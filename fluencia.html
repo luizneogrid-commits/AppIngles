@@ -1438,6 +1438,17 @@ function blockReview(el,opt={}){
 
 /* ---------- 2. Dictation + shadowing ---------- */
 function norm(s){ return String(s).toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9' ]+/g," ").split(/\s+/).filter(Boolean); }
+// Expande contrações dos dois lados, para "I'm" = "I am" no ditado.
+function expand(tok){
+  const special = {"can't":"cannot","won't":"will not","shan't":"shall not","let's":"let us","ain't":"is not"};
+  if(special[tok]) return special[tok].split(" ");
+  let m;
+  if((m = tok.match(/^(.+)n't$/))) return [m[1],"not"];
+  if((m = tok.match(/^(.+)'(ll|ve|re|d|m)$/))) return [m[1],{ll:"will",ve:"have",re:"are",d:"would",m:"am"}[m[2]]];
+  if((m = tok.match(/^(it|that|he|she|what|there|here|who|where|how)'s$/))) return [m[1],"is"];
+  return [tok];
+}
+function toks(s){ return norm(s).flatMap(expand); }
 function lcsOk(t,g){
   const n=t.length,m=g.length, dp=Array.from({length:n+1},()=>new Array(m+1).fill(0));
   for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--) dp[i][j] = t[i]===g[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
@@ -1446,7 +1457,7 @@ function lcsOk(t,g){
   return ok;
 }
 function blockListen(el,opt={}){
-  let item, shadows = 0;
+  let item, shadows = 0, hinted = false;
   function pick(){
     const lvl = S.listenLevel||1;
     let pool = LISTEN.filter(x=>x[0]===lvl && !S.recentListen.includes(x[1]));
@@ -1455,26 +1466,31 @@ function blockListen(el,opt={}){
     S.recentListen = S.recentListen.concat(item[1]).slice(-10);
   }
   function draw(){
-    shadows = 0;
+    shadows = 0; hinted = false;
     el.innerHTML = `<div class="card pad stack">
       <div class="row between"><h3>Ditado</h3><span class="chip">Nível ${S.listenLevel}/3</span></div>
       <p class="muted small">Ouça quantas vezes precisar e escreva exatamente o que ouviu. Atenção às palavras “engolidas” na fala rápida (<i>I'd, gonna, of</i>).</p>
       <div class="row"><button class="btn primary" id="p1">${ICON.speaker} Ouvir</button><button class="btn" id="p2">Ouvir devagar</button></div>
       <label for="dict">O que você ouviu</label>
       <textarea id="dict" rows="2" placeholder="Type what you hear…" autocomplete="off" spellcheck="false"></textarea>
-      <div class="row"><button class="btn" id="chk">Conferir</button><span class="muted small">ou Ctrl + Enter</span></div>
+      <div class="row"><button class="btn" id="chk">Conferir</button><button class="btn ghost sm" id="hint">Dica: primeiras letras</button><span class="muted small">Ctrl + Enter confere</span></div>
+      <p class="mono small muted" id="hintTxt" hidden></p>
       <div id="res"></div>
     </div>`;
     $("#p1",el).onclick = ()=>speak(item[1]);
     $("#p2",el).onclick = ()=>speak(item[1],0.7);
     $("#chk",el).onclick = check;
+    $("#hint",el).onclick = ()=>{ hinted = true; const h=$("#hintTxt",el); h.hidden=false; h.textContent = item[1].split(" ").map(w=>w.replace(/^([^A-Za-z]*[A-Za-z'’]?)([A-Za-z'’]*)/,(m,a,b)=>a+b.replace(/[A-Za-z]/g,"_"))).join(" ") + "  (a dica limita a nota a 90%)"; };
     $("#dict",el).addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); check(); } });
     setTimeout(()=>speak(item[1]),250);
   }
   function check(){
     const val = $("#dict",el).value; if(!val.trim()){ toast("Escreva o que ouviu primeiro"); return; }
-    const words = item[1].split(" "), t = words.map(w=>norm(w).join(" ")), ok = lcsOk(t, norm(val));
-    const score = ok.filter(Boolean).length/ok.length;
+    const words = item[1].split(" "), owner = [], t = [];
+    words.forEach((w,wi)=>toks(w).forEach(x=>{ t.push(x); owner.push(wi); }));
+    const okTok = lcsOk(t, toks(val)), ok = words.map((w,wi)=>okTok.every((v,k)=>owner[k]!==wi || v));
+    let score = ok.filter(Boolean).length/ok.length;
+    if(hinted) score = Math.min(score, 0.9);
     S.dict.push({d:todayKey(),s:Math.round(score*100),l:S.listenLevel});
     const recent = S.dict.filter(x=>x.l===S.listenLevel).slice(-4);
     let lvlMsg = "";
@@ -1485,7 +1501,8 @@ function blockListen(el,opt={}){
     $("#dict",el).disabled = true; $("#chk",el).disabled = true;
     $("#res",el).innerHTML = `<div class="stack">
       <div class="row"><span class="score">${Math.round(score*100)}%</span><span class="muted">${score===1?"Perfeito!":score>=.8?"Muito bom — veja o que escapou.":"As palavras em vermelho foram as que você não pegou."}</span></div>
-      <div class="diff">${words.map((w,i)=>`<span class="${ok[i]?"ok":"miss"}">${esc(w)}</span>`).join(" ")}</div>
+      <div class="diff">${words.map((w,i)=>ok[i]?`<span class="ok">${esc(w)}</span>`:`<span class="miss" role="button" tabindex="0" style="cursor:pointer" data-say="${esc(w.replace(/[.,!?;:]/g,""))}" title="Toque para ouvir">${esc(w)}</span>`).join(" ")}</div>
+      ${ok.some(x=>!x)?`<p class="small muted">Toque numa palavra vermelha para ouvi-la sozinha.</p>`:""}
       ${lvlMsg?`<p class="note">${lvlMsg}</p>`:""}
       <hr class="sep">
       <h3>Shadowing</h3>
