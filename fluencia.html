@@ -2577,13 +2577,23 @@ function blockDialogs(el,startId){
         :turn?`<div class="stack" style="gap:8px">
           <span class="eyebrow">Sua vez: ${esc(turn[1])}</span>
           ${revealed?`<div class="opts">${opts.map((o,j)=>`<button class="opt" data-o="${j}">${esc(o[0])}</button>`).join("")}</div>`
-            :`<p class="note small">Diga sua resposta em voz alta primeiro. Depois compare com as opções.</p><button class="btn primary" id="rv">Já falei — mostrar opções</button>`}
+            :`<p class="note small">Diga sua resposta em voz alta primeiro. Depois compare com as opções.</p><div class="row">${(window.SpeechRecognition||window.webkitSpeechRecognition)?`<button class="btn" id="dsay">${ICON.mic} Falar minha resposta</button>`:""}<button class="btn primary" id="rv">Já falei — mostrar opções</button></div><div id="dsayOut" role="status" aria-live="polite"></div>`}
           <div id="fbk">${feedback}</div></div>`
         :`<button class="btn primary" id="fin">Ver resultado</button>`}
       </div>`;
       const ch = $("#ch",el); ch.scrollTop = ch.scrollHeight;
       $("#dl",el).onclick = list;
       const rv = $("#rv",el); if(rv) rv.onclick = ()=>{ revealed = true; draw(); };
+      const ds = $("#dsay",el); if(ds) ds.onclick = async ()=>{
+        const out = $("#dsayOut",el); ds.disabled = true; out.innerHTML = loadingHTML("Ouvindo…");
+        try{
+          const alts = await listenOnce(), model = turn[2].find(o=>o[1])[0], mt = toks(model);
+          let best = {a:alts[0],sc:0}; alts.forEach(a=>{ const ok = lcsOk(mt,toks(a)); const sc = ok.filter(Boolean).length/Math.max(1,mt.length); if(sc>best.sc) best = {a,sc}; });
+          const pct = Math.round(best.sc*100); if(pct>=70) addXP(2,"fala");
+          out.innerHTML = `<p class="note small">Você disse: “<span lang="en">${esc(best.a)}</span>” — ${pct>=70?"muito parecido com a resposta natural!":pct>=40?"parte das palavras bate. Compare com as opções.":"bem diferente do esperado. Veja as opções e repita a certa."} <span class="mono">(${pct}%)</span></p>`;
+          revealed = true; setTimeout(()=>{ const keep = out.innerHTML; draw(); const fb = $("#fbk",el); if(fb) fb.insertAdjacentHTML("afterbegin", keep); }, 900);
+        }catch(e){ out.innerHTML = `<p class="note warn small">${e.code==="not-allowed"||e.code==="service-not-allowed"?"Microfone bloqueado aqui — no app do celular funciona.":"Não ouvi. Tente de novo ou toque em “Já falei”."}</p>`; ds.disabled = false; }
+      };
       const fin = $("#fin",el); if(fin) fin.onclick = finish;
       const cn = $("#cn",el); if(cn) cn.onclick = ()=>{ confirm = null; advance(); };
       keyH = e=>{ if(confirm && e.key==="Enter") cn && cn.click(); else if(!confirm && revealed && /^[1-3]$/.test(e.key)){ const b=el.querySelector(`[data-o="${+e.key-1}"]`); if(b && !b.disabled) b.click(); } };
