@@ -1056,7 +1056,7 @@ function defaultState(){ return {
   v:1, created:todayKey(), updatedAt:0, xp:0,
   streak:{count:0,best:0,last:null}, freezes:0,
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
-  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{},
+  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[],
   stats:{reviews:0,correct:0},
   settings:{accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false}
 };}
@@ -1168,6 +1168,46 @@ function ivlLabel(d){ return d<30? d+"d" : d<365? Math.round(d/30)+"m" : "1a"; }
 function dueIds(){ const t=todayKey(); return Object.keys(S.cards).filter(id=>cardById(id) && S.cards[id].due<=t); }
 function introduce(id){ if(S.cards[id]) return; S.cards[id]={due:addDays(todayKey(),1),ivl:0,ef:2.5,reps:0,lapses:0,added:todayKey()}; dayRec().newIds.push(id); }
 function nextNewIds(n){ const out=[]; for(const c of S.custom.concat(VOCAB)){ if(out.length>=n) break; if(!S.cards[c.id]) out.push(c.id); } return out; }
+/* ---------- deck de erros ---------- */
+function addMistake(m){
+  if(!Array.isArray(S.mistakes)) S.mistakes = [];
+  const key = m.k==="g" ? "g:"+m.l+":"+m.q : "d:"+m.d+":"+m.l;
+  const ex = S.mistakes.find(x=>x.key===key);
+  if(ex) ex.streak = 0; else S.mistakes.push(Object.assign({key,streak:0,date:todayKey()},m));
+  if(S.mistakes.length>80) S.mistakes = S.mistakes.slice(-80);
+}
+function mistakeItem(m){
+  if(m.k==="g"){ const L = GRAMMAR.find(l=>l.id===m.l); const q = L && L.q[m.q]; if(!q) return null;
+    return {title:L.t, ctx:"", prompt:esc(q[0]).replace("___",'<span class="gap">_____</span>'), opts:q[1].map((o,j)=>[o,j===q[2],q[3]])}; }
+  const D = DIALOGS.find(d=>d.id===m.d); const line = D && D.lines[m.l]; if(!line || line[0]!=="me") return null;
+  const prev = D.lines.slice(0,m.l).reverse().find(l=>l[0]==="a");
+  return {title:D.t, ctx:prev?prev[1]:"", prompt:"Sua vez: "+esc(line[1]), opts:line[2]};
+}
+function blockMistakes(el){
+  const pool = shuffle((S.mistakes||[]).filter(m=>mistakeItem(m))).slice(0,10);
+  if(!pool.length){ el.innerHTML = `<div class="card empty"><h3>Nenhum erro guardado</h3><p>Quando você erra uma questão de gramática ou uma resposta num diálogo, ela vem para cá. Acerte 2 vezes seguidas e ela sai do deck.</p></div>`; return; }
+  let i = 0, right = 0;
+  function q(){
+    if(i>=pool.length){ save(); el.innerHTML = `<div class="card empty"><h3>${right}/${pool.length} corretas</h3><p>${(S.mistakes||[]).length} ${S.mistakes.length===1?"item continua":"itens continuam"} no deck. Itens acertados 2 vezes seguidas saem sozinhos.</p><button class="btn primary" id="ag">Mais uma rodada</button></div>`; $("#ag",el).onclick=()=>blockMistakes(el); return; }
+    const m = pool[i], it = mistakeItem(m), opts = shuffle(it.opts);
+    el.innerHTML = `<div class="card pad stack">
+      <div class="row between"><span class="eyebrow">${esc(it.title)}</span><span class="mono small muted">${i+1}/${pool.length}</span></div>
+      ${it.ctx?`<div class="msg ai">${esc(it.ctx)} ${spk(it.ctx)}</div>`:""}
+      <p class="qsent">${it.prompt}</p>
+      <div class="opts">${opts.map((o,j)=>`<button class="opt" data-j="${j}">${esc(o[0])}</button>`).join("")}</div>
+      <div id="mf"></div></div>`;
+    $$(".opt",el).forEach(b=>b.onclick=()=>{
+      const o = opts[+b.dataset.j], ok = !!o[1];
+      $$(".opt",el).forEach(x=>{ x.disabled = true; if(opts[+x.dataset.j][1]) x.classList.add("right"); });
+      if(ok){ right++; m.streak++; addXP(2); if(m.streak>=2) S.mistakes = S.mistakes.filter(x=>x!==m); }
+      else { b.classList.add("wrong"); m.streak = 0; }
+      const why = opts.find(x=>x[1])[2];
+      $("#mf",el).innerHTML = `<p class="note small">${ok?(m.streak>=2?"<b>Dominado!</b> Saiu do deck. ":"<b>Certo.</b> Mais um acerto e sai do deck. "):"<b>Ainda não.</b> "}${esc(ok?why:o[2]+" → "+why)}</p><button class="btn primary" id="mn" style="margin-top:10px">Continuar →</button>`;
+      $("#mn",el).onclick = ()=>{ i++; q(); };
+    });
+  }
+  q();
+}
 function hardIds(){ return Object.keys(S.cards).filter(id=>cardById(id) && (S.cards[id].lapses||0)>=3).sort((a,b)=>S.cards[b].lapses-S.cards[a].lapses); }
 function stageOf(id){ const c=S.cards[id]; if(!c) return "new"; if(c.ivl>=21) return "mat"; if(c.ivl>=7) return "young"; return "lrn"; }
 const STAGE_LABEL = {new:"Nova",lrn:"Aprendendo",young:"Jovem",mat:"Madura"};
@@ -1682,7 +1722,7 @@ function blockGrammar(el,opt={},lessonId){
         <div class="opts">${o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join("")}</div>
         <div id="gf"></div></div>`;
       $$(".opt",el).forEach(b=>b.onclick=()=>{
-        const j = +b.dataset.j, ok = j===a; if(ok){ right++; addXP(3); }
+        const j = +b.dataset.j, ok = j===a; if(ok){ right++; addXP(3); } else { addMistake({k:"g",l:L.id,q:L.q.indexOf(qs[i])}); save(); }
         $$(".opt",el).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); });
         if(!ok) b.classList.add("wrong");
         const full = s.replace("___", o[a].replace(" / "," … "));
@@ -1806,6 +1846,7 @@ function renderPractice(){
   if(sub==="pairs") return blockPairs(shell("Pares mínimos"));
   if(sub==="chat") return blockChat(shell("Conversa com IA"));
   if(sub==="dialogs") return blockDialogs(shell("Diálogos"));
+  if(sub==="mistakes") return blockMistakes(shell("Meus erros"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -1814,6 +1855,7 @@ function renderPractice(){
     <div class="tiles">
       <button class="card tile" data-s="dialogs"><span class="ti">${ICON.chat}</span><h3>Diálogos</h3><p>${DIALOGS.length} situações com roteiro: café, aeroporto, entrevista, médico… Escolha a resposta natural e repita. Sem IA, funciona offline.</p></button>
       <button class="card tile" data-s="chat"><span class="ti">${ICON.chat}</span><h3>Conversa com IA</h3><p>Role-play de situações reais (entrevista, reunião, hotel) com correções na hora.${AI?"":" Disponível quando aberto no Claude."}</p></button>
+      <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>As questões de gramática e as falas de diálogo que você errou voltam aqui até você acertar 2 vezes seguidas.</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
       <button class="card tile" data-s="speak"><span class="ti">${ICON.mic}</span><h3>Fala livre</h3><p>Um tema aleatório, frases úteis e cronômetro 90/60 s.</p></button>
@@ -1947,6 +1989,7 @@ function blockDialogs(el,startId){
         hist.push({r:"me",t:o[0]}); speak(o[0]); i++;
         confirm = o; opts = null; draw();
       }else{
+        addMistake({k:"d",d:d.id,l:i}); save();
         feedback = `<p class="note warn small"><b>Não soa natural:</b> ${esc(o[2])} Tente outra.</p>`;
         const b = el.querySelector(`[data-o="${j}"]`); b.classList.add("wrong"); b.disabled = true;
         $("#fbk",el).innerHTML = feedback;
