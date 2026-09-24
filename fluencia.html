@@ -1080,7 +1080,7 @@ function defaultState(){ return {
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
   dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{},
   stats:{reviews:0,correct:0},
-  settings:{accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false}
+  settings:{accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,tm:"07:30",tn:"21:30"}
 };}
 let S = defaultState();
 let userDoc = null, remoteTimer = null, remoteBusy = false, remoteAgain = false, syncState = "local";
@@ -1336,6 +1336,29 @@ Task: ${task}
 ${targets&&targets.length?"Target vocabulary the learner tried to use: "+targets.join(", "):""}
 Learner's text:
 """${text}"""`;
+}
+
+/* ---------- arquivos: lembretes (.ics) e backup ---------- */
+async function saveFile(filename, text, mime){
+  if(window.claude && typeof window.claude.use==="function"){
+    const dl = await claude.use("downloads").catch(()=>null);
+    if(dl){ try{ await dl.save({filename, data:new Blob([text],{type:mime})}); return true; }catch(e){ if(e && e.code==="cancelled") return false; } }
+  }
+  try{ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text],{type:mime})); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); return true; }
+  catch(e){ toast("Não foi possível salvar o arquivo aqui"); return false; }
+}
+const CRLF = String.fromCharCode(13,10);
+function icsReminders(){
+  const d = addDays(todayKey(),1).replace(/-/g,""), stamp = new Date().toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+  const ev = (id,time,title,desc)=>[
+    "BEGIN:VEVENT","UID:fluencia-"+id+"-"+d+"@1515","DTSTAMP:"+stamp,
+    "DTSTART:"+d+"T"+time.replace(":","")+"00","DURATION:PT15M","RRULE:FREQ=DAILY",
+    "SUMMARY:"+title,"DESCRIPTION:"+desc,
+    "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+title,"TRIGGER:PT0M","END:VALARM","END:VEVENT"].join(CRLF);
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Fluencia 15+15//PT","CALSCALE:GREGORIAN",
+    ev("m",S.settings.tm,"Inglês 15 min - Manhã (ouvir e falar)","Revisão espaçada, ditado e fala guiada."),
+    ev("n",S.settings.tn,"Inglês 15 min - Noite (aprender e escrever)","Palavras novas, gramática e diário."),
+    "END:VCALENDAR"].join(CRLF);
 }
 
 /* ============================================================
@@ -2210,10 +2233,15 @@ function renderProgress(){
       </div>
       <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><span class="small muted"><span class="dot ${syncState==="cloud"?"ok":""}"></span> ${syncState==="cloud"?"Progresso salvo na sua conta — abre igual em outros dispositivos.":"Progresso salvo neste navegador."}</span></div>
       <hr class="sep">
+      <h3>Lembretes</h3>
+      <p class="small muted">Escolha os horários e adicione dois lembretes diários ao seu calendário (Google, iPhone, Outlook). Abra o arquivo baixado e confirme. Ter um horário fixo é o que mais sustenta o hábito.</p>
+      <div class="row"><label for="s-tm" style="display:flex;gap:8px;align-items:center">Manhã <input type="time" id="s-tm" value="${S.settings.tm}" style="width:auto"></label><label for="s-tn" style="display:flex;gap:8px;align-items:center">Noite <input type="time" id="s-tn" value="${S.settings.tn}" style="width:auto"></label></div>
+      <div class="row"><button class="btn sm" id="ics">Adicionar lembretes ao calendário (.ics)</button></div>
+      <hr class="sep">
       <h3>Backup</h3>
       <p class="small muted">Copie o código para guardar ou levar seu progresso para outro navegador. Para restaurar, cole e importe.</p>
       <textarea id="bk" rows="3" spellcheck="false" placeholder="Cole aqui um backup para importar"></textarea>
-      <div class="row"><button class="btn sm" id="ex">Gerar e copiar backup</button><button class="btn sm" id="im">Importar backup</button><button class="btn sm ghost" id="rs" style="color:var(--bad)">Apagar todo o progresso</button></div>
+      <div class="row"><button class="btn sm" id="ex">Gerar e copiar backup</button><button class="btn sm" id="im">Importar backup</button><button class="btn sm" id="exf">Salvar backup em arquivo</button><label class="btn sm" for="imf" style="cursor:pointer">Abrir arquivo de backup<input type="file" id="imf" accept=".json,application/json" hidden></label><button class="btn sm ghost" id="rs" style="color:var(--bad)">Apagar todo o progresso</button></div>
       <div id="cfm"></div>
     </div>
   </div>`;
@@ -2227,6 +2255,11 @@ function renderProgress(){
   $("#tv").onclick = ()=>speak("Consistency beats intensity. Fifteen minutes in the morning and fifteen at night.");
   $("#ex").onclick = ()=>{ const ta=$("#bk"); ta.value = JSON.stringify(S); ta.select();
     if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>toast("Backup copiado"),()=>toast("Selecionado — copie com Ctrl+C")); else toast("Selecionado — copie com Ctrl+C"); };
+  $("#s-tm").onchange = e=>{ if(e.target.value){ S.settings.tm=e.target.value; save(); } };
+  $("#s-tn").onchange = e=>{ if(e.target.value){ S.settings.tn=e.target.value; save(); } };
+  $("#ics").onclick = async ()=>{ if(await saveFile("lembretes-ingles-15-15.ics", icsReminders(), "text/calendar")) toast("Abra o arquivo para adicionar ao calendário"); };
+  $("#exf").onclick = async ()=>{ if(await saveFile("fluencia-backup-"+todayKey()+".json", JSON.stringify(S), "application/json")) toast("Backup salvo"); };
+  $("#imf").onchange = e=>{ const f = e.target.files[0]; if(!f) return; const rd = new FileReader(); rd.onload = ()=>{ $("#bk").value = rd.result; $("#im").click(); }; rd.readAsText(f); };
   $("#im").onclick = ()=>{ let o; try{ o = JSON.parse($("#bk").value); if(!o || typeof o!=="object" || !o.cards) throw 0; }catch(e){ toast("Esse texto não é um backup válido"); return; }
     confirmBox("Substituir o progresso atual por este backup?","Importar",()=>{ S = merge(o); save(); toast("Backup importado"); renderProgress(); }); };
   $("#rs").onclick = ()=>confirmBox("Apagar XP, sequência, palavras e diário? Isso não pode ser desfeito.","Apagar tudo",()=>{ const keep=S.settings; S = defaultState(); S.settings=keep; save(); toast("Progresso apagado"); renderProgress(); });
