@@ -19,7 +19,7 @@ App de inglês para quem está no **intermediário (B1)** e quer chegar ao **B2/
 
 Extras: sequência de dias com proteção, XP e níveis, calendário de constância, pares mínimos de pronúncia, ditado e fala livres, lista de palavras com as suas próprias.
 
-**Conteúdo:** 217 palavras e expressões (phrasal verbs, collocations, falsos cognatos, idioms, conectores), 21 aulas de gramática focadas nos erros típicos de brasileiros, 81 frases de ditado em 3 níveis, 50 temas de fala e 60 temas de escrita para o diário.
+**Conteúdo:** 217 palavras e expressões (phrasal verbs, collocations, falsos cognatos, idioms, conectores), 21 aulas de gramática focadas nos erros típicos de brasileiros, 81 frases de ditado em 3 níveis, 50 temas de fala, 60 temas de escrita para o diário e 10 diálogos com roteiro (46 falas) que funcionam sem IA.
 
 ## Versões
 

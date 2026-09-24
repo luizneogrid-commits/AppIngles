@@ -907,6 +907,122 @@ const ROLES = [
 {t:"Negociar o aluguel",d:"You are a landlord. The learner wants to negotiate a lower rent or better conditions for renewing the lease. Be firm but open.",o:"Hi, thanks for getting in touch. You wanted to talk about renewing your lease?"}
 ];
 
+// Diálogos roteirizados (sem IA). ["a", fala] = personagem; ["me", dica em PT, [[opção, correta?, explicação], ...]]
+const DIALOGS = [
+{id:"cafe",t:"Na cafeteria",lvl:"A2–B1",d:"Pedir um café e um lanche para levar.",lines:[
+ ["a","Hi there! What can I get for you today?"],
+ ["me","Peça um latte médio, educadamente",[["Could I get a medium latte, please?",1,"“Could I get…, please?” é o jeito natural e educado de pedir."],["I want a latte medium.",0,"O adjetivo vem antes (medium latte), e “I want” soa brusco."],["Give me a medium latte.",0,"Imperativo direto soa grosseiro ao pedir algo."]]],
+ ["a","Sure. Would you like anything to eat with that?"],
+ ["me","Pergunte que tipos de muffin eles têm",[["What kind of muffins do you have?",1,"Pergunta direta e natural."],["Which muffins you have?",0,"Falta o auxiliar: “do you have”."],["What muffins there are have?",0,"Estrutura misturada; use “What kind of… do you have?”."]]],
+ ["a","We've got blueberry, chocolate chip and banana nut."],
+ ["me","Escolha o de blueberry",[["I'll have the blueberry one, please.",1,"“I'll have…” é o padrão para escolher num pedido."],["I will want the blueberry.",0,"“Will want” não se usa; diga “I'll have”."],["For me is the blueberry.",0,"Tradução de “pra mim é o de…”. Em inglês: “I'll have the blueberry one”."]]],
+ ["a","Great. Is that for here or to go?"],
+ ["me","Diga que é para levar",[["To go, please.",1,"“To go” (EUA) ou “to take away” (Reino Unido)."],["For carry.",0,"Não existe; use “to go”."],["For take.",0,"Não existe; use “to go” ou “takeaway”."]]],
+ ["a","That'll be eight fifty. Would you like your receipt?"],
+ ["me","Diga que não precisa, obrigado",[["No, I'm good, thanks.",1,"“I'm good” = não preciso, obrigado. Muito comum."],["No, I don't need, thanks.",0,"“Need” precisa de objeto: “I don't need it”."],["Not, thanks.",0,"A resposta curta é “No, thanks”."]]],
+ ["a","Here you go. Have a great day!"]]},
+{id:"airport",t:"Check-in no aeroporto",lvl:"B1",d:"Despachar mala, excesso de peso e escolher assento.",lines:[
+ ["a","Good morning. Where are you flying to today?"],
+ ["me","Diga que vai para Toronto, com escala em Nova York",[["I'm flying to Toronto, with a connection in New York.",1,"“Flying to” + “connection/layover in”."],["I go to Toronto doing a scale in New York.",0,"Escala = “connection” ou “layover”, nunca “scale”."],["I'm going for Toronto, stopping at New York.",0,"Destino usa “to”, não “for”."]]],
+ ["a","Can I see your passport, please? Are you checking any bags?"],
+ ["me","Diga que vai despachar uma mala",[["Yes, just one suitcase.",1,"Simples e natural."],["Yes, I will dispatch one bag.",0,"Despachar mala = “check a bag”; “dispatch” é enviar mercadoria."],["Yes, one baggage.",0,"“Baggage” é incontável: diga “one bag” ou “one suitcase”."]]],
+ ["a","Could you put it on the scale, please? Hmm, it's two kilos over the limit, I'm afraid."],
+ ["me","Pergunte quanto custa o excesso",[["How much would the excess baggage fee be?",1,"“Excess baggage fee” é o termo usado."],["How much is the excess of weight?",0,"O termo é “excess baggage fee”."],["How much I have to pay more?",0,"Falta o auxiliar: “How much more do I have to pay?”."]]],
+ ["a","It's fifty dollars. Or you could move a few things to your carry-on."],
+ ["me","Diga que então vai passar algumas coisas para a bagagem de mão",[["I'll move some things to my carry-on, then.",1,"“Carry-on” = bagagem de mão; decisão na hora → I'll."],["I will pass some things to my handbag.",0,"“Pass” não é transferir, e “handbag” é bolsa. Use “move… to my carry-on”."],["Then I put some things in the hand luggage.",0,"Decisão na hora pede “I'll”: “I'll put…”."]]],
+ ["a","Perfect, that's within the limit now. Would you prefer a window or an aisle seat?"],
+ ["me","Peça corredor, se possível",[["An aisle seat, if possible.",1,"“Aisle” (pronuncia-se “ail”) = corredor."],["Corridor, please.",0,"No avião, corredor é “aisle”."],["I prefer the side of the corridor.",0,"Use “aisle seat”."]]],
+ ["a","Here's your boarding pass. Boarding starts at nine forty at gate twelve. Have a nice flight!"]]},
+{id:"interview",t:"Entrevista de emprego",lvl:"B1+",d:"Apresentar-se, falar de pontos fracos e fazer perguntas.",lines:[
+ ["a","Thanks for coming in. So, tell me a bit about yourself."],
+ ["me","Resuma sua experiência (5 anos em marketing)",[["Sure. I've been working in marketing for five years, mostly on digital campaigns.",1,"Present perfect continuous para experiência que continua."],["Sure. I work in marketing since five years.",0,"Erro clássico: use “I've been working… for five years”."],["Sure. I have five years that I work in marketing.",0,"Tradução de “tenho cinco anos que…”. Use “I've been working in marketing for five years”."]]],
+ ["a","Interesting. Why are you interested in this position?"],
+ ["me","Diga que busca desafios e admira a empresa",[["I'm looking for new challenges, and I really admire the company's approach to innovation.",1,"Motivação + elogio específico = resposta forte."],["Because I want to earn more money.",0,"Pode ser verdade, mas é a pior resposta numa entrevista."],["I am searching new challenges.",0,"“Search” pede “for” e soa estranho aqui; use “looking for”."]]],
+ ["a","What would you say is your biggest weakness?"],
+ ["me","Cite uma fraqueza real e como está melhorando",[["I sometimes take on too much, but I've been learning to delegate and prioritize.",1,"Fraqueza real + o que você está fazendo a respeito."],["I'm a perfectionist, so I have no weaknesses.",0,"Clichê e soa arrogante."],["My weakness is that I'm very ansious.",0,"A grafia é “anxious”, e falta mostrar como está melhorando."]]],
+ ["a","Fair enough. Can you tell me about a time you solved a difficult problem?"],
+ ["me","Conte uma situação do ano passado",[["Last year, a key supplier went bankrupt, so I found two alternatives within a week.",1,"Past simple para uma história com momento definido."],["Last year a supplier has gone bankrupt and I have found alternatives.",0,"“Last year” pede past simple, não present perfect."],["One time, a supplier broke and I found others.",0,"Empresa “goes bankrupt”; “break” é quebrar um objeto."]]],
+ ["a","Great. Do you have any questions for us?"],
+ ["me","Pergunte como é um dia típico na função",[["Yes. What does a typical day look like for someone in this role?",1,"Pergunta inteligente e bem estruturada."],["No, I don't have.",0,"Sempre faça uma pergunta. E “have” precisa de objeto: “I don't have any”."],["Yes. How is a typical day for this role?",0,"Mais natural: “What does a typical day look like…?”"]]],
+ ["a","Good question. Most days start with a quick team meeting. We'll be in touch by Friday."]]},
+{id:"status",t:"Reunião de status",lvl:"B1+",d:"Explicar um atraso e propor uma solução.",lines:[
+ ["a","Morning, everyone. Could you give us a quick update on the website project?"],
+ ["me","Diga que está quase pronto, mas uma semana atrasado",[["Sure. We're almost done, but we're running about a week behind schedule.",1,"“Behind schedule” = atrasado em relação ao cronograma."],["Sure. We are almost ready, but we are delayed of one week.",0,"Não existe “delayed of”; diga “a week behind schedule” ou “delayed by a week”."],["Sure. It's almost finished but late one week.",0,"Estrutura incompleta; use “running a week behind”."]]],
+ ["a","I see. What's causing the delay?"],
+ ["me","Explique que estão esperando o conteúdo do cliente",[["We're still waiting for the client to send us the final content.",1,"“Wait for someone to do something”."],["We are still waiting the client send the content.",0,"Faltam “for” e “to”: “waiting for the client to send”."],["We still wait the content from the client.",0,"Ação em andamento → “We're still waiting for”."]]],
+ ["a","Is there anything we can do to speed things up?"],
+ ["me","Sugira marcar uma ligação com o cliente",[["It might help if we set up a call with them this week.",1,"“It might help if…” é uma sugestão educada."],["We must to call the client.",0,"Depois de modal, sem “to”: “we must call”."],["I suggest to call the client.",0,"“Suggest” + -ing ou “suggest that we call”."]]],
+ ["a","Good idea. Can you take care of that?"],
+ ["me","Aceite e diga que manda o convite hoje à tarde",[["Absolutely. I'll send them an invite this afternoon.",1,"Decisão na hora → will."],["Absolutely. I send the invitation today in the afternoon.",0,"Use “I'll send… this afternoon”."],["Sure, I'm going to sending it.",0,"“Going to” + verbo base: “I'm going to send it”."]]],
+ ["a","Perfect. Let's touch base again on Thursday."],
+ ["me","Concorde e diga que vai mantê-los informados",[["Sounds good. I'll keep you posted.",1,"“Keep you posted” = manter informado."],["Sounds good. I will keep you informated.",0,"“Informated” não existe; diga “keep you posted/updated”."],["Is good for me.",0,"Falta sujeito: “That's good for me” / “Sounds good”."]]],
+ ["a","Great. Thanks, everyone."]]},
+{id:"doctor",t:"No médico",lvl:"B1",d:"Descrever sintomas, alergias e entender a receita.",lines:[
+ ["a","Hi, have a seat. What seems to be the problem?"],
+ ["me","Diga que está com dor de garganta e febre há dois dias",[["I've had a sore throat and a fever for two days.",1,"Present perfect + for."],["I have a sore throat and fever since two days.",0,"Com duração use “for”, e o tempo verbal é present perfect."],["I'm with a sore throat and fever.",0,"Tradução de “estou com”. Em inglês: “I have / I've got”."]]],
+ ["a","I see. Are you taking any medication at the moment?"],
+ ["me","Diga que só tomou analgésico para a dor de cabeça",[["Just some painkillers for the headache.",1,"“Painkillers” = analgésicos."],["Only some remedies for the head pain.",0,"Use “medicine” ou “painkillers”, e “headache”."],["I took some pills of pain.",0,"Use “painkillers”."]]],
+ ["a","Any allergies?"],
+ ["me","Diga que é alérgico a penicilina",[["Yes, I'm allergic to penicillin.",1,"“Allergic to”."],["Yes, I have allergy of penicillin.",0,"“Allergic to” ou “an allergy to”."],["Yes, penicillin makes me allergy.",0,"Use “I'm allergic to penicillin”."]]],
+ ["a","Thanks for letting me know. It looks like a throat infection. I'll prescribe something without penicillin."],
+ ["me","Pergunte com que frequência deve tomar",[["How often should I take it?",1,"“How often” pergunta a frequência."],["How many times for day I take?",0,"Diga “a day” e use auxiliar: “How many times a day should I take it?”"],["What frequency I must take?",0,"Soa artificial; use “How often should I take it?”"]]],
+ ["a","Twice a day, after meals, for seven days. Get plenty of rest and drink lots of water."],
+ ["me","Agradeça",[["Great, thank you so much, doctor.",1,"Natural."],["Thanks, doctor, you are very kind with me.",0,"“Kind to me”, não “with”."],["Thank you for all, doctor.",0,"Diga “Thank you for everything”."]]],
+ ["a","You're welcome. Feel better soon!"]]},
+{id:"hotel",t:"Problema no hotel",lvl:"B1",d:"Reclamar do quarto e pedir para trocar.",lines:[
+ ["a","Front desk, how can I help you?"],
+ ["me","Diga seu quarto (305) e que o ar-condicionado não funciona",[["Hi, this is room three oh five. The air conditioning isn't working.",1,"“Isn't working” para defeito. Número de quarto se lê dígito a dígito."],["Hi, room three hundred five. The air conditioning don't work.",0,"Terceira pessoa: “doesn't work”."],["Hello, the air conditioning is not functioning well since I arrived.",0,"“Since I arrived” pede present perfect: “hasn't been working”."]]],
+ ["a","I'm so sorry about that. I'll send someone up right away."],
+ ["me","Pergunte quanto tempo vai levar, mais ou menos",[["Thanks. Roughly how long will it take?",1,"“Roughly” = mais ou menos."],["Thanks. How much time it will take?",0,"Pergunta precisa de inversão: “How long will it take?”"],["Thanks. It will delay much?",0,"Use “How long will it take?”"]]],
+ ["a","About twenty minutes. If it can't be fixed, we can move you to another room."],
+ ["me","Diga que prefere trocar de quarto, pois tem reunião cedo",[["Actually, I'd rather change rooms. I have an early meeting tomorrow.",1,"“I'd rather” + verbo base; “change rooms” no plural."],["Actually, I prefer to change of room.",0,"Diga “change rooms”, sem “of”."],["Actually, I rather change the room.",0,"Falta o 'd: “I'd rather”."]]],
+ ["a","Of course. Room four twelve is available. Your new key will be ready at the desk."],
+ ["me","Pergunte se alguém pode ajudar com a bagagem",[["Great. Could someone help me with my luggage?",1,"“Luggage” é incontável; pedido educado com “could”."],["Great. Could someone help me with my luggages?",0,"“Luggage” é incontável: sem “s”."],["Great. Someone can help me with the bags?",0,"Pergunta precisa de inversão: “Can someone help…?”"]]],
+ ["a","Certainly, I'll send someone right away. Again, sorry for the inconvenience."]]},
+{id:"monday",t:"Papo de segunda-feira",lvl:"B1",d:"Small talk com um colega sobre o fim de semana.",lines:[
+ ["a","Hey! How was your weekend?"],
+ ["me","Diga que foi ótimo e que foi à praia com amigos",[["It was great, thanks! I went to the beach with some friends.",1,"Past simple para um fim de semana que já terminou."],["It was great! I have gone to the beach with friends.",0,"Tempo terminado → past simple: “I went”."],["Was great! I went in the beach.",0,"Falta sujeito (“It was”), e é “go to the beach”."]]],
+ ["a","Nice! Lucky you. It rained all weekend here."],
+ ["me","Pergunte o que ele fez, então",[["Oh no! So what did you get up to?",1,"“Get up to” = fazer (informal)."],["Oh no! So what you did?",0,"Pergunta no passado precisa de “did”: “What did you do?”"],["Oh no! So what have you done in the weekend?",0,"Tempo terminado → past simple; e “on/at the weekend”."]]],
+ ["a","Not much, honestly. I watched a whole new series in two days."],
+ ["me","Pergunte qual e se vale a pena",[["Which one? Is it worth watching?",1,"“Worth” + -ing."],["Which? It worths to watch?",0,"“Worth” não é verbo: “Is it worth watching?”"],["What series? Is worth to see?",0,"Falta sujeito, e a estrutura é “worth watching”."]]],
+ ["a","Definitely. It's a crime thriller set in Norway. You'd love it."],
+ ["me","Diga que vai anotar o nome",[["Cool, I'll write that down.",1,"“Write down” = anotar."],["Cool, I will note the name.",0,"Mais natural: “I'll write it down” ou “make a note of it”."],["Cool, I'm going to anotate.",0,"“Anotate” não existe; diga “write it down”."]]],
+ ["a","Anyway, back to work! Have a good week."]]},
+{id:"directions",t:"Pedindo informação na rua",lvl:"A2–B1",d:"Encontrar a estação de metrô mais próxima.",lines:[
+ ["a","Yes? Can I help you?"],
+ ["me","Peça licença e pergunte onde fica a estação de metrô mais próxima",[["Excuse me, could you tell me where the nearest subway station is?",1,"Pergunta indireta: o verbo vai para o fim."],["Excuse me, could you tell me where is the nearest subway station?",0,"Em pergunta indireta, o verbo vai no fim: “where the station is”."],["Sorry, where stays the subway station?",0,"“Stay” não é “ficar” no sentido de localização; use “Where is…?”"]]],
+ ["a","Sure. Go straight down this street for two blocks, then turn left at the bank."],
+ ["me","Confirme: duas quadras e à esquerda no banco",[["So, two blocks straight and then left at the bank?",1,"Repetir para confirmar evita erros."],["So, two quarters and left in the bank?",0,"Quadra = “block”; e “at the bank”."],["Two blocks and left on the bank, correct?",0,"Referência de lugar → “at the bank”."]]],
+ ["a","Exactly. The station will be on your right, next to a pharmacy."],
+ ["me","Pergunte se dá para ir a pé",[["Is it within walking distance?",1,"“Within walking distance” = dá para ir a pé."],["Can I go by foot?",0,"A expressão é “on foot”; mais natural: “Can I walk there?”"],["It's possible go walking?",0,"Estrutura: “Is it possible to walk there?”"]]],
+ ["a","Oh yes, it's only about five minutes."],
+ ["me","Agradeça bastante",[["Thanks so much, I really appreciate it.",1,"“I appreciate it” é um agradecimento caloroso."],["Thanks a lot, I appreciate.",0,"“Appreciate” precisa de objeto: “I appreciate it”."],["Very thank you!",0,"Não existe; diga “Thank you very much”."]]],
+ ["a","No problem. Have a good one!"]]},
+{id:"return",t:"Devolvendo um produto",lvl:"B1",d:"Explicar o defeito e pedir reembolso.",lines:[
+ ["a","Hi, how can I help you today?"],
+ ["me","Diga que quer devolver o fone que comprou semana passada",[["Hi, I'd like to return these headphones. I bought them last week.",1,"“I'd like to return…” + past simple."],["Hi, I want to give back this headphone. I have bought it last week.",0,"“Headphones” é plural; “last week” → “I bought”."],["Hi, I come to devolve these headphones.",0,"“Devolve” é falso cognato; use “return”."]]],
+ ["a","Sure. What seems to be the problem with them?"],
+ ["me","Explique que o lado esquerdo parou de funcionar depois de dois dias",[["The left side stopped working after two days.",1,"“Stop” + -ing = parar de."],["The left side stopped to work after two days.",0,"“Stopped to work” = parou PARA trabalhar. Use “stopped working”."],["The left part is not working more.",0,"Use “not… anymore”: “doesn't work anymore”."]]],
+ ["a","I'm sorry to hear that. Do you have the receipt?"],
+ ["me","Diga que está no celular",[["Yes, I've got it here on my phone.",1,"“On my phone”."],["Yes, I have in my cellphone.",0,"Falta o objeto (“it”), e é “on my phone”."],["Yes, is in the phone.",0,"Falta sujeito: “It's on my phone”."]]],
+ ["a","Great. Would you like a refund or an exchange?"],
+ ["me","Peça o reembolso",[["I'd prefer a refund, please.",1,"“Refund” = reembolso."],["I want my money of back.",0,"Diga “I want my money back”, ou melhor, “a refund”."],["I prefer the reimbursement.",0,"“Reimbursement” é para despesas; em loja é “refund”."]]],
+ ["a","No problem. The money will go back to your card within three to five business days."],
+ ["me","Agradeça a ajuda",[["Perfect, thanks for your help.",1,"Natural."],["Perfect, thanks for the help me.",0,"Diga “thanks for helping me” ou “thanks for your help”."],["Perfect, I'm obliged.",0,"Muito formal e antiquado."]]],
+ ["a","You're welcome. Have a nice day!"]]},
+{id:"phone",t:"Remarcando por telefone",lvl:"B1+",d:"Ligar para o dentista e mudar o horário.",lines:[
+ ["a","Good afternoon, Bright Dental, Lisa speaking."],
+ ["me","Diga seu nome (Marco) e que quer remarcar a consulta de quinta",[["Hi Lisa, this is Marco. I'd like to reschedule my appointment on Thursday.",1,"Ao telefone: “This is…”; remarcar = “reschedule”."],["Hi Lisa, I am Marco. I want to remark my consult of Thursday.",0,"Ao telefone use “This is…”; consulta = “appointment”; remarcar = “reschedule”."],["Hi, here speaks Marco. I need to change my consultation.",0,"“Here speaks” não existe: “This is Marco”."]]],
+ ["a","Sure, Marco. What day would work better for you?"],
+ ["me","Pergunte se tem horário na segunda de manhã",[["Do you have anything available on Monday morning?",1,"“Available on Monday morning”."],["Do you have something free in Monday in the morning?",0,"Dias levam “on”: “on Monday morning”."],["Have you any hour on Monday?",0,"Soa estranho; diga “Do you have anything available…?”"]]],
+ ["a","Let me check. I have nine thirty or eleven fifteen."],
+ ["me","Escolha nove e meia",[["Nine thirty works for me.",1,"“Works for me” = está bom para mim."],["Nine thirty is good to me.",0,"Diga “good for me”."],["I stay with nine thirty.",0,"“Fico com” não é “stay”: diga “I'll take nine thirty”."]]],
+ ["a","Great, you're all set for Monday at nine thirty. Is there anything else?"],
+ ["me","Pergunte se deve chegar um pouco antes",[["Should I get there a bit early?",1,"“Get there early”."],["I need arrive before?",0,"Faltam auxiliar e “to”: “Do I need to arrive early?”"],["Must I to arrive early?",0,"Modal sem “to”, e “should” soa mais natural aqui."]]],
+ ["a","Ten minutes early would be perfect. See you on Monday!"]]}
+];
+
 const SESSIONS = {
   m:{name:"Manhã",sub:"Ouvir & Falar",icon:"sun",blocks:[
     {k:"review",t:"Revisão espaçada",d:"Os cartões que vencem hoje — memória ativa, não releitura",min:5},
@@ -940,9 +1056,9 @@ function defaultState(){ return {
   v:1, created:todayKey(), updatedAt:0, xp:0,
   streak:{count:0,best:0,last:null}, freezes:0,
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
-  dict:[], listenLevel:1, recentListen:[], pairs:[],
+  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{},
   stats:{reviews:0,correct:0},
-  settings:{accent:"en-US",voice:"",rate:0.95,newPerDay:5}
+  settings:{accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false}
 };}
 let S = defaultState();
 let userDoc = null, remoteTimer = null, remoteBusy = false, remoteAgain = false, syncState = "local";
@@ -1664,12 +1780,14 @@ function renderPractice(){
   if(sub==="speak") return blockSpeak(shell("Fala livre"),{},Math.floor(Math.random()*SPEAK.length));
   if(sub==="pairs") return blockPairs(shell("Pares mínimos"));
   if(sub==="chat") return blockChat(shell("Conversa com IA"));
+  if(sub==="dialogs") return blockDialogs(shell("Diálogos"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
   view.innerHTML = `<section class="hello"><span class="eyebrow">Treino livre</span><h1>Praticar</h1><p class="muted">Tempo sobrando? Escolha um treino. As sessões diárias continuam sendo o principal.</p></section>
   <div class="stack">
     <div class="tiles">
+      <button class="card tile" data-s="dialogs"><span class="ti">${ICON.chat}</span><h3>Diálogos</h3><p>${DIALOGS.length} situações com roteiro: café, aeroporto, entrevista, médico… Escolha a resposta natural e repita. Sem IA, funciona offline.</p></button>
       <button class="card tile" data-s="chat"><span class="ti">${ICON.chat}</span><h3>Conversa com IA</h3><p>Role-play de situações reais (entrevista, reunião, hotel) com correções na hora.${AI?"":" Disponível quando aberto no Claude."}</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
@@ -1710,7 +1828,7 @@ function blockPairs(el){
   q();
 }
 function blockChat(el){
-  if(!AI){ el.innerHTML = `<div class="card empty"><h3>Disponível dentro do Claude</h3><p>A conversa com IA usa o Claude para responder. Abra este app pelo link do artefato no Claude para usar. Enquanto isso, a fala guiada e o ditado funcionam normalmente.</p></div>`; return; }
+  if(!AI){ el.innerHTML = `<div class="card empty"><h3>Conversa livre só dentro do Claude</h3><p>A conversa livre usa o Claude para responder. Aqui você pode treinar com os diálogos com roteiro, que funcionam sem IA e offline.</p><button class="btn primary" id="todlg">Abrir diálogos</button></div>`; $("#todlg",el).onclick=()=>go("practice","dialogs"); return; }
   let role = null, msgs = [], busy = false, ctrl = null;
   function pickRole(){
     el.innerHTML = `<div class="stack"><p class="muted">Escolha uma situação. A IA faz o outro personagem, mantém as respostas curtas e corrige seus erros em uma linha separada.</p>
@@ -1752,6 +1870,80 @@ Start now in character.`},{role:"assistant",content:role.o}];
     busy = false; if(document.body.contains(el) && role) chat();
   }
   pickRole();
+}
+function dlgTurns(d){ return d.lines.filter(l=>l[0]==="me").length; }
+function blockDialogs(el,startId){
+  function list(){
+    keyH = null;
+    el.innerHTML = `<div class="stack">
+      <p class="muted">Situações reais com roteiro. O outro personagem fala — <b>ouça antes de ler</b>. Na sua vez, escolha a resposta mais natural (as erradas são erros típicos de brasileiros) e repita em voz alta. Funciona sem internet e sem IA.</p>
+      <label class="row small" style="font-weight:400;cursor:pointer"><input type="checkbox" id="dlgsp" ${S.settings.dlgSpeak?"checked":""} style="accent-color:var(--acc)"> Modo desafio: responder em voz alta antes de ver as opções</label>
+      <div class="tiles">${DIALOGS.map((d,i)=>{ const b=S.dialogs[d.id]; return `<button class="card tile" data-d="${i}"><span class="tag">${esc(d.lvl)}</span><h3>${esc(d.t)}</h3><p>${esc(d.d)}</p><span class="small mono ${b==null?"muted":""}">${b==null?"não feito":"melhor: "+b+"/"+dlgTurns(d)}</span></button>`; }).join("")}</div></div>`;
+    $("#dlgsp",el).onchange = e=>{ S.settings.dlgSpeak = e.target.checked; save(); };
+    $$("[data-d]",el).forEach(b=>b.onclick=()=>play(DIALOGS[+b.dataset.d]));
+  }
+  function play(d){
+    let i = 0, right = 0, tries = 0, opts = null, revealed = false, feedback = "", confirm = null;
+    const hist = [];
+    function advance(){
+      let said = "";
+      while(i<d.lines.length && d.lines[i][0]==="a"){ hist.push({r:"ai",t:d.lines[i][1]}); said = d.lines[i][1]; i++; }
+      opts = null; revealed = !S.settings.dlgSpeak; tries = 0; feedback = "";
+      draw(); if(said) speak(said);
+    }
+    function draw(){
+      const turn = i<d.lines.length ? d.lines[i] : null;
+      if(turn && !opts && !confirm) opts = shuffle(turn[2]);
+      const done = hist.filter(h=>h.r==="me").length;
+      el.innerHTML = `<div class="card pad stack">
+        <div class="row between"><button class="btn sm ghost" id="dl">‹ Diálogos</button><span class="mono small muted">${done}/${dlgTurns(d)}</span></div>
+        <h3>${esc(d.t)}</h3>
+        <div class="chat" id="ch">${hist.map(h=>`<div class="msg ${h.r}">${esc(h.t)}${h.r==="ai"?` <button class="icon-btn" style="width:28px;height:28px;margin-left:4px" data-say="${esc(h.t)}" aria-label="Ouvir">${ICON.speaker}</button>`:""}</div>`).join("")}</div>
+        ${confirm?`<p class="note small"><b>Isso!</b> ${esc(confirm[2])}</p><div class="row"><button class="btn sm" data-say="${esc(confirm[0])}">${ICON.speaker} Repetir em voz alta</button><button class="btn sm primary" id="cn">Continuar →</button></div>`
+        :turn?`<div class="stack" style="gap:8px">
+          <span class="eyebrow">Sua vez: ${esc(turn[1])}</span>
+          ${revealed?`<div class="opts">${opts.map((o,j)=>`<button class="opt" data-o="${j}">${esc(o[0])}</button>`).join("")}</div>`
+            :`<p class="note small">Diga sua resposta em voz alta primeiro. Depois compare com as opções.</p><button class="btn primary" id="rv">Já falei — mostrar opções</button>`}
+          <div id="fbk">${feedback}</div></div>`
+        :`<button class="btn primary" id="fin">Ver resultado</button>`}
+      </div>`;
+      const ch = $("#ch",el); ch.scrollTop = ch.scrollHeight;
+      $("#dl",el).onclick = list;
+      const rv = $("#rv",el); if(rv) rv.onclick = ()=>{ revealed = true; draw(); };
+      const fin = $("#fin",el); if(fin) fin.onclick = finish;
+      const cn = $("#cn",el); if(cn) cn.onclick = ()=>{ confirm = null; advance(); };
+      keyH = e=>{ if(confirm && e.key==="Enter") cn && cn.click(); else if(!confirm && revealed && /^[1-3]$/.test(e.key)){ const b=el.querySelector(`[data-o="${+e.key-1}"]`); if(b && !b.disabled) b.click(); } };
+      $$("[data-o]",el).forEach(b=>b.onclick=()=>pick(+b.dataset.o));
+    }
+    function pick(j){
+      const o = opts[j]; tries++;
+      if(o[1]){
+        if(tries===1) right++;
+        hist.push({r:"me",t:o[0]}); speak(o[0]); i++;
+        confirm = o; opts = null; draw();
+      }else{
+        feedback = `<p class="note warn small"><b>Não soa natural:</b> ${esc(o[2])} Tente outra.</p>`;
+        const b = el.querySelector(`[data-o="${j}"]`); b.classList.add("wrong"); b.disabled = true;
+        $("#fbk",el).innerHTML = feedback;
+      }
+    }
+    function finish(){
+      const n = dlgTurns(d), prev = S.dialogs[d.id];
+      S.dialogs[d.id] = Math.max(prev??0, right);
+      addXP(right*2+5,"diálogo");
+      const mine = d.lines.filter(l=>l[0]==="me").map(l=>l[2].find(o=>o[1])[0]);
+      el.innerHTML = `<div class="card pad stack">
+        <h2>${right}/${n} de primeira</h2>
+        <p class="muted">${right===n?"Perfeito! Agora tente o modo desafio: responder em voz alta antes de ver as opções.":"Os erros que você evitou hoje são os que mais aparecem na fala de brasileiros. Repita as frases abaixo até saírem naturalmente."}</p>
+        <span class="eyebrow">Suas falas — ouça e repita</span>
+        <ul class="exlist">${mine.map(x=>`<li>${spk(x)}<span>${esc(x)}</span></li>`).join("")}</ul>
+        <div class="row"><button class="btn" id="ag">Fazer de novo</button><button class="btn primary" id="ls">Outros diálogos</button></div></div>`;
+      $("#ag",el).onclick = ()=>play(d); $("#ls",el).onclick = list;
+    }
+    advance();
+  }
+  const s = startId && DIALOGS.find(d=>d.id===startId);
+  if(s) play(s); else list();
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
