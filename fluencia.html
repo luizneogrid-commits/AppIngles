@@ -237,7 +237,9 @@ details.method[open] summary::after{content:" −"}
 
 /* word list */
 .wlist{display:flex;flex-direction:column}
-.wrow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:10px 4px;border-bottom:1px solid var(--line);align-items:center}
+.wrow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:10px 4px;border:0;border-bottom:1px solid var(--line);align-items:center;background:none;width:100%;text-align:left;cursor:pointer}
+.wrow:hover{background:var(--bg)}
+.wdet{background:var(--bg);border-radius:10px;padding:12px;margin:6px 0}
 .wrow .w{font-weight:700}
 .wrow .p{font-size:.88rem;color:var(--muted)}
 .st{font-size:.74rem;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
@@ -1571,6 +1573,7 @@ function forecast(days){
   Object.keys(S.cards).forEach(id=>{ if(!cardById(id)) return; const d = diffDays(t, S.cards[id].due); if(d<=0) out[0]++; else if(d<days) out[d]++; });
   return out;
 }
+function markKnown(id){ S.cards[id] = {due:addDays(todayKey(),30),ivl:30,ef:2.6,reps:3,lapses:0,added:todayKey(),known:true}; save(); }
 function hardIds(){ return Object.keys(S.cards).filter(id=>cardById(id) && (S.cards[id].lapses||0)>=3).sort((a,b)=>S.cards[b].lapses-S.cards[a].lapses); }
 function stageOf(id){ const c=S.cards[id]; if(!c) return "new"; if(c.ivl>=21) return "mat"; if(c.ivl>=7) return "young"; return "lrn"; }
 const STAGE_LABEL = {new:"Nova",lrn:"Aprendendo",young:"Jovem",mat:"Madura"};
@@ -2197,10 +2200,11 @@ function blockNew(el,opt={}){
           <input type="text" id="own" placeholder="Ex.: ${esc(plain(c.ex))}" autocomplete="off">
         </div>
       </div>
-      <button class="btn primary" id="nxt">Aprendi — próxima →</button></div>`;
+      <div class="row"><button class="btn primary" id="nxt" style="flex:1">Aprendi — próxima →</button><button class="btn" id="knw" title="Pula esta palavra e agenda uma checagem daqui a 30 dias">Já conheço</button></div></div>`;
     speak(c.w);
     const go = ()=>{ const own = $("#own",el).value.trim(); introduce(c.id); if(own) S.cards[c.id].own = own.slice(0,200); addXP(own?4:3); i++; learn(); };
     $("#nxt",el).onclick = go;
+    $("#knw",el).onclick = ()=>{ markKnown(c.id); const nx = nextNewIds(batch.length+1).find(id=>!batch.includes(id)); if(nx) batch[i] = nx; else batch.splice(i,1); toast("Marcada como conhecida — volta para checagem em 30 dias"); learn(); };
     $("#own",el).addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } });
   }
   function quiz(){
@@ -2330,6 +2334,23 @@ function blockWrite(el,opt={}){
 /* ============================================================
    REVIEW TAB
    ============================================================ */
+function wordDetail(c){
+  const st = S.cards[c.id], custom = c.id.startsWith("c");
+  return `<div class="wdet stack" id="wdet" data-id="${c.id}">
+    <p class="ex" lang="en">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>
+    ${st?`<div class="stack" style="gap:4px"><label for="wown">Sua frase com “${esc(c.w)}”</label><div class="row" style="flex-wrap:nowrap"><input type="text" id="wown" value="${esc(st.own||"")}" placeholder="Escreva uma frase sua"><button class="btn sm" id="wsave">Salvar</button></div></div>
+      <p class="small muted">Revisões: ${st.reps||0} · esquecida ${st.lapses||0}× · intervalo ${st.ivl||0} dias${st.known?" · marcada como conhecida":""}</p>`:""}
+    <div class="row">${st?`<button class="btn sm" id="wreset">Reiniciar (voltar a nova)</button>`:`<button class="btn sm" id="wknown">Já conheço</button>`}${custom?`<button class="btn sm ghost" id="wdel" style="color:var(--bad)">Excluir palavra</button>`:""}</div>
+    <div id="wcfm"></div></div>`;
+}
+function wireWordDetail(box, redraw){
+  const id = box.dataset.id;
+  const sv = $("#wsave",box); if(sv) sv.onclick = ()=>{ S.cards[id].own = $("#wown",box).value.trim().slice(0,200); save(); toast("Frase salva"); };
+  const rs = $("#wreset",box); if(rs) rs.onclick = ()=>{ delete S.cards[id]; save(); toast("Voltou para as palavras novas"); redraw(); };
+  const kn = $("#wknown",box); if(kn) kn.onclick = ()=>{ markKnown(id); toast("Marcada como conhecida"); redraw(); };
+  const dl = $("#wdel",box); if(dl) dl.onclick = ()=>{ $("#wcfm",box).innerHTML = `<div class="confirm"><span>Excluir esta palavra e o histórico dela?</span><button class="btn sm" id="wy" style="color:var(--bad)">Excluir</button><button class="btn sm ghost" id="wn">Cancelar</button></div>`;
+    $("#wy",box).onclick = ()=>{ S.custom = S.custom.filter(c=>c.id!==id); delete S.cards[id]; save(); toast("Palavra excluída"); redraw(); }; $("#wn",box).onclick = ()=>$("#wcfm",box).innerHTML=""; };
+}
 function renderReviewTab(){
   if(sub==="run"){
     view.innerHTML = `<div class="sess"><div class="row"><button class="btn ghost" id="bk">‹ Voltar</button></div><div id="block"></div></div>`;
@@ -2376,12 +2397,15 @@ function renderReviewTab(){
     S.custom.push({id:"c"+Date.now().toString(36),w,pt:p,ex:e,tag:"minha palavra"}); save();
     toast("Adicionada — entra nas próximas palavras novas"); renderReviewTab();
   };
+  let openW = null;
   const drawList = ()=>{
     const f = $("#flt").value.toLowerCase();
     const list = ids.filter(c=>!f || c.w.toLowerCase().includes(f) || c.pt.toLowerCase().includes(f))
       .sort((a,b)=>{ const o={lrn:0,young:1,mat:2,new:3}; return o[stageOf(a.id)]-o[stageOf(b.id)]; });
     $("#wl").innerHTML = list.map(c=>{ const s=stageOf(c.id), st=S.cards[c.id];
-      return `<div class="wrow"><div><span class="w">${esc(c.w)}</span> <span class="p">— ${esc(c.pt)}</span></div><span class="st ${s}">${STAGE_LABEL[s]}${st?` · ${st.due<=todayKey()?"hoje":fmtDate(st.due)}`:""}</span></div>`; }).join("") || `<p class="muted small">Nada encontrado.</p>`;
+      return `<button class="wrow" data-w="${c.id}" aria-expanded="${openW===c.id}"><div><span class="w">${esc(c.w)}</span> <span class="p">— ${esc(c.pt)}</span></div><span class="st ${s}">${STAGE_LABEL[s]}${st?` · ${st.due<=todayKey()?"hoje":fmtDate(st.due)}`:""}</span></button>${openW===c.id?wordDetail(c):""}`; }).join("") || `<p class="muted small">Nada encontrado.</p>`;
+    $$("[data-w]").forEach(b=>b.onclick=()=>{ openW = openW===b.dataset.w ? null : b.dataset.w; drawList(); });
+    const wd = $("#wdet"); if(wd) wireWordDetail(wd, drawList);
   };
   $("#flt").addEventListener("input",drawList); drawList();
 }
