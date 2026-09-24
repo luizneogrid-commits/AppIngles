@@ -2845,8 +2845,23 @@ function blockDialogs(el,startId){
 function blockReading(el){
   function list(){
     el.innerHTML = `<div class="stack"><p class="muted">Textos curtos em inglês real. Leia uma vez sem parar, depois toque nas palavras sublinhadas para ver a tradução e responda às perguntas. Ler é o que mais amplia vocabulário em contexto.</p>
+      ${AI?`<div class="card pad stack"><h3>Gerar um texto novo com IA</h3><p class="small muted">No seu nível (${esc(curLevel().t)}), sobre o tema que você quiser, com glossário e perguntas.</p>
+        <div class="row" style="flex-wrap:nowrap"><input type="text" id="aiTopic" placeholder="Ex.: futebol, carreira em TI, viagem ao Japão, culinária" aria-label="Tema do texto"><button class="btn primary" id="aiGen">Gerar</button></div><div id="aiGenOut" role="status" aria-live="polite"></div></div>`:""}
       <div class="tiles">${READINGS.map((r,i)=>[r,i]).sort((a,b)=>isBasic()?0:(isBasicItem(a[0])-isBasicItem(b[0]))).map(([r,i])=>{ const b=S.reading&&S.reading[r.id]; return `<button class="card tile" data-r="${i}"><span class="tag">${esc(r.lvl)}</span><h3>${esc(r.t)}</h3><p>${esc(r.text.slice(0,90))}…</p><span class="small mono ${b==null?"muted":""}">${b==null?"não lido":"acertos: "+b+"/"+r.q.length}</span></button>`; }).join("")}</div></div>`;
     $$("[data-r]",el).forEach(b=>b.onclick=()=>read(READINGS[+b.dataset.r]));
+    const g = $("#aiGen",el); if(g) g.onclick = async ()=>{
+      const topic = ($("#aiTopic",el).value.trim() || "daily life").slice(0,80), out = $("#aiGenOut",el);
+      g.disabled = true; out.innerHTML = loadingHTML("Escrevendo um texto para você…");
+      const words = isBasic() ? "70 to 90 words, A1-A2 level, present and simple past, short sentences" : S.settings.level==="b2" ? "150 to 180 words, B2-C1 level, rich vocabulary" : "120 to 150 words, B1-B2 level";
+      try{
+        const r = await AI.json(`Write an original reading text for a Brazilian learner of English about: "${topic}". Length and level: ${words}. Make it engaging and realistic (a short story, news piece or opinion). Then pick 8 to 10 useful words or expressions that appear EXACTLY in the text and translate them to Brazilian Portuguese as used in context. Then write 3 multiple-choice comprehension questions with 3 options each.
+Return ONLY JSON: {"title":"...","text":"...","gloss":{"expression exactly as in text":"tradução"},"q":[{"question":"...","options":["...","...","..."],"answer":0}]}`,{modelTier:"default"});
+        const text = String(r.text||""); if(!text) throw {code:"x"};
+        const gloss = {}; Object.entries(r.gloss||{}).forEach(([k,v])=>{ if(k && text.toLowerCase().includes(String(k).toLowerCase())) gloss[k] = String(v); });
+        const q = (Array.isArray(r.q)?r.q:[]).filter(x=>x && Array.isArray(x.options) && x.options.length>=2 && x.answer>=0 && x.answer<x.options.length).slice(0,3).map(x=>[String(x.question),x.options.map(String),x.answer]);
+        read({id:"ai-"+Date.now(), t:String(r.title||topic), lvl:curLevel().t.replace(/.*\((.*)\)/,"$1"), text, gloss, q, ai:true});
+      }catch(e){ out.innerHTML = `<p class="note warn small">${e&&e.code&&e.code!=="x"?aiErr(e):"Não consegui gerar o texto agora. Tente outro tema ou de novo em instantes."}</p>`; g.disabled = false; }
+    };
   }
   function read(r){
     const keys = Object.keys(r.gloss).sort((a,b)=>b.length-a.length);
@@ -2863,7 +2878,7 @@ function blockReading(el){
       <div class="row"><button class="btn sm" id="ra">${ICON.speaker} Ouvir o texto</button><button class="btn sm ghost" id="rs">Parar</button></div>
       <p class="reading" lang="en">${html}</p>
       <div id="glbox" role="status" aria-live="polite"></div>
-      <button class="btn primary" id="rq">Responder às perguntas</button>
+      ${r.q.length?`<button class="btn primary" id="rq">Responder às perguntas</button>`:""}
       <div id="rqbox"></div></div>`;
     $("#rl",el).onclick = ()=>{ speechSynthesis && speechSynthesis.cancel(); list(); };
     $("#ra",el).onclick = ()=>speak(r.text, Math.min(S.settings.rate,0.95));
@@ -2880,12 +2895,12 @@ function blockReading(el){
         ga.outerHTML = `<span class="small muted">adicionada</span>`; toast("Entra nas próximas palavras novas");
       };
     });
-    $("#rq",el).onclick = ()=>{
+    if($("#rq",el)) $("#rq",el).onclick = ()=>{
       $("#rq",el).hidden = true;
       let i = 0, right = 0;
       const box = $("#rqbox",el);
       function q(){
-        if(i>=r.q.length){ if(!S.reading) S.reading={}; S.reading[r.id] = Math.max(S.reading[r.id]??0, right); const rr = dayRec(); rr.read = (rr.read||0)+1; addXP(right*3+5,"leitura");
+        if(i>=r.q.length){ if(!S.reading) S.reading={}; if(!r.ai) S.reading[r.id] = Math.max(S.reading[r.id]??0, right); const rr = dayRec(); rr.read = (rr.read||0)+1; addXP(right*3+5,"leitura");
           box.innerHTML = `<div class="note"><b>${right}/${r.q.length} corretas.</b> Agora leia de novo em voz alta junto com o áudio — é leitura e shadowing ao mesmo tempo.</div>`; return; }
         const [qq,o,a] = r.q[i];
         box.innerHTML = `<div class="stack"><span class="eyebrow">Pergunta ${i+1}/${r.q.length}</span><p class="qsent">${esc(qq)}</p><div class="opts">${o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join("")}</div><div id="rf" role="status" aria-live="polite"></div></div>`;
