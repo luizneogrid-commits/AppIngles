@@ -307,6 +307,11 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .res:last-child{border-bottom:0}
 .res a{color:var(--acc);text-decoration:none}
 .res a:hover{text-decoration:underline}
+.build-line{min-height:56px;padding:10px;border:2px dashed var(--line);border-radius:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.build-bank{display:flex;flex-wrap:wrap;gap:8px}
+.wtile{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer;box-shadow:0 2px 0 var(--line)}
+.wtile.on{background:var(--acc-soft);border-color:var(--acc)}
+.wtile.ghost{opacity:.25;box-shadow:none;cursor:default}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2541,6 +2546,7 @@ function renderPractice(){
   if(sub==="ear") return blockEarGame(shell("Ouça e entenda"));
   if(sub==="test") return blockLevelTest(shell("Teste de nível"));
   if(sub==="world") return blockResources(shell("Inglês no mundo real"));
+  if(sub==="build") return blockBuild(shell("Monte a frase"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -2551,6 +2557,7 @@ function renderPractice(){
       <button class="card tile" data-s="chat"><span class="ti">${ICON.chat}</span><h3>Conversa com IA</h3><p>Role-play de situações reais (entrevista, reunião, hotel) com correções na hora.${AI?"":" Disponível quando aberto no Claude."}</p></button>
       <button class="card tile" data-s="reading"><span class="ti">${ICON.book}</span><h3>Leitura</h3><p>${READINGS.length} textos curtos com tradução ao toque, áudio e perguntas. Mande palavras novas para o seu baralho.</p></button>
       <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>Questões de gramática, falas de diálogo e correções da IA no seu diário voltam aqui até você acertar 2 vezes seguidas.</p></button>
+      <button class="card tile" data-s="build"><span class="ti">${ICON.pen}</span><h3>Monte a frase</h3><p>Ouça e toque nas palavras na ordem certa. Treina a estrutura da frase em inglês, sem digitar.</p></button>
       <button class="card tile" data-s="ear"><span class="ti">${ICON.ear}</span><h3>Ouça e entenda</h3><p>Só áudio: reconheça as palavras do seu baralho de ouvido, sozinhas ou dentro da frase.</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
@@ -2856,6 +2863,44 @@ function blockResources(el){
       ${RESOURCES.filter(r=>r.band===b).map(r=>`<div class="res"><div class="row between" style="flex-wrap:nowrap"><a href="${r.u}" target="_blank" rel="noopener noreferrer"><b>${esc(r.t)}</b> ↗</a><span class="tag">${esc(r.k)}</span></div><span class="small muted">${esc(r.d)}</span></div>`).join("")}
     </div>`).join("")}
     <p class="small muted">Links externos abrem em outra aba. Nenhum deles tem relação com este app.</p></div>`;
+}
+function blockBuild(el){
+  const lvl = S.listenLevel ?? 1, N = 8;
+  const pool = shuffle(LISTEN.filter(x=>x[0]===lvl || x[0]===Math.max(0,lvl-1))).slice(0,N);
+  let i = 0, right = 0;
+  function q(){
+    if(i>=pool.length){ addXP(right*3,"frases"); el.innerHTML = `<div class="card empty"><h3>${right}/${pool.length} frases montadas de primeira</h3><p>Ordem das palavras é um dos erros mais comuns de brasileiros (adjetivo antes do substantivo, advérbio no lugar certo, pergunta com auxiliar). Repita as frases em voz alta.</p><button class="btn primary" id="ag">Mais 8 frases</button></div>`; $("#ag",el).onclick=()=>blockBuild(el); return; }
+    const item = pool[i], words = item[1].split(" ");
+    let tiles = shuffle(words.map((w,k)=>({w,k}))); if(tiles.every((t,k)=>t.k===k) && words.length>1) tiles.reverse();
+    let picked = [], mistakes = 0;
+    function draw(){
+      el.innerHTML = `<div class="card pad stack">
+        <div class="row between"><span class="eyebrow">Monte a frase · ${i+1}/${pool.length}</span><button class="btn sm" id="pl">${ICON.speaker} Ouvir</button></div>
+        ${item[2]?`<p class="muted">${esc(item[2])}</p>`:`<p class="muted small">Ouça e toque nas palavras na ordem certa.</p>`}
+        <div class="build-line" lang="en" aria-label="Sua frase">${picked.map((t,k)=>`<button class="wtile on" data-back="${k}">${esc(t.w)}</button>`).join("") || '<span class="muted small">toque nas palavras abaixo</span>'}</div>
+        <div class="build-bank" lang="en">${tiles.map((t,k)=>picked.includes(t)?`<span class="wtile ghost">${esc(t.w)}</span>`:`<button class="wtile" data-t="${k}">${esc(t.w)}</button>`).join("")}</div>
+        <div class="row"><button class="btn primary" id="bchk" ${picked.length===words.length?"":"disabled"}>Conferir</button><button class="btn ghost sm" id="bclr">Limpar</button></div>
+        <div id="bf" role="status" aria-live="polite"></div></div>`;
+      $("#pl",el).onclick = ()=>speak(item[1]);
+      $$("[data-t]",el).forEach(b=>b.onclick=()=>{ picked.push(tiles[+b.dataset.t]); draw(); });
+      $$("[data-back]",el).forEach(b=>b.onclick=()=>{ picked.splice(+b.dataset.back,1); draw(); });
+      $("#bclr",el).onclick = ()=>{ picked = []; draw(); };
+      $("#bchk",el).onclick = check;
+    }
+    function check(){
+      const got = picked.map(t=>t.w).join(" ");
+      if(got===item[1]){ if(!mistakes) right++; speak(item[1]);
+        $("#bf",el).innerHTML = `<p class="note small"><b>Isso!</b> Agora repita a frase em voz alta.</p><button class="btn primary" id="qnx">Próxima →</button>`;
+        $$(".wtile,#bchk,#bclr",el).forEach(b=>b.disabled=true); $("#qnx",el).onclick = ()=>{ i++; q(); };
+      }else{ mistakes++;
+        const firstBad = picked.findIndex((t,k)=>t.w!==words[k]);
+        $("#bf",el).innerHTML = `<p class="note warn small">Quase. A partir da palavra ${firstBad+1} a ordem muda. ${mistakes>=2?"Resposta: <b lang=\"en\">"+esc(item[1])+"</b>":"Ouça de novo e tente."}</p>`;
+        if(mistakes>=2){ $("#bf",el).insertAdjacentHTML("beforeend",`<button class="btn primary" id="qnx">Próxima →</button>`); $("#qnx",el).onclick = ()=>{ i++; q(); }; }
+      }
+    }
+    draw(); setTimeout(()=>speak(item[1]),200);
+  }
+  q();
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
