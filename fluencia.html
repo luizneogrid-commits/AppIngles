@@ -274,6 +274,11 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .reading{font-size:1.12rem;line-height:1.8;max-width:65ch}
 .gl{font:inherit;color:inherit;background:none;border:0;padding:0;border-bottom:2px dotted var(--acc);cursor:pointer}
 .gl:hover{background:var(--acc-soft)}
+.typed{padding:6px 12px;border-radius:8px;font-size:.95rem}
+.typed.exact{background:var(--ok-soft);color:var(--ok)}
+.typed.close{background:var(--sun-soft);color:var(--warn)}
+.typed.wrong{background:var(--bad-soft);color:var(--bad)}
+.grades button.sug{outline:3px solid currentColor;outline-offset:-3px}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1500,6 +1505,16 @@ function schedule(st,q){
   }
   return {ivl,ef,reps,lapses};
 }
+function lev(a,b){ const m=a.length,n=b.length; if(!m) return n; if(!n) return m; let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const cur=[i]; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur; } return prev[n]; }
+function checkTyped(guess,target){
+  const g = norm(guess).join(" "), t = norm(target).join(" ");
+  if(!g) return null;
+  const d = lev(g,t), tol = Math.max(1, Math.floor(t.length/6));
+  if(d===0) return {v:"exact",label:"Exato!",grade:2};
+  if(d<=tol) return {v:"close",label:"Quase — confira a grafia",grade:1};
+  return {v:"wrong",label:"Diferente da resposta",grade:0};
+}
 function ivlLabel(d){ return d<30? d+"d" : d<365? Math.round(d/30)+"m" : "1a"; }
 function dueIds(){ const t=todayKey(); return Object.keys(S.cards).filter(id=>cardById(id) && S.cards[id].due<=t); }
 function introduce(id){ if(S.cards[id]) return; S.cards[id]={due:addDays(todayKey(),1),ivl:0,ef:2.5,reps:0,lapses:0,added:todayKey()}; dayRec().newIds.push(id); }
@@ -1837,7 +1852,7 @@ const BLOCKS = {review:blockReview, listen:blockListen, speak:blockSpeak, "new":
 
 /* ---------- 1. Spaced repetition ---------- */
 function blockReview(el,opt={}){
-  let queue = shuffle(opt.ids || dueIds()), extra = !!opt.ids, done = 0, total, cur, showing, prod;
+  let queue = shuffle(opt.ids || dueIds()), extra = !!opt.ids, done = 0, total, cur, showing, prod, typed = null, guessTxt = "";
   if(!queue.length && !opt.ids){
     const known = Object.keys(S.cards).filter(cardById);
     if(known.length){
@@ -1856,7 +1871,7 @@ function blockReview(el,opt={}){
       el.innerHTML = `<div class="card empty"><h3>Revisão concluída</h3><p>${done} ${done===1?"cartão revisado":"cartões revisados"}. ${opt.inSession?"Siga para o próximo bloco quando quiser.":"Volte amanhã: os intervalos já foram ajustados."}</p></div>`;
       return;
     }
-    cur = queue.shift(); showing = false;
+    cur = queue.shift(); showing = false; typed = null; guessTxt = "";
     const st = S.cards[cur]; prod = (st.reps||0)>=2 && Math.random()<0.5;
     draw();
   }
@@ -1866,9 +1881,9 @@ function blockReview(el,opt={}){
     const face = prod
       ? `<span class="eyebrow">Como se diz em inglês?</span><div class="prompt-pt">${esc(c.pt)}</div><p class="ex">${blanked(c.ex)}</p>${showing?"":`<input type="text" id="guess" placeholder="Pense ou digite (opcional)" autocomplete="off" style="max-width:340px">`}`
       : `<div class="word">${esc(c.w)} ${spk(c.w)}</div><p class="ex">${bolded(c.ex)}</p><span class="muted small">O que significa? Pense antes de virar.</span>`;
-    const back = showing ? `<div class="back">${prod?`<div class="word">${esc(c.w)} ${spk(c.w)}</div>`:`<div class="pt">${esc(c.pt)}</div>`}<p class="ex">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>${st.own?`<p class="small"><span class="eyebrow">Sua frase</span><br>${esc(st.own)}</p>`:""}${(st.lapses||0)>=3?`<span class="chip" style="background:var(--bad-soft);color:var(--bad)">palavra difícil · crie uma imagem mental ou frase absurda para ela</span>`:""}</div>` : "";
+    const back = showing ? `<div class="back">${prod?`<div class="word">${esc(c.w)} ${spk(c.w)}</div>`:`<div class="pt">${esc(c.pt)}</div>`}<p class="ex">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>${typed?`<p class="typed ${typed.v}">Você escreveu: <b>${esc(guessTxt)}</b> — ${typed.label}</p>`:""}${st.own?`<p class="small"><span class="eyebrow">Sua frase</span><br>${esc(st.own)}</p>`:""}${(st.lapses||0)>=3?`<span class="chip" style="background:var(--bad-soft);color:var(--bad)">palavra difícil · crie uma imagem mental ou frase absurda para ela</span>`:""}</div>` : "";
     const grades = showing
-      ? `<div class="grades">${["De novo","Difícil","Bom","Fácil"].map((l,q)=>`<button class="g${q}" data-q="${q}">${l}<small>${extra?"—":ivlLabel(schedule(st,q).ivl)}</small><span class="kbd">${q+1}</span></button>`).join("")}</div>`
+      ? `<div class="grades">${["De novo","Difícil","Bom","Fácil"].map((l,q)=>`<button class="g${q} ${typed&&typed.grade===q?"sug":""}" data-q="${q}" ${typed&&typed.grade===q?'title="Sugestão com base no que você digitou"':""}>${l}<small>${extra?"—":ivlLabel(schedule(st,q).ivl)}</small><span class="kbd">${q+1}</span></button>`).join("")}</div>`
       : `<button class="btn primary" id="rev" style="width:100%">Mostrar resposta <span class="kbd">espaço</span></button>`;
     el.innerHTML = `<div class="stack">
       <div class="row between small muted"><span>${queue.length+1} restantes${extra?" · treino extra":""}</span><span class="tag">${esc(c.tag||"")}</span></div>
@@ -1883,7 +1898,7 @@ function blockReview(el,opt={}){
       if(prod) speak(c.w);
     }
   }
-  function reveal(){ const g=$("#guess",el); if(g && g.value.trim()){ const ok = g.value.trim().toLowerCase().replace(/[^a-z' -]/g,"")===cardById(cur).w.toLowerCase(); toast(ok?"Acertou na escrita!":"Compare com a resposta"); } showing = true; draw(); }
+  function reveal(){ const g=$("#guess",el); if(g && g.value.trim()){ guessTxt = g.value.trim(); typed = checkTyped(guessTxt, cardById(cur).w); } showing = true; draw(); }
   function grade(q){
     if(!extra){ const st=S.cards[cur]; const n=schedule(st,q); Object.assign(st,n,{due:addDays(todayKey(),n.ivl)}); S.stats.reviews++; if(q>0) S.stats.correct++; }
     if(q===0) queue.push(cur); else done++;
