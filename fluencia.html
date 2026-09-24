@@ -33,6 +33,7 @@
 }
 .m-mode{--acc:var(--sun); --acc-soft:var(--sun-soft)}
 .n-mode{--acc:var(--moon); --acc-soft:var(--moon-soft)}
+.x-mode{--acc:var(--ok); --acc-soft:var(--ok-soft)}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;margin:0}
@@ -1044,8 +1045,13 @@ const SESSIONS = {
   n:{name:"Noite",sub:"Aprender & Escrever",icon:"moon",blocks:[
     {k:"new",t:"Palavras novas",d:"Palavras novas em contexto + mini-quiz",min:5},
     {k:"grammar",t:"Gramática",d:"Micro-aula focada em erros de brasileiros",min:5},
-    {k:"write",t:"Diário em inglês",d:"Escreva usando as palavras de hoje e receba correção",min:5}]}
+    {k:"write",t:"Diário em inglês",d:"Escreva usando as palavras de hoje e receba correção",min:5}]},
+  x:{name:"Expressa",sub:"Dia corrido",icon:"flame",blocks:[
+    {k:"review",t:"Revisão rápida",d:"Os cartões que vencem hoje",min:3},
+    {k:"listen",t:"Um ditado",d:"Ouvir, escrever e repetir",min:2}]}
 };
+function blocksOf(rec,k){ if(!rec[k]) rec[k] = new Array(SESSIONS[k].blocks.length).fill(0); return rec[k]; }
+function daySessions(r){ if(!r) return 0; const n = (r.m.every(Boolean)?1:0)+(r.n.every(Boolean)?1:0); return n || (r.x && r.x.every(Boolean) ? 1 : 0); }
 
 const ICON = {
  sun:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2 6 6M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>',
@@ -1287,7 +1293,7 @@ setInterval(()=>{
 function weekStats(offset){
   const t = todayKey(); let min=0, sess=0, xp=0, words=0, days=0;
   for(let k=0;k<7;k++){ const r = S.days[addDays(t,-(k+offset))]; if(!r) continue;
-    const n = (r.m.every(Boolean)?1:0)+(r.n.every(Boolean)?1:0);
+    const n = daySessions(r);
     min += (r.sec||0)/60; sess += n; xp += r.xp||0; words += (r.newIds||[]).length; if(n) days++; }
   return {min:Math.round(min),sess,xp,words,days};
 }
@@ -1387,6 +1393,7 @@ function renderToday(){
   </section>
   <div class="stack">
     <div class="grid2">${card("m")}${card("n")}</div>
+    ${!doneM && !doneN && !(rec.x && rec.x.every(Boolean)) ? `<div class="row between card pad x-mode" style="padding-block:12px"><span><b>Dia corrido?</b> <span class="muted">Sessão expressa de 5 min: revisão + um ditado. Mantém a sequência.</span></span><button class="btn" data-start="x">Fazer 5 min</button></div>` : ""}
     <div class="statrow">
       <div class="card stat"><span class="v">${streak}</span><span class="l">dias seguidos${S.freezes?` · ${S.freezes} proteção${S.freezes>1?"ões":""}`:""}</span></div>
       <div class="card stat"><span class="v">${due}</span><span class="l">cartões para revisar</span></div>
@@ -1421,13 +1428,13 @@ function renderToday(){
    SESSION PLAYER
    ============================================================ */
 function startSession(kind){
-  const r = dayRec()[kind]; let i = r.findIndex(x=>!x); if(i<0) i=0;
+  const r = blocksOf(dayRec(),kind); let i = r.findIndex(x=>!x); if(i<0) i=0;
   session = {kind,i,done:false};
   go("session");
 }
 function renderSession(){
   if(!session){ currentTab="today"; return renderToday(); }
-  const def = SESSIONS[session.kind], rec = dayRec();
+  const def = SESSIONS[session.kind], rec = dayRec(); blocksOf(rec,session.kind);
   if(session.done) return renderSessionDone();
   const b = def.blocks[session.i];
   view.innerHTML = `<div class="sess">
@@ -1458,7 +1465,7 @@ function startTimer(sec){
   },1000);
 }
 function completeBlock(){
-  const k = session.kind, rec = dayRec(), def = SESSIONS[k];
+  const k = session.kind, rec = dayRec(), def = SESSIONS[k]; blocksOf(rec,k);
   const wasDone = rec[k].every(Boolean);
   rec[k][session.i] = 1;
   if(rec[k].every(Boolean)){
@@ -1472,12 +1479,12 @@ function completeBlock(){
 }
 function renderSessionDone(){
   const k = session.kind, def = SESSIONS[k], rec = dayRec(), other = k==="m"?"n":"m";
-  const otherDone = rec[other].every(Boolean);
+  const otherDone = k==="x" ? false : rec[other].every(Boolean);
   view.innerHTML = `<div class="sess"><div class="card pad empty" style="padding-block:40px">
     <div class="sess-ico" style="width:64px;height:64px">${ICON[def.icon]}</div>
-    <h1>Sessão da ${def.name.toLowerCase()} concluída</h1>
+    <h1>${k==="x"?"Sessão expressa concluída":"Sessão da "+def.name.toLowerCase()+" concluída"}</h1>
     <p>+20 XP de bônus. Você tem <b>${effectiveStreak()}</b> ${effectiveStreak()===1?"dia":"dias"} de sequência e <b>${rec.xp} XP</b> hoje.</p>
-    <p>${otherDone?"Manhã e noite completas. Amanhã tem mais — a revisão da manhã vai trazer as palavras de hoje de volta.":k==="m"?"À noite: palavras novas, uma micro-aula de gramática e o seu diário.":"Amanhã de manhã a revisão espaçada vai trazer de volta as palavras de hoje. Dormir entre aprender e revisar ajuda a memória."}</p>
+    <p>${k==="x"?"Sequência mantida! Nos dias normais, as sessões de 15 minutos rendem muito mais — mas 5 minutos é infinitamente melhor que zero.":otherDone?"Manhã e noite completas. Amanhã tem mais — a revisão da manhã vai trazer as palavras de hoje de volta.":k==="m"?"À noite: palavras novas, uma micro-aula de gramática e o seu diário.":"Amanhã de manhã a revisão espaçada vai trazer de volta as palavras de hoje. Dormir entre aprender e revisar ajuda a memória."}</p>
     <button class="btn primary" id="home">Voltar para Hoje</button>
   </div></div>`;
   $("#home").onclick = ()=>{ session=null; go("today"); };
@@ -2136,7 +2143,7 @@ function renderProgress(){
   const t = todayKey(), tDate = keyToDate(t), start = addDays(t, -(7*11 + tDate.getDay()));
   let cells = "";
   for(let i=0;i<84;i++){ const k = addDays(start,i); if(k>t){ cells += `<i style="visibility:hidden"></i>`; continue; }
-    const r = S.days[k], n = r ? (r.m.every(Boolean)?1:0)+(r.n.every(Boolean)?1:0) : 0;
+    const r = S.days[k], n = daySessions(r);
     cells += `<i class="${n?"h"+n:""} ${k===t?"today":""}" title="${fmtDate(k)}: ${n} ${n===1?"sessão":"sessões"}${r&&r.sec?", "+Math.round(r.sec/60)+" min":""}"></i>`; }
   const acc = S.stats.reviews ? Math.round(S.stats.correct/S.stats.reviews*100) : 0;
   const spark = ()=>{
