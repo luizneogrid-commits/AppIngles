@@ -1308,7 +1308,49 @@ const DIALOGS = [
  ["me","Escolha nove e meia",[["Nine thirty works for me.",1,"“Works for me” = está bom para mim."],["Nine thirty is good to me.",0,"Diga “good for me”."],["I stay with nine thirty.",0,"“Fico com” não é “stay”: diga “I'll take nine thirty”."]]],
  ["a","Great, you're all set for Monday at nine thirty. Is there anything else?"],
  ["me","Pergunte se deve chegar um pouco antes",[["Should I get there a bit early?",1,"“Get there early”."],["I need arrive before?",0,"Faltam auxiliar e “to”: “Do I need to arrive early?”"],["Must I to arrive early?",0,"Modal sem “to”, e “should” soa mais natural aqui."]]],
- ["a","Ten minutes early would be perfect. See you on Monday!"]]}
+ ["a","Ten minutes early would be perfect. See you on Monday!"]]},
+{id:"pharmacy",t:"Na farmácia",lvl:"A2",d:"Pedir algo para dor de cabeça e entender como tomar.",lines:[
+ ["a","Hi there. How can I help you?"],
+ ["me","Diga que está com dor de cabeça",[["Hi. I have a headache.",1,"“Have a headache” = estar com dor de cabeça."],["Hi. I am with headache.",0,"Tradução de “estou com”. Use “I have a headache”."],["Hi. My head is hurting me.",0,"Compreensível, mas o natural é “I have a headache”."]]],
+ ["a","I'm sorry to hear that. How long have you had it?"],
+ ["me","Diga que desde hoje de manhã",[["Since this morning.",1,"“Since” + ponto no tempo."],["For this morning.",0,"Ponto no tempo usa “since”, não “for”."],["From this morning ago.",0,"“Ago” não combina aqui; diga “since this morning”."]]],
+ ["a","OK. You can take these painkillers. Are you allergic to anything?"],
+ ["me","Diga que não, não tem alergias",[["No, I'm not allergic to anything.",1,"“Allergic to”."],["No, I don't have allergic.",0,"“Allergic” é adjetivo: “I'm not allergic” ou “I don't have any allergies”."],["No, I'm not allergy.",0,"Use “I'm not allergic to anything”."]]],
+ ["a","Great. Take one tablet every eight hours, with water."],
+ ["me","Pergunte se pode tomar de estômago vazio",[["Can I take it on an empty stomach?",1,"“On an empty stomach” = de estômago vazio."],["Can I take it with the stomach empty?",0,"A expressão fixa é “on an empty stomach”."],["I can take without eating?",0,"Pergunta precisa de inversão: “Can I take it without eating?”"]]],
+ ["a","It's better to eat something first. That'll be nine dollars."],
+ ["me","Pague e agradeça",[["Here you go. Thanks for your help.",1,"“Here you go” ao entregar o dinheiro ou cartão."],["Take. Thank you for the help me.",0,"Use “Here you go” e “thanks for your help”."],["Here is. Thanks.",0,"Falta o sujeito: “Here it is” ou “Here you go”."]]],
+ ["a","You're welcome. I hope you feel better soon!"]]},
+{id:"complaint",t:"Reclamando no restaurante",lvl:"B1",d:"O prato veio errado e frio — resolva com educação.",lines:[
+ ["a","Is everything OK with your meal?"],
+ ["me","Diga, com educação, que não pediu esse prato",[["Actually, I'm afraid this isn't what I ordered.",1,"“I'm afraid…” suaviza a reclamação — muito britânico e educado."],["No. This is not my order, you made a mistake.",0,"Direto demais; soa agressivo em inglês."],["Actually, I didn't asked this.",0,"Depois de “didn't”, verbo base: “I didn't ask for this” / “order this”."]]],
+ ["a","Oh, I'm so sorry! What did you order?"],
+ ["me","Diga que pediu o salmão grelhado",[["I ordered the grilled salmon.",1,"Past simple de “order”."],["I have ordered the grilled salmon.",0,"Ação terminada num momento definido → past simple."],["I asked the salmon grilled.",0,"Adjetivo antes do substantivo (“grilled salmon”) e “asked for”."]]],
+ ["a","I'll get that for you right away. Is there anything else?"],
+ ["me","Diga que as batatas também estão frias",[["Also, the fries are a bit cold.",1,"“A bit” suaviza a crítica."],["Also, the fries is cold.",0,"“Fries” é plural → “are”."],["Also, the potatoes are very frozen.",0,"“Frozen” = congelado. Frio aqui é “cold”."]]],
+ ["a","I'm really sorry about that. We'll bring you fresh ones, and the dessert is on the house."],
+ ["me","Agradeça pela gentileza",[["That's very kind of you, thank you.",1,"“That's very kind of you” é o agradecimento padrão."],["You are very kind with me, thanks.",0,"“Kind to me”, não “with”."],["Thanks, is very nice of you.",0,"Falta o sujeito: “It's very nice of you”."]]],
+ ["a","It's the least we can do. Your salmon will be out in ten minutes."]]},
+{id:"apartment",t:"Visitando um apartamento",lvl:"B1",d:"Perguntar sobre aluguel, contas e contrato.",lines:[
+ ["a","Welcome! So, this is the apartment. What do you think so far?"],
+ ["me","Diga que é mais espaçoso do que esperava",[["It's more spacious than I expected.",1,"Comparativo + “than I expected”."],["It's more spacious than I was expecting it.",0,"Sobrou o “it”: “than I was expecting”."],["It's more big than I thought.",0,"Adjetivo curto: “bigger”, nunca “more big”."]]],
+ ["a","Great! Any questions?"],
+ ["me","Pergunte se as contas estão incluídas no aluguel",[["Are utilities included in the rent?",1,"“Utilities” = contas de água, luz, gás."],["The bills are inclusive in the rent?",0,"Use inversão e “included”: “Are the bills included in the rent?”"],["Is included the bills in the rent?",0,"Ordem: “Are the bills included…?”"]]],
+ ["a","Water is included, but electricity and internet are not."],
+ ["me","Pergunte quanto tempo dura o contrato",[["How long is the lease?",1,"“Lease” = contrato de aluguel."],["How much time is the contract?",0,"Duração: “How long…?”; e contrato de aluguel é “lease”."],["The contract is for how long time?",0,"Diga “How long is the lease?”"]]],
+ ["a","It's a twelve-month lease, and we ask for one month's deposit."],
+ ["me","Diga que gostou e quer pensar até amanhã",[["I really like it. Can I let you know by tomorrow?",1,"“Let you know” = te dar uma resposta."],["I like very much. I will think and tell you tomorrow.",0,"“Like” pede objeto e advérbio no fim: “I like it very much”."],["I liked a lot. I answer you tomorrow.",0,"Use “I really like it” e “I'll let you know tomorrow”."]]],
+ ["a","Of course. Just send me a message, but don't wait too long. There's a lot of interest."]]},
+{id:"raise",t:"Pedindo um aumento",lvl:"B1+",d:"Conversa com a gestora sobre salário, com argumentos.",lines:[
+ ["a","Hi, come in. You wanted to talk about something?"],
+ ["me","Diga que queria conversar sobre seu salário",[["Yes, thanks for your time. I'd like to discuss my salary.",1,"“Discuss” não leva “about”."],["Yes. I want to discuss about my salary.",0,"“Discuss” é transitivo direto: “discuss my salary”."],["Yes. I need more money.",0,"Direto demais para uma negociação."]]],
+ ["a","OK, I'm listening."],
+ ["me","Mencione que assumiu mais responsabilidades no último ano",[["Over the past year, I've taken on a lot more responsibility.",1,"Present perfect para um período até agora; “take on” = assumir."],["In the last year, I took more responsibilities.",0,"Período até agora → present perfect; e “take on” soa mais natural."],["Since one year I have more responsibilities.",0,"“Since one year” não existe; use “for a year” ou “over the past year”."]]],
+ ["a","That's true. You've led two major projects."],
+ ["me","Diga que, com base nisso, acredita que um reajuste de 10% seria justo",[["Based on that, I believe a ten percent raise would be fair.",1,"“Raise” = aumento; “would be fair” soa firme e educado."],["Based on this, I deserve ten percent more of salary.",0,"Soa exigente e a estrutura não é natural; use “a ten percent raise”."],["So I think is fair ten percent more.",0,"Falta sujeito e a ordem está errada."]]],
+ ["a","I appreciate you bringing this up. I can't promise ten percent, but let me talk to HR."],
+ ["me","Agradeça e pergunte quando terá uma resposta",[["Thank you. When do you think you'll have an answer?",1,"Pergunta indireta e educada sobre prazo."],["Thanks. When you will have an answer?",0,"Pergunta direta precisa de inversão: “When will you have…?”"],["Thanks. Until when you answer me?",0,"Use “When do you think you'll have an answer?”"]]],
+ ["a","I should know by the end of next week. Thanks for being so well prepared."]]}
 ];
 
 // Leituras graduadas: texto, glossário (toque para traduzir) e perguntas [pergunta, opções, índice correto]
