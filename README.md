@@ -29,6 +29,9 @@ Extras:
 - Tela de boas-vindas com **5 níveis** (A1 a B2), sotaque e horários; **teste de nível** mensal com histórico
 - **Leituras graduadas** com tradução ao toque, **Ouça e entenda** (vocabulário só de ouvido) e **checagem de pronúncia** por reconhecimento de fala
 - Revisão com **desfazer**, correção tolerante a erros de digitação, **previsão de 7 dias** e limite automático de palavras novas quando há acúmulo
+- **Já conheço** para pular palavras, detalhe editável de cada palavra, **gramática com revisão espaçada** (2, 7, 21, 60 dias)
+- Análise **Onde focar agora**, recapitulação do dia, correções da IA no deck de erros e **falar a resposta** nos diálogos
+- Sessões de **10, 15 ou 20 min**, **Inglês no mundo real** (recursos gratuitos por nível), lembrete de backup, exportação do diário e **atalhos de teclado** (tecla ?)
 - Diagnóstico de voz em inglês, acessibilidade para leitores de tela e **imagem de progresso** para compartilhar
 
 **Conteúdo:** 312 palavras e expressões (95 básicas + phrasal verbs, collocations, falsos cognatos, idioms, conectores), 30 aulas de gramática (9 para iniciantes), 101 frases de ditado em 4 níveis (as de iniciante com tradução), 62 temas de fala, 72 temas de escrita, 12 diálogos com roteiro e 8 leituras graduadas.
