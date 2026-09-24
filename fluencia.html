@@ -68,6 +68,7 @@ p{margin:0}
 .tabs button{border:0;background:none;padding:8px 12px 10px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
 .tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--acc)}
 .tabs .ti{display:none}
+h1:focus,h2:focus,h3:focus{outline:none}
 /* mobile: barra de abas inferior, alvos de toque maiores */
 @media (max-width:640px){
   body{font-size:17px}
@@ -1551,7 +1552,7 @@ function blockMistakes(el){
       ${it.ctx?`<div class="msg ai">${esc(it.ctx)} ${spk(it.ctx)}</div>`:""}
       <p class="qsent">${it.prompt}</p>
       <div class="opts">${opts.map((o,j)=>`<button class="opt" data-j="${j}">${esc(o[0])}</button>`).join("")}</div>
-      <div id="mf"></div></div>`;
+      <div id="mf" role="status" aria-live="polite"></div></div>`;
     $$(".opt",el).forEach(b=>b.onclick=()=>{
       const o = opts[+b.dataset.j], ok = !!o[1];
       $$(".opt",el).forEach(x=>{ x.disabled = true; if(opts[+x.dataset.j][1]) x.classList.add("right"); });
@@ -1585,6 +1586,14 @@ function pickVoice(){
   const pool = same.length?same:voices;
   return pool.find(v=>/natural|neural|online|google/i.test(v.name)) || pool[0] || null;
 }
+const VOICE_HELP = "<b>Android:</b> Configurações → Sistema → Idiomas → Saída de texto para fala → Mecanismo do Google → instalar voz em inglês. <b>iPhone:</b> Ajustes → Acessibilidade → Conteúdo Falado → Vozes → Inglês. <b>Windows:</b> Configurações → Hora e idioma → Fala → Adicionar vozes → English. Depois, feche e abra o app.";
+let voiceNoteHidden = false, voicesChecked = false;
+function voiceStatus(){
+  if(!("speechSynthesis" in window)) return {ok:false,msg:"Este navegador não tem voz sintetizada. Use Chrome, Edge ou Safari."};
+  if(!voices.length) return {ok:false,msg:"Nenhuma voz em inglês instalada neste aparelho — o áudio do app não vai funcionar direito."};
+  const v = pickVoice(); return {ok:true,msg:"Voz em uso: "+(v?v.name+" ("+v.lang+")":"padrão do sistema")};
+}
+setTimeout(()=>{ voicesChecked = true; loadVoices(); if(currentTab==="today" && !voiceStatus().ok) render(); }, 1800);
 function speak(text,rate){
   if(!("speechSynthesis" in window)){ toast("Este navegador não tem voz sintetizada"); return; }
   speechSynthesis.cancel();
@@ -1683,7 +1692,9 @@ function go(tab,subv=null){
   currentTab = tab; sub = subv;
   $$("#tabs button").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===(tab==="session"?"today":tab)?"page":"false"));
   render(); window.scrollTo({top:0});
+  if(navCount++){ const h = view.querySelector("h1,h2,h3"); if(h){ h.setAttribute("tabindex","-1"); h.focus({preventScroll:true}); } }
 }
+let navCount = 0;
 function render(){
   document.body.classList.remove("m-mode","n-mode");
   if(currentTab==="session" && session) document.body.classList.add(session.kind+"-mode");
@@ -1723,7 +1734,9 @@ function renderToday(){
   const wk = weekStats(0), pw = weekStats(7);
   const trend = (a,b)=> b===0 ? "" : `<span class="small ${a>=b?"up":"down"}">${a>=b?"▲":"▼"} ${Math.abs(Math.round((a-b)/b*100))}%</span>`;
   const atRisk = streak>0 && h>=18 && !doneM && !doneN && !rec.m.some(Boolean) && !rec.n.some(Boolean);
+  const vs = voiceStatus();
   view.innerHTML = `
+  ${voicesChecked && !vs.ok && !voiceNoteHidden?`<div class="note warn stack" style="margin-top:16px;gap:6px" role="alert"><span><b>Áudio indisponível.</b> ${esc(vs.msg)}</span><span class="small">${VOICE_HELP}</span><button class="btn sm" id="vhide" style="align-self:flex-start">Entendi</button></div>`:""}
   ${atRisk?`<div class="note warn" style="margin-top:16px"><b>Sua sequência de ${streak} ${streak===1?"dia":"dias"} está em risco.</b> Faça ao menos uma sessão hoje${S.freezes?" (você tem "+S.freezes+" proteção, mas melhor não gastar)":""}.</div>`:""}
   <section class="hello">
     <span class="eyebrow">${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</span>
@@ -1763,6 +1776,7 @@ function renderToday(){
   </div>`;
   $$("[data-start]",view).forEach(b=>b.addEventListener("click",()=>startSession(b.dataset.start)));
   const gt = $("#gotest"); if(gt) gt.onclick = ()=>go("practice","test");
+  const vh = $("#vhide"); if(vh) vh.onclick = ()=>{ voiceNoteHidden = true; renderToday(); };
 }
 
 function renderOnboarding(){
@@ -1809,7 +1823,7 @@ function renderSession(){
     <div class="sess-top">
       <button class="btn ghost" id="sx">‹ Sair</button>
       <div class="sess-title">${ICON[def.icon]} ${def.name} · ${def.sub}</div>
-      <button class="timer mono" id="timer" title="Toque para pausar">${fmtTime(b.min*60)}</button>
+      <button class="timer mono" id="timer" title="Toque para pausar" aria-label="Cronômetro do bloco; toque para pausar">${fmtTime(b.min*60)}</button>
     </div>
     <ol class="stepper" style="grid-template-columns:repeat(${def.blocks.length},1fr)">${def.blocks.map((x,j)=>`<li class="${j===session.i?"cur":""} ${rec[session.kind][j]?"done":""}"><button data-j="${j}" aria-label="Bloco ${j+1}: ${esc(x.t)}"><span class="n">${rec[session.kind][j]?ICON.check:j+1}</span><span class="lbl">${esc(x.t)}</span></button></li>`).join("")}</ol>
     <div id="block"></div>
@@ -1894,9 +1908,9 @@ function blockReview(el,opt={}){
     const c = cardById(cur), st = S.cards[cur];
     const pct = Math.round(done/(done+queue.length+1)*100);
     const face = prod
-      ? `<span class="eyebrow">Como se diz em inglês?</span><div class="prompt-pt">${esc(c.pt)}</div><p class="ex">${blanked(c.ex)}</p>${showing?"":`<input type="text" id="guess" placeholder="Pense ou digite (opcional)" autocomplete="off" style="max-width:340px">`}`
-      : `<div class="word">${esc(c.w)} ${spk(c.w)}</div><p class="ex">${bolded(c.ex)}</p><span class="muted small">O que significa? Pense antes de virar.</span>`;
-    const back = showing ? `<div class="back">${prod?`<div class="word">${esc(c.w)} ${spk(c.w)}</div>`:`<div class="pt">${esc(c.pt)}</div>`}<p class="ex">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>${typed?`<p class="typed ${typed.v}">Você escreveu: <b>${esc(guessTxt)}</b> — ${typed.label}</p>`:""}${st.own?`<p class="small"><span class="eyebrow">Sua frase</span><br>${esc(st.own)}</p>`:""}${(st.lapses||0)>=3?`<span class="chip" style="background:var(--bad-soft);color:var(--bad)">palavra difícil · crie uma imagem mental ou frase absurda para ela</span>`:""}</div>` : "";
+      ? `<span class="eyebrow">Como se diz em inglês?</span><div class="prompt-pt">${esc(c.pt)}</div><p class="ex" lang="en">${blanked(c.ex)}</p>${showing?"":`<input type="text" id="guess" placeholder="Pense ou digite (opcional)" autocomplete="off" style="max-width:340px">`}`
+      : `<div class="word" lang="en">${esc(c.w)} ${spk(c.w)}</div><p class="ex" lang="en">${bolded(c.ex)}</p><span class="muted small">O que significa? Pense antes de virar.</span>`;
+    const back = showing ? `<div class="back">${prod?`<div class="word" lang="en">${esc(c.w)} ${spk(c.w)}</div>`:`<div class="pt">${esc(c.pt)}</div>`}<p class="ex" lang="en">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>${typed?`<p class="typed ${typed.v}">Você escreveu: <b>${esc(guessTxt)}</b> — ${typed.label}</p>`:""}${st.own?`<p class="small"><span class="eyebrow">Sua frase</span><br>${esc(st.own)}</p>`:""}${(st.lapses||0)>=3?`<span class="chip" style="background:var(--bad-soft);color:var(--bad)">palavra difícil · crie uma imagem mental ou frase absurda para ela</span>`:""}</div>` : "";
     const grades = showing
       ? `<div class="grades">${["De novo","Difícil","Bom","Fácil"].map((l,q)=>`<button class="g${q} ${typed&&typed.grade===q?"sug":""}" data-q="${q}" ${typed&&typed.grade===q?'title="Sugestão com base no que você digitou"':""}>${l}<small>${extra?"—":ivlLabel(schedule(st,q).ivl)}</small><span class="kbd">${q+1}</span></button>`).join("")}</div>`
       : `<button class="btn primary" id="rev" style="width:100%">Mostrar resposta <span class="kbd">espaço</span></button>`;
@@ -1973,7 +1987,7 @@ function blockListen(el,opt={}){
       <textarea id="dict" rows="2" placeholder="Type what you hear…" autocomplete="off" spellcheck="false"></textarea>
       <div class="row"><button class="btn" id="chk">Conferir</button><button class="btn ghost sm" id="hint">Dica: primeiras letras</button><span class="muted small">Ctrl + Enter confere</span></div>
       <p class="mono small muted" id="hintTxt" hidden></p>
-      <div id="res"></div>
+      <div id="res" role="status" aria-live="polite"></div>
     </div>`;
     $("#p1",el).onclick = ()=>speak(item[1]);
     $("#p2",el).onclick = ()=>speak(item[1],0.7);
@@ -1999,7 +2013,7 @@ function blockListen(el,opt={}){
     $("#dict",el).disabled = true; $("#chk",el).disabled = true;
     $("#res",el).innerHTML = `<div class="stack">
       <div class="row"><span class="score">${Math.round(score*100)}%</span><span class="muted">${score===1?"Perfeito!":score>=.8?"Muito bom — veja o que escapou.":"As palavras em vermelho foram as que você não pegou."}</span></div>
-      <div class="diff">${words.map((w,i)=>ok[i]?`<span class="ok">${esc(w)}</span>`:`<span class="miss" role="button" tabindex="0" style="cursor:pointer" data-say="${esc(w.replace(/[.,!?;:]/g,""))}" title="Toque para ouvir">${esc(w)}</span>`).join(" ")}</div>
+      <div class="diff" lang="en">${words.map((w,i)=>ok[i]?`<span class="ok">${esc(w)}</span>`:`<span class="miss" role="button" tabindex="0" style="cursor:pointer" data-say="${esc(w.replace(/[.,!?;:]/g,""))}" title="Toque para ouvir">${esc(w)}</span>`).join(" ")}</div>
       ${ok.some(x=>!x)?`<p class="small muted">Toque numa palavra vermelha para ouvi-la sozinha.</p>`:""}
       ${item[2]?`<p class="small"><span class="eyebrow">Tradução</span><br>${esc(item[2])}</p>`:""}
       ${lvlMsg?`<p class="note">${lvlMsg}</p>`:""}
@@ -2047,7 +2061,7 @@ function wirePronCheck(el,sentence){
       const pct = Math.round(best.sc*100);
       if(pct>=80) addXP(2,"pronúncia");
       out.innerHTML = `<div class="stack" style="gap:6px"><div class="row"><span class="score" style="font-size:1.5rem">${pct}%</span><span class="muted small">${pct>=90?"Muito claro!":pct>=70?"Bom — as palavras em vermelho não foram reconhecidas.":"Tente de novo mais devagar, articulando cada palavra."}</span></div>
-        <div class="diff">${words.map((w,i)=>`<span class="${best.ok[i]?"ok":"miss"}">${esc(w)}</span>`).join(" ")}</div>
+        <div class="diff" lang="en">${words.map((w,i)=>`<span class="${best.ok[i]?"ok":"miss"}">${esc(w)}</span>`).join(" ")}</div>
         <p class="small muted">Entendido: “${esc(best.a)}”</p></div>`;
     }catch(e){
       out.innerHTML = `<p class="note warn small">${e.code==="not-allowed"||e.code==="service-not-allowed"?"O microfone está bloqueado aqui. No app do celular (link do GitHub) a checagem funciona.":e.code==="no-speech"?"Não ouvi nada. Toque de novo e fale logo depois.":"O reconhecimento de fala não está disponível agora."}</p>`;
@@ -2089,7 +2103,7 @@ function blockSpeak(el,opt={},forceIdx){
     const p = POOL[idx];
     el.innerHTML = `<div class="card pad stack">
       <div class="row between"><span class="eyebrow">Tema ${opt.inSession?"de hoje":""}</span><button class="btn sm ghost" id="other">Outro tema ↻</button></div>
-      <div class="row" style="align-items:flex-start;flex-wrap:nowrap"><h3 class="prompt">${esc(p.q)}</h3>${spk(p.q)}</div>
+      <div class="row" style="align-items:flex-start;flex-wrap:nowrap"><h3 class="prompt" lang="en">${esc(p.q)}</h3>${spk(p.q)}</div>
       ${p.pt?`<p class="muted">${esc(p.pt)}</p>`:""}
       <div class="stack" style="gap:6px"><span class="eyebrow">Frases úteis — use pelo menos 2 (toque para ouvir)</span>
         <div class="row">${p.p.map(x=>`<button class="chip" data-say="${esc(x)}">${esc(x)}</button>`).join("")}</div></div>
@@ -2110,7 +2124,7 @@ function blockSpeak(el,opt={},forceIdx){
         <label><input type="checkbox"> Na segunda tentativa falei com mais detalhe</label>
       </div>
       <div class="row">${AI?`<button class="btn" id="fb">Corrigir minha resposta (IA)</button><button class="btn ghost" id="model">Ver resposta modelo (IA)</button>`:`<span class="muted small">O feedback com IA aparece quando o app está aberto no Claude.</span>`}</div>
-      <div id="aiout"></div>
+      <div id="aiout" role="status" aria-live="polite"></div>
     </div>`;
     $("#other",el).onclick = ()=>{ idx=(idx+1+Math.floor(Math.random()*(POOL.length-1)))%POOL.length; stopRec(); clearInterval(countdown); draw(); };
     $("#go",el).onclick = ()=>run(90);
@@ -2175,9 +2189,9 @@ function blockNew(el,opt={}){
       <div class="row between small muted"><span>Palavra ${i+1} de ${batch.length}</span><span class="tag">${esc(c.tag||"")}</span></div>
       <div class="progressbar"><span style="width:${Math.round(i/batch.length*100)}%"></span></div>
       <div class="card flash">
-        <div class="word">${esc(c.w)} ${spk(c.w)}</div>
+        <div class="word" lang="en">${esc(c.w)} ${spk(c.w)}</div>
         <div class="pt">${esc(c.pt)}</div>
-        <p class="ex">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>
+        <p class="ex" lang="en">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>
         <div class="back" style="align-items:stretch;text-align:left">
           <label for="own">Escreva uma frase sua com “${esc(c.w)}” — criar a própria frase fixa muito mais</label>
           <input type="text" id="own" placeholder="Ex.: ${esc(plain(c.ex))}" autocomplete="off">
@@ -2200,7 +2214,7 @@ function blockNew(el,opt={}){
       const distract = shuffle(allCards().filter(x=>x.id!==c.id && x.tag===c.tag)).slice(0,3);
       const opts = shuffle([c,...(distract.length<3?shuffle(allCards().filter(x=>x.id!==c.id)).slice(0,3):distract)]);
       el.innerHTML = `<div class="card pad stack"><div class="row between"><span class="eyebrow">Mini-quiz · ${qi+1}/${order.length}</span></div>
-        <div class="prompt-pt">${esc(c.pt)}</div><div class="opts">${opts.map(o=>`<button class="opt" data-id="${o.id}">${esc(o.w)}</button>`).join("")}</div><div id="qf"></div></div>`;
+        <div class="prompt-pt">${esc(c.pt)}</div><div class="opts">${opts.map(o=>`<button class="opt" data-id="${o.id}">${esc(o.w)}</button>`).join("")}</div><div id="qf" role="status" aria-live="polite"></div></div>`;
       $$(".opt",el).forEach(b=>b.onclick=()=>{
         const ok = b.dataset.id===c.id; if(ok){ right++; addXP(2); }
         $$(".opt",el).forEach(x=>{ x.disabled=true; if(x.dataset.id===c.id) x.classList.add("right"); });
@@ -2250,7 +2264,7 @@ function blockGrammar(el,opt={},lessonId){
         <div class="progressbar"><span style="width:${i*20}%"></span></div>
         <p class="qsent">${esc(s).replace("___",'<span class="gap">_____</span>')}</p>
         <div class="opts">${o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join("")}</div>
-        <div id="gf"></div></div>`;
+        <div id="gf" role="status" aria-live="polite"></div></div>`;
       $$(".opt",el).forEach(b=>b.onclick=()=>{
         const j = +b.dataset.j, ok = j===a; if(ok){ right++; addXP(3); } else { addMistake({k:"g",l:L.id,q:L.q.indexOf(qs[i])}); save(); }
         $$(".opt",el).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); });
@@ -2275,7 +2289,7 @@ function blockWrite(el,opt={}){
   let lastFb = null;
   el.innerHTML = `<div class="card pad stack">
     <span class="eyebrow">Diário · ${fmtDate(todayKey())}</span>
-    <h3 class="prompt">${esc(prompt)}</h3>
+    <h3 class="prompt" lang="en">${esc(prompt)}</h3>
     ${wb?`<p class="muted">${esc(wb[1])} Comece assim: <i>${esc(wb[2])}</i></p>`:""}
     ${targets.length?`<div class="stack" style="gap:6px"><span class="eyebrow">Use pelo menos 2 palavras recentes</span><div class="row" id="tg">${targets.map(t=>`<span class="chip" data-t="${esc(t)}">${esc(t)}</span>`).join("")}</div></div>`:""}
     <textarea id="jr" rows="8" placeholder="Start writing… Pense em inglês simples em vez de traduzir frases longas do português.">${esc(S.draft||"")}</textarea>
@@ -2286,7 +2300,7 @@ function blockWrite(el,opt={}){
       <label><input type="checkbox"> Usei conectores (however, although, therefore…)</label>
       <label><input type="checkbox"> Revisei preposições (depend on, arrive in, good at…)</label>
       <label><input type="checkbox"> Li o texto em voz alta</label></div>`}
-    <div id="aiout"></div>
+    <div id="aiout" role="status" aria-live="polite"></div>
   </div>`;
   const ta = $("#jr",el);
   let dt;
@@ -2424,7 +2438,7 @@ function blockPairs(el){
       <span class="eyebrow">Rodada ${round+1}/${N} · Qual você ouviu?</span>
       <button class="btn primary" id="pl">${ICON.speaker} Ouvir de novo</button>
       <div class="grid2" style="width:100%">${[0,1].map(j=>`<button class="opt" style="text-align:center;font-size:1.4rem;font-family:var(--display)" data-j="${j}">${pair[j]}</button>`).join("")}</div>
-      <div id="pf"></div></div>`;
+      <div id="pf" role="status" aria-live="polite"></div></div>`;
     const play = ()=>speak(pair[target],0.85);
     $("#pl",el).onclick = play; setTimeout(play,200);
     $$(".opt",el).forEach(b=>b.onclick=()=>{
@@ -2574,7 +2588,7 @@ function blockReading(el){
       <div class="row between"><button class="btn sm ghost" id="rl">‹ Leituras</button><span class="tag">${esc(r.lvl)}</span></div>
       <h2>${esc(r.t)}</h2>
       <div class="row"><button class="btn sm" id="ra">${ICON.speaker} Ouvir o texto</button><button class="btn sm ghost" id="rs">Parar</button></div>
-      <p class="reading">${html}</p>
+      <p class="reading" lang="en">${html}</p>
       <div id="glbox" role="status" aria-live="polite"></div>
       <button class="btn primary" id="rq">Responder às perguntas</button>
       <div id="rqbox"></div></div>`;
@@ -2634,7 +2648,7 @@ function blockEarGame(el){
     $$(".opt",el).forEach(b=>b.onclick=()=>{
       const ok = b.dataset.id===c.id; if(ok) right++;
       $$(".opt",el).forEach(x=>{ x.disabled=true; if(x.dataset.id===c.id) x.classList.add("right"); }); if(!ok) b.classList.add("wrong");
-      $("#ef",el).innerHTML = `<p class="word" style="font-size:1.6rem">${esc(c.w)} ${spk(c.w)}</p><p class="ex">${bolded(c.ex)}</p><button class="btn primary" id="en">Próxima →</button>`;
+      $("#ef",el).innerHTML = `<p class="word" style="font-size:1.6rem">${esc(c.w)} ${spk(c.w)}</p><p class="ex" lang="en">${bolded(c.ex)}</p><button class="btn primary" id="en">Próxima →</button>`;
       $("#en",el).onclick = ()=>{ i++; q(); };
     });
   }
@@ -2772,6 +2786,7 @@ function renderProgress(){
         <div class="stack" style="gap:4px"><label for="s-big">Tamanho do texto</label><select id="s-big"><option value="0" ${S.settings.big?"":"selected"}>Normal</option><option value="1" ${S.settings.big?"selected":""}>Grande</option></select></div>
         <div class="stack" style="gap:4px"><label for="s-new">Palavras novas por noite</label><select id="s-new">${[3,5,8,10].map(n=>`<option ${S.settings.newPerDay===n?"selected":""}>${n}</option>`).join("")}</select></div>
       </div>
+      <p class="small ${voiceStatus().ok?"muted":""}" ${voiceStatus().ok?"":'style="color:var(--bad)"'}>${esc(voiceStatus().msg)}${voiceStatus().ok?"":"<br>"+VOICE_HELP}</p>
       <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><span class="small muted"><span class="dot ${syncState==="cloud"?"ok":""}"></span> ${syncState==="cloud"?"Progresso salvo na sua conta — abre igual em outros dispositivos.":"Progresso salvo neste navegador."}</span></div>
       <hr class="sep">
       <h3>Lembretes</h3>
