@@ -271,6 +271,9 @@ svg.spark{width:100%;height:70px;display:block}
 body.big{font-size:19px}
 body.big .small{font-size:.92rem}
 body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
+.reading{font-size:1.12rem;line-height:1.8;max-width:65ch}
+.gl{font:inherit;color:inherit;background:none;border:0;padding:0;border-bottom:2px dotted var(--acc);cursor:pointer}
+.gl:hover{background:var(--acc-soft)}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1040,6 +1043,28 @@ const DIALOGS = [
  ["a","Ten minutes early would be perfect. See you on Monday!"]]}
 ];
 
+// Leituras graduadas: texto, glossário (toque para traduzir) e perguntas [pergunta, opções, índice correto]
+const READINGS = [
+{id:"memory",t:"Why We Forget",lvl:"B1",text:"In the 1880s, a German psychologist named Hermann Ebbinghaus tested his own memory by learning lists of nonsense words. He discovered that we forget most new information within a day, unless we review it. This pattern became known as the forgetting curve. The good news is that every time we review something at the right moment, just before we forget it, the memory lasts longer. This is the idea behind spaced repetition, the method used by apps like Anki. Instead of studying for hours once a week, it is far more effective to review for a few minutes every day. In other words, consistency beats intensity.",
+ gloss:{"nonsense":"sem sentido","discovered":"descobriu","unless":"a menos que","review":"revisar","pattern":"padrão","forgetting curve":"curva do esquecimento","lasts":"dura","spaced repetition":"repetição espaçada","far more":"muito mais","consistency beats intensity":"constância vence intensidade"},
+ q:[["What did Ebbinghaus use to test his memory?",["Lists of nonsense words","Famous poems","Foreign languages"],0],["When is the best moment to review?",["Right after learning","Just before you forget","Once a month"],1],["What is the main message of the text?",["Study for hours on weekends","Short daily reviews work better","Memory cannot be improved"],1]]},
+{id:"phone",t:"A Weekend Without a Phone",lvl:"B1",text:"Last month, I decided to spend a whole weekend without my phone. On Friday night, I switched it off and put it in a drawer. On Saturday morning, I kept reaching for my pocket out of habit. It was harder than I had expected. By the afternoon, though, something changed. I read fifty pages of a novel, went for a long walk and actually noticed the trees on my street. On Sunday, I had lunch with my parents and nobody looked at a screen. When I turned my phone back on, I had ninety-seven messages. Surprisingly, none of them were urgent.",
+ gloss:{"whole":"inteiro","switched it off":"desliguei","drawer":"gaveta","kept reaching for":"continuava levando a mão ao","out of habit":"por hábito","expected":"esperava","though":"porém","novel":"romance (livro)","noticed":"reparei","urgent":"urgentes"},
+ q:[["How did the writer feel on Saturday morning?",["Relaxed from the start","It was harder than expected","He forgot about the phone"],1],["What did he do in the afternoon?",["Watched TV","Read and went for a walk","Worked from home"],1],["What surprised him in the end?",["He had no messages","None of the messages were urgent","His phone was broken"],1]]},
+{id:"lisbon",t:"A Brazilian in Lisbon",lvl:"B1",text:"When Camila moved from São Paulo to Lisbon to work remotely, she thought the language would be the easy part. After all, Portuguese is her first language. What she didn't expect was that most of her daily work would happen in English. Her team is spread across six countries, and every meeting, email and chat is in English. \"At the beginning, I understood almost everything, but I struggled to speak up,\" she says. \"I would prepare what to say, and by the time I was ready, the conversation had moved on.\" To overcome this, she started joining meetings with one goal: to say at least one thing, even if it wasn't perfect.",
+ gloss:{"remotely":"remotamente","After all":"afinal","expect":"esperar (prever)","spread across":"espalhado por","struggled":"tive dificuldade","speak up":"me manifestar, falar","by the time":"quando finalmente","moved on":"seguiu em frente","overcome":"superar","at least":"pelo menos"},
+ q:[["What surprised Camila in Lisbon?",["The food","Most of her work happened in English","The Portuguese accent"],1],["What was her main difficulty?",["Understanding meetings","Speaking up in time","Writing emails"],1],["What was her strategy?",["Taking an English course","Saying at least one thing in every meeting","Using only the chat"],1]]},
+{id:"cafe",t:"No Laptops Allowed",lvl:"B1+",text:"A popular café in Brooklyn has made a controversial decision: laptops are no longer allowed on weekends. The owner, Maria Lopez, explains that many customers were buying one coffee and staying for five hours. \"It's not only about money,\" she says. \"The place used to be full of conversation, and it had become silent, like a library.\" Not everyone is happy about the new rule. Some freelancers claim they have nowhere else to work. On the other hand, regular customers say the atmosphere has improved and it's easier to find a table. Lopez insists that the rule is here to stay, at least for now.",
+ gloss:{"controversial":"polêmica","no longer":"não mais","allowed":"permitidos","owner":"dona","used to be":"costumava ser","claim":"afirmam","nowhere else":"nenhum outro lugar","regular customers":"clientes frequentes","atmosphere":"ambiente","insists":"insiste","here to stay":"veio para ficar"},
+ q:[["When are laptops not allowed?",["Every day","On weekends","In the morning"],1],["According to the owner, what had changed in the café?",["It had become silent","It had become more expensive","It closed earlier"],0],["Who is unhappy with the rule?",["Regular customers","Some freelancers","The staff"],1]]},
+{id:"fourday",t:"The Four-Day Week",lvl:"B1+",text:"Last year, a software company in Manchester decided to try something unusual: a four-day work week with no pay cut. At first, managers were skeptical. They worried that deadlines would be missed and clients would complain. However, after six months, the results were surprising. Productivity went up by eight percent, and sick days dropped significantly. Employees said they felt more focused because they knew they had less time. Some admitted that the first weeks were tough, as they had to cut down on unnecessary meetings. The company has now made the change permanent, although it acknowledges that the model may not work for every business.",
+ gloss:{"unusual":"incomum","pay cut":"corte de salário","skeptical":"céticos","deadlines":"prazos","sick days":"faltas por doença","significantly":"significativamente","focused":"concentrados","admitted":"admitiram","tough":"difíceis","cut down on":"reduzir","acknowledges":"reconhece"},
+ q:[["What happened to productivity?",["It went down","It went up by eight percent","It stayed the same"],1],["Why did employees feel more focused?",["They knew they had less time","They earned more","Managers watched them closely"],0],["What does the company think about the model?",["It works for every company","It may not suit every business","It was a failure"],1]]},
+{id:"failure",t:"Fail Fast, Learn Faster",lvl:"B2",text:"In many companies, failure is still seen as something to hide. Yet some of the most innovative organizations actively encourage their teams to share mistakes. At one design agency, employees present a \"failure of the month\" in a relaxed meeting, explaining what went wrong and what they would do differently. The goal is not to celebrate carelessness, but to make it safe to take reasonable risks. Research on so-called psychological safety suggests that teams who feel comfortable admitting errors tend to learn faster and perform better. Ironically, the fear of looking incompetent is often what prevents people from becoming competent.",
+ gloss:{"failure":"fracasso","hide":"esconder","Yet":"no entanto","encourage":"incentivam","carelessness":"descuido","reasonable":"razoáveis","so-called":"assim chamada","admitting":"admitir","tend to":"tendem a","perform":"ter desempenho","prevents":"impede"},
+ q:[["What happens in the “failure of the month” meeting?",["People are punished","People explain a mistake and what they would change","People vote for the worst employee"],1],["What is the goal of the meeting?",["To celebrate carelessness","To make reasonable risks feel safe","To reduce costs"],1],["What is ironic, according to the text?",["Fear of looking incompetent stops people from improving","Experts make more mistakes","Meetings are a waste of time"],0]]}
+];
+
 const SESSIONS = {
   m:{name:"Manhã",sub:"Ouvir & Falar",icon:"sun",blocks:[
     {k:"review",t:"Revisão espaçada",d:"Os cartões que vencem hoje — memória ativa, não releitura",min:5},
@@ -1078,7 +1103,7 @@ function defaultState(){ return {
   v:1, created:todayKey(), updatedAt:0, xp:0,
   streak:{count:0,best:0,last:null}, freezes:0,
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
-  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{},
+  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{},
   stats:{reviews:0,correct:0},
   settings:{accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,tm:"07:30",tn:"21:30"}
 };}
@@ -2008,6 +2033,7 @@ function renderPractice(){
   if(sub==="chat") return blockChat(shell("Conversa com IA"));
   if(sub==="dialogs") return blockDialogs(shell("Diálogos"));
   if(sub==="mistakes") return blockMistakes(shell("Meus erros"));
+  if(sub==="reading") return blockReading(shell("Leitura"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -2016,6 +2042,7 @@ function renderPractice(){
     <div class="tiles">
       <button class="card tile" data-s="dialogs"><span class="ti">${ICON.chat}</span><h3>Diálogos</h3><p>${DIALOGS.length} situações com roteiro: café, aeroporto, entrevista, médico… Escolha a resposta natural e repita. Sem IA, funciona offline.</p></button>
       <button class="card tile" data-s="chat"><span class="ti">${ICON.chat}</span><h3>Conversa com IA</h3><p>Role-play de situações reais (entrevista, reunião, hotel) com correções na hora.${AI?"":" Disponível quando aberto no Claude."}</p></button>
+      <button class="card tile" data-s="reading"><span class="ti">${ICON.book}</span><h3>Leitura</h3><p>${READINGS.length} textos curtos com tradução ao toque, áudio e perguntas. Mande palavras novas para o seu baralho.</p></button>
       <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>As questões de gramática e as falas de diálogo que você errou voltam aqui até você acertar 2 vezes seguidas.</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
@@ -2173,6 +2200,62 @@ function blockDialogs(el,startId){
   }
   const s = startId && DIALOGS.find(d=>d.id===startId);
   if(s) play(s); else list();
+}
+function blockReading(el){
+  function list(){
+    el.innerHTML = `<div class="stack"><p class="muted">Textos curtos em inglês real. Leia uma vez sem parar, depois toque nas palavras sublinhadas para ver a tradução e responda às perguntas. Ler é o que mais amplia vocabulário em contexto.</p>
+      <div class="tiles">${READINGS.map((r,i)=>{ const b=S.reading&&S.reading[r.id]; return `<button class="card tile" data-r="${i}"><span class="tag">${esc(r.lvl)}</span><h3>${esc(r.t)}</h3><p>${esc(r.text.slice(0,90))}…</p><span class="small mono ${b==null?"muted":""}">${b==null?"não lido":"acertos: "+b+"/"+r.q.length}</span></button>`; }).join("")}</div></div>`;
+    $$("[data-r]",el).forEach(b=>b.onclick=()=>read(READINGS[+b.dataset.r]));
+  }
+  function read(r){
+    const keys = Object.keys(r.gloss).sort((a,b)=>b.length-a.length);
+    let html = esc(r.text); const marks = [];
+    keys.forEach(k=>{
+      const re = new RegExp("\\b"+k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i");
+      html = html.replace(re, m=>{ marks.push([k,m]); return "\u0000"+(marks.length-1)+"\u0000"; });
+    });
+    html = html.replace(/\u0000(\d+)\u0000/g,(x,n)=>`<button class="gl" data-g="${esc(marks[n][0])}">${marks[n][1]}</button>`);
+    const sentences = r.text.split(/(?<=[.!?]["”]?)\s+/);
+    el.innerHTML = `<div class="card pad stack">
+      <div class="row between"><button class="btn sm ghost" id="rl">‹ Leituras</button><span class="tag">${esc(r.lvl)}</span></div>
+      <h2>${esc(r.t)}</h2>
+      <div class="row"><button class="btn sm" id="ra">${ICON.speaker} Ouvir o texto</button><button class="btn sm ghost" id="rs">Parar</button></div>
+      <p class="reading">${html}</p>
+      <div id="glbox" role="status" aria-live="polite"></div>
+      <button class="btn primary" id="rq">Responder às perguntas</button>
+      <div id="rqbox"></div></div>`;
+    $("#rl",el).onclick = ()=>{ speechSynthesis && speechSynthesis.cancel(); list(); };
+    $("#ra",el).onclick = ()=>speak(r.text, Math.min(S.settings.rate,0.95));
+    $("#rs",el).onclick = ()=>{ if("speechSynthesis" in window) speechSynthesis.cancel(); };
+    $$(".gl",el).forEach(b=>b.onclick=()=>{
+      const k = b.dataset.g, pt = r.gloss[k], sent = sentences.find(s=>s.toLowerCase().includes(k.toLowerCase())) || k;
+      const exists = S.custom.some(c=>c.w.toLowerCase()===k.toLowerCase()) || VOCAB.some(c=>c.w.toLowerCase()===k.toLowerCase());
+      $("#glbox",el).innerHTML = `<div class="note row between"><span><b>${esc(k)}</b> — ${esc(pt)}</span><span class="row">${spk(k)}${exists?`<span class="small muted">já está no app</span>`:`<button class="btn sm" id="gadd">+ Baralho</button>`}</span></div>`;
+      speak(k);
+      const ga = $("#gadd",el); if(ga) ga.onclick = ()=>{
+        const i = sent.toLowerCase().indexOf(k.toLowerCase());
+        const ex = i>=0 ? sent.slice(0,i)+"*"+sent.slice(i,i+k.length)+"*"+sent.slice(i+k.length) : k;
+        S.custom.push({id:"c"+Date.now().toString(36),w:k,pt,ex,tag:"da leitura"}); save();
+        ga.outerHTML = `<span class="small muted">adicionada</span>`; toast("Entra nas próximas palavras novas");
+      };
+    });
+    $("#rq",el).onclick = ()=>{
+      $("#rq",el).hidden = true;
+      let i = 0, right = 0;
+      const box = $("#rqbox",el);
+      function q(){
+        if(i>=r.q.length){ if(!S.reading) S.reading={}; S.reading[r.id] = Math.max(S.reading[r.id]??0, right); addXP(right*3+5,"leitura");
+          box.innerHTML = `<div class="note"><b>${right}/${r.q.length} corretas.</b> Agora leia de novo em voz alta junto com o áudio — é leitura e shadowing ao mesmo tempo.</div>`; return; }
+        const [qq,o,a] = r.q[i];
+        box.innerHTML = `<div class="stack"><span class="eyebrow">Pergunta ${i+1}/${r.q.length}</span><p class="qsent">${esc(qq)}</p><div class="opts">${o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join("")}</div><div id="rf" role="status" aria-live="polite"></div></div>`;
+        $$(".opt",box).forEach(b=>b.onclick=()=>{ const ok = +b.dataset.j===a; if(ok) right++;
+          $$(".opt",box).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); }); if(!ok) b.classList.add("wrong");
+          $("#rf",box).innerHTML = `<button class="btn primary" id="rn" style="margin-top:8px">Continuar →</button>`; $("#rn",box).onclick = ()=>{ i++; q(); }; });
+      }
+      q();
+    };
+  }
+  list();
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
