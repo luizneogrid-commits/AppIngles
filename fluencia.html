@@ -302,6 +302,8 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .quest.done .small{text-decoration:line-through;color:var(--muted)}
 .rule{border-top:1px solid var(--line);padding-top:10px}
 .rule summary{cursor:pointer;font-weight:700;font-size:.9rem;color:var(--acc)}
+.faq summary{cursor:pointer;font-weight:700}
+.faq p{margin-top:8px;color:var(--muted)}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1938,6 +1940,12 @@ function renderToday(){
       </div>
       <p class="small muted">${wk.days>=6?"Semana excelente — é essa constância que leva ao B2.":wk.days>=4?"Boa semana. Tente não pular dois dias seguidos.":"Meta: estudar pelo menos 5 dos 7 dias. Mesmo uma sessão curta conta."}</p>
     </div>
+    ${(()=>{ const w = wordOfDay(), st = S.cards[w.id]; return `<div class="card pad stack wod"><div class="row between"><span class="eyebrow">Palavra do dia</span><span class="tag">${esc(w.tag||"")}</span></div>
+      <div class="row" style="align-items:center"><span class="word" lang="en" style="font-size:1.6rem;justify-content:flex-start">${esc(w.w)}</span>${spk(w.w)}<span class="muted">— ${esc(w.pt)}</span></div>
+      <p class="ex" lang="en" style="max-width:none">${bolded(w.ex)} ${spk(w.ex,"Ouvir exemplo")}</p>
+      ${st?`<span class="small muted">Já está no seu baralho · ${STAGE_LABEL[stageOf(w.id)]}</span>`:`<div class="row"><button class="btn sm" id="wodAdd">Adicionar ao baralho</button><button class="btn sm ghost" id="wodKnow">Já conheço</button></div>`}
+    </div>`; })()}
+    <p class="small muted" style="text-align:center">Dúvidas? <button class="btn sm ghost" id="toGuide" style="display:inline-flex">Como usar o app</button></p>
     <details class="card method">
       <summary>Por que este método funciona</summary>
       <ul>
@@ -1951,6 +1959,9 @@ function renderToday(){
   </div>`;
   $$("[data-start]",view).forEach(b=>b.addEventListener("click",()=>startSession(b.dataset.start)));
   const gt = $("#gotest"); if(gt) gt.onclick = ()=>go("practice","test");
+  const wa = $("#wodAdd"); if(wa) wa.onclick = ()=>{ introduce(wordOfDay().id); save(); toast("Adicionada — volta amanhã na revisão"); renderToday(); };
+  const wk2 = $("#wodKnow"); if(wk2) wk2.onclick = ()=>{ markKnown(wordOfDay().id); renderToday(); };
+  $("#toGuide").onclick = ()=>go("practice","guide");
   const qb = $("#qbk"); if(qb) qb.onclick = async ()=>{ if(await quickBackup()) renderToday(); };
   const vh = $("#vhide"); if(vh) vh.onclick = ()=>{ voiceNoteHidden = true; renderToday(); };
 }
@@ -2669,6 +2680,7 @@ function renderPractice(){
   if(sub==="test") return blockLevelTest(shell("Teste de nível"));
   if(sub==="world") return blockResources(shell("Inglês no mundo real"));
   if(sub==="build") return blockBuild(shell("Monte a frase"));
+  if(sub==="guide") return blockGuide(shell("Como usar o app"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -2685,6 +2697,7 @@ function renderPractice(){
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
       <button class="card tile" data-s="speak"><span class="ti">${ICON.mic}</span><h3>Fala livre</h3><p>Um tema aleatório, frases úteis e cronômetro 90/60 s.</p></button>
       <button class="card tile" data-s="write"><span class="ti">${ICON.pen}</span><h3>Escrita livre</h3><p>Mais um texto no diário, com correção.</p></button>
+      <button class="card tile" data-s="guide"><span class="ti">${ICON.book}</span><h3>Como usar o app</h3><p>Rotina ideal, o que fazer se faltar um dia, onde fica o progresso, microfone e áudio.</p></button>
       <button class="card tile" data-s="world"><span class="ti">${ICON.wave}</span><h3>Inglês no mundo real</h3><p>Podcasts, séries, notícias e sites gratuitos escolhidos para o seu nível, com dica de como usar cada um.</p></button>
       <button class="card tile" data-s="journal"><span class="ti">${ICON.book}</span><h3>Seu diário</h3><p>${S.journal.length} ${S.journal.length===1?"texto salvo":"textos salvos"}. Releia e veja sua evolução.</p></button>
     </div>
@@ -3038,6 +3051,28 @@ function blockBuild(el){
     draw(); setTimeout(()=>speak(item[1]),200);
   }
   q();
+}
+const GUIDE = [
+ ["Qual é a rotina ideal?","Uma sessão de manhã (revisão, ditado e fala) e uma à noite (palavras novas, gramática e diário). A revisão da manhã traz de volta o que você aprendeu na noite anterior — dormir entre as duas fixa a memória. Tempo sobrando? Use a aba Praticar."],
+ ["E se eu não tiver tempo num dia?","Faça a sessão expressa de 5 minutos na tela Hoje: ela mantém sua sequência. Se perder um dia inteiro, uma proteção de sequência é usada automaticamente (você ganha uma a cada 7 dias seguidos ou troca 300 XP por uma na Loja)."],
+ ["Como dou nota na revisão?","Seja honesto: “De novo” se não lembrou, “Difícil” se lembrou com esforço, “Bom” se lembrou, “Fácil” se foi instantâneo. Errou o botão? Toque em “Desfazer” (ou tecla Z)."],
+ ["As revisões acumularam. E agora?","Priorize a revisão por alguns dias. O app reduz sozinho as palavras novas quando há 40 ou mais revisões pendentes, para a pilha não crescer."],
+ ["Onde meu progresso fica salvo?","Aberto pelo Claude, fica salvo na sua conta. No app do celular (link do GitHub), fica só no aparelho — faça backup em Progresso → Backup (o app lembra a cada 14 dias). O backup também serve para levar o progresso de um para o outro."],
+ ["O microfone não funciona.","Dentro do Claude o microfone é bloqueado por segurança. Use o app do celular (Chrome, Edge ou Safari) para gravar sua voz, checar a pronúncia e falar nos diálogos. No Claude, fale em voz alta mesmo assim e digite um resumo se quiser correção."],
+ ["Não ouço o áudio.","Seu aparelho precisa de uma voz em inglês instalada. O app mostra um aviso com o passo a passo quando não encontra nenhuma. Em Progresso → Ajustes você escolhe a voz, o sotaque e a velocidade."],
+ ["Como mudo meu nível?","Em Progresso → Ajustes → Seu nível, a qualquer momento. Na dúvida, faça o teste de nível (Praticar ou Progresso): ele sugere o nível certo e mede sua evolução mês a mês."],
+ ["Onde a IA funciona?","A correção do diário e da fala, a conversa livre, os exemplos automáticos e as leituras geradas funcionam quando o app está aberto pelo Claude. Todo o resto funciona em qualquer lugar, até sem internet."],
+ ["Como instalo no celular?","Abra o link do GitHub. Android (Chrome): menu ⋮ → Instalar app. iPhone (Safari): Compartilhar → Adicionar à Tela de Início. Depois ele abre como um app e funciona offline."],
+ ["O que eu já sei atrapalha?","Não precisa estudar o que você já sabe: toque em “Já conheço” nas palavras novas. Ela volta só para uma checagem em 30 dias."]
+];
+function blockGuide(el){
+  el.innerHTML = `<div class="stack"><p class="muted">Dúvidas comuns sobre o app. No computador, pressione <span class="kbd">?</span> para ver os atalhos.</p>
+    ${GUIDE.map((g,i)=>`<details class="card pad faq" ${i===0?"open":""}><summary>${esc(g[0])}</summary><p>${esc(g[1])}</p></details>`).join("")}</div>`;
+}
+function wordOfDay(){
+  const pool = VOCAB.filter(c=>isBasic() ? isBasicItem(c) : !isBasicItem(c));
+  let h = 7; for(const ch of todayKey()) h = (h*33 + ch.charCodeAt(0)) >>> 0;
+  return pool[h % pool.length];
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
