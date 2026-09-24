@@ -1325,7 +1325,49 @@ const DIALOGS = [
  ["me","Escolha nove e meia",[["Nine thirty works for me.",1,"“Works for me” = está bom para mim."],["Nine thirty is good to me.",0,"Diga “good for me”."],["I stay with nine thirty.",0,"“Fico com” não é “stay”: diga “I'll take nine thirty”."]]],
  ["a","Great, you're all set for Monday at nine thirty. Is there anything else?"],
  ["me","Pergunte se deve chegar um pouco antes",[["Should I get there a bit early?",1,"“Get there early”."],["I need arrive before?",0,"Faltam auxiliar e “to”: “Do I need to arrive early?”"],["Must I to arrive early?",0,"Modal sem “to”, e “should” soa mais natural aqui."]]],
- ["a","Ten minutes early would be perfect. See you on Monday!"]]}
+ ["a","Ten minutes early would be perfect. See you on Monday!"]]},
+{id:"pharmacy",t:"Na farmácia",lvl:"A2",d:"Pedir algo para dor de cabeça e entender como tomar.",lines:[
+ ["a","Hi there. How can I help you?"],
+ ["me","Diga que está com dor de cabeça",[["Hi. I have a headache.",1,"“Have a headache” = estar com dor de cabeça."],["Hi. I am with headache.",0,"Tradução de “estou com”. Use “I have a headache”."],["Hi. My head is hurting me.",0,"Compreensível, mas o natural é “I have a headache”."]]],
+ ["a","I'm sorry to hear that. How long have you had it?"],
+ ["me","Diga que desde hoje de manhã",[["Since this morning.",1,"“Since” + ponto no tempo."],["For this morning.",0,"Ponto no tempo usa “since”, não “for”."],["From this morning ago.",0,"“Ago” não combina aqui; diga “since this morning”."]]],
+ ["a","OK. You can take these painkillers. Are you allergic to anything?"],
+ ["me","Diga que não, não tem alergias",[["No, I'm not allergic to anything.",1,"“Allergic to”."],["No, I don't have allergic.",0,"“Allergic” é adjetivo: “I'm not allergic” ou “I don't have any allergies”."],["No, I'm not allergy.",0,"Use “I'm not allergic to anything”."]]],
+ ["a","Great. Take one tablet every eight hours, with water."],
+ ["me","Pergunte se pode tomar de estômago vazio",[["Can I take it on an empty stomach?",1,"“On an empty stomach” = de estômago vazio."],["Can I take it with the stomach empty?",0,"A expressão fixa é “on an empty stomach”."],["I can take without eating?",0,"Pergunta precisa de inversão: “Can I take it without eating?”"]]],
+ ["a","It's better to eat something first. That'll be nine dollars."],
+ ["me","Pague e agradeça",[["Here you go. Thanks for your help.",1,"“Here you go” ao entregar o dinheiro ou cartão."],["Take. Thank you for the help me.",0,"Use “Here you go” e “thanks for your help”."],["Here is. Thanks.",0,"Falta o sujeito: “Here it is” ou “Here you go”."]]],
+ ["a","You're welcome. I hope you feel better soon!"]]},
+{id:"complaint",t:"Reclamando no restaurante",lvl:"B1",d:"O prato veio errado e frio — resolva com educação.",lines:[
+ ["a","Is everything OK with your meal?"],
+ ["me","Diga, com educação, que não pediu esse prato",[["Actually, I'm afraid this isn't what I ordered.",1,"“I'm afraid…” suaviza a reclamação — muito britânico e educado."],["No. This is not my order, you made a mistake.",0,"Direto demais; soa agressivo em inglês."],["Actually, I didn't asked this.",0,"Depois de “didn't”, verbo base: “I didn't ask for this” / “order this”."]]],
+ ["a","Oh, I'm so sorry! What did you order?"],
+ ["me","Diga que pediu o salmão grelhado",[["I ordered the grilled salmon.",1,"Past simple de “order”."],["I have ordered the grilled salmon.",0,"Ação terminada num momento definido → past simple."],["I asked the salmon grilled.",0,"Adjetivo antes do substantivo (“grilled salmon”) e “asked for”."]]],
+ ["a","I'll get that for you right away. Is there anything else?"],
+ ["me","Diga que as batatas também estão frias",[["Also, the fries are a bit cold.",1,"“A bit” suaviza a crítica."],["Also, the fries is cold.",0,"“Fries” é plural → “are”."],["Also, the potatoes are very frozen.",0,"“Frozen” = congelado. Frio aqui é “cold”."]]],
+ ["a","I'm really sorry about that. We'll bring you fresh ones, and the dessert is on the house."],
+ ["me","Agradeça pela gentileza",[["That's very kind of you, thank you.",1,"“That's very kind of you” é o agradecimento padrão."],["You are very kind with me, thanks.",0,"“Kind to me”, não “with”."],["Thanks, is very nice of you.",0,"Falta o sujeito: “It's very nice of you”."]]],
+ ["a","It's the least we can do. Your salmon will be out in ten minutes."]]},
+{id:"apartment",t:"Visitando um apartamento",lvl:"B1",d:"Perguntar sobre aluguel, contas e contrato.",lines:[
+ ["a","Welcome! So, this is the apartment. What do you think so far?"],
+ ["me","Diga que é mais espaçoso do que esperava",[["It's more spacious than I expected.",1,"Comparativo + “than I expected”."],["It's more spacious than I was expecting it.",0,"Sobrou o “it”: “than I was expecting”."],["It's more big than I thought.",0,"Adjetivo curto: “bigger”, nunca “more big”."]]],
+ ["a","Great! Any questions?"],
+ ["me","Pergunte se as contas estão incluídas no aluguel",[["Are utilities included in the rent?",1,"“Utilities” = contas de água, luz, gás."],["The bills are inclusive in the rent?",0,"Use inversão e “included”: “Are the bills included in the rent?”"],["Is included the bills in the rent?",0,"Ordem: “Are the bills included…?”"]]],
+ ["a","Water is included, but electricity and internet are not."],
+ ["me","Pergunte quanto tempo dura o contrato",[["How long is the lease?",1,"“Lease” = contrato de aluguel."],["How much time is the contract?",0,"Duração: “How long…?”; e contrato de aluguel é “lease”."],["The contract is for how long time?",0,"Diga “How long is the lease?”"]]],
+ ["a","It's a twelve-month lease, and we ask for one month's deposit."],
+ ["me","Diga que gostou e quer pensar até amanhã",[["I really like it. Can I let you know by tomorrow?",1,"“Let you know” = te dar uma resposta."],["I like very much. I will think and tell you tomorrow.",0,"“Like” pede objeto e advérbio no fim: “I like it very much”."],["I liked a lot. I answer you tomorrow.",0,"Use “I really like it” e “I'll let you know tomorrow”."]]],
+ ["a","Of course. Just send me a message, but don't wait too long. There's a lot of interest."]]},
+{id:"raise",t:"Pedindo um aumento",lvl:"B1+",d:"Conversa com a gestora sobre salário, com argumentos.",lines:[
+ ["a","Hi, come in. You wanted to talk about something?"],
+ ["me","Diga que queria conversar sobre seu salário",[["Yes, thanks for your time. I'd like to discuss my salary.",1,"“Discuss” não leva “about”."],["Yes. I want to discuss about my salary.",0,"“Discuss” é transitivo direto: “discuss my salary”."],["Yes. I need more money.",0,"Direto demais para uma negociação."]]],
+ ["a","OK, I'm listening."],
+ ["me","Mencione que assumiu mais responsabilidades no último ano",[["Over the past year, I've taken on a lot more responsibility.",1,"Present perfect para um período até agora; “take on” = assumir."],["In the last year, I took more responsibilities.",0,"Período até agora → present perfect; e “take on” soa mais natural."],["Since one year I have more responsibilities.",0,"“Since one year” não existe; use “for a year” ou “over the past year”."]]],
+ ["a","That's true. You've led two major projects."],
+ ["me","Diga que, com base nisso, acredita que um reajuste de 10% seria justo",[["Based on that, I believe a ten percent raise would be fair.",1,"“Raise” = aumento; “would be fair” soa firme e educado."],["Based on this, I deserve ten percent more of salary.",0,"Soa exigente e a estrutura não é natural; use “a ten percent raise”."],["So I think is fair ten percent more.",0,"Falta sujeito e a ordem está errada."]]],
+ ["a","I appreciate you bringing this up. I can't promise ten percent, but let me talk to HR."],
+ ["me","Agradeça e pergunte quando terá uma resposta",[["Thank you. When do you think you'll have an answer?",1,"Pergunta indireta e educada sobre prazo."],["Thanks. When you will have an answer?",0,"Pergunta direta precisa de inversão: “When will you have…?”"],["Thanks. Until when you answer me?",0,"Use “When do you think you'll have an answer?”"]]],
+ ["a","I should know by the end of next week. Thanks for being so well prepared."]]}
 ];
 
 // Leituras graduadas: texto, glossário (toque para traduzir) e perguntas [pergunta, opções, índice correto]
@@ -1353,7 +1395,19 @@ const READINGS = [
  q:[["What happened to productivity?",["It went down","It went up by eight percent","It stayed the same"],1],["Why did employees feel more focused?",["They knew they had less time","They earned more","Managers watched them closely"],0],["What does the company think about the model?",["It works for every company","It may not suit every business","It was a failure"],1]]},
 {id:"failure",t:"Fail Fast, Learn Faster",lvl:"B2",text:"In many companies, failure is still seen as something to hide. Yet some of the most innovative organizations actively encourage their teams to share mistakes. At one design agency, employees present a \"failure of the month\" in a relaxed meeting, explaining what went wrong and what they would do differently. The goal is not to celebrate carelessness, but to make it safe to take reasonable risks. Research on so-called psychological safety suggests that teams who feel comfortable admitting errors tend to learn faster and perform better. Ironically, the fear of looking incompetent is often what prevents people from becoming competent.",
  gloss:{"failure":"fracasso","hide":"esconder","Yet":"no entanto","encourage":"incentivam","carelessness":"descuido","reasonable":"razoáveis","so-called":"assim chamada","admitting":"admitir","tend to":"tendem a","perform":"ter desempenho","prevents":"impede"},
- q:[["What happens in the “failure of the month” meeting?",["People are punished","People explain a mistake and what they would change","People vote for the worst employee"],1],["What is the goal of the meeting?",["To celebrate carelessness","To make reasonable risks feel safe","To reduce costs"],1],["What is ironic, according to the text?",["Fear of looking incompetent stops people from improving","Experts make more mistakes","Meetings are a waste of time"],0]]}
+ q:[["What happens in the “failure of the month” meeting?",["People are punished","People explain a mistake and what they would change","People vote for the worst employee"],1],["What is the goal of the meeting?",["To celebrate carelessness","To make reasonable risks feel safe","To reduce costs"],1],["What is ironic, according to the text?",["Fear of looking incompetent stops people from improving","Experts make more mistakes","Meetings are a waste of time"],0]]},
+{id:"interview",t:"Ana's First Interview",lvl:"A2",text:"Ana had her first job interview in English last week. She was very nervous, so she practiced her answers every night with a friend. On the day of the interview, she arrived fifteen minutes early. The manager was friendly and asked simple questions about her experience and her plans. Ana didn't understand one question, so she asked, \"Could you repeat that, please?\" The manager smiled and said it again, more slowly. After thirty minutes, the interview finished. Two days later, Ana received an email. She got the job!",
+ gloss:{"nervous":"nervosa","practiced":"praticou","arrived":"chegou","early":"cedo","manager":"gerente","friendly":"simpático","experience":"experiência","repeat":"repetir","slowly":"devagar","received":"recebeu"},
+ q:[["How did Ana prepare for the interview?",["She read a book about interviews","She practiced every night with a friend","She didn't prepare"],1],["What did she do when she didn't understand a question?",["She asked the manager to repeat it","She answered anything","She left the room"],0],["What happened in the end?",["She had another interview","She never heard from them","She got the job"],2]]},
+{id:"smalltalk",t:"Small Talk Is Not Small",lvl:"B1",text:"Many Brazilians who move abroad are surprised by how much small talk matters at work. Conversations about the weather, the weekend or a football game may seem pointless, but they build trust. In countries like the United States and the United Kingdom, colleagues often chat for a few minutes before a meeting starts. If you stay silent, people may think you are unfriendly, even if you are just shy. The good news is that small talk follows predictable patterns. Learning a handful of questions and reactions, like \"How was your weekend?\" and \"Oh, that sounds fun!\", can make a huge difference.",
+ gloss:{"abroad":"no exterior","small talk":"conversa informal","pointless":"sem sentido","trust":"confiança","chat":"conversam","unfriendly":"antipático","shy":"tímido","predictable":"previsíveis","a handful of":"um punhado de","huge":"enorme"},
+ q:[["According to the text, what does small talk build?",["Stress","Trust","Money"],1],["What may colleagues think if you stay silent?",["That you are smart","That you are tired","That you are unfriendly"],2],["Why is small talk easier than it looks?",["It follows predictable patterns","It is always about football","It uses difficult words"],0]]},
+{id:"secondhand",t:"The Rise of Second-Hand Clothes",lvl:"B1+",text:"Buying second-hand clothes used to be something people did only when they had no choice. Today, it has become a trend, especially among young people. Apps that let users sell their old clothes have grown rapidly, and many shoppers say they enjoy finding unique pieces at lower prices. There is also an environmental reason: the fashion industry is one of the largest polluters in the world, and reusing clothes reduces waste. Critics point out, however, that some people now buy more than ever, simply because it is cheap. In other words, second-hand shopping only helps the planet if we actually buy less.",
+ gloss:{"second-hand":"de segunda mão","used to be":"costumava ser","trend":"tendência","rapidly":"rapidamente","shoppers":"consumidores","unique":"únicas","polluters":"poluidores","reusing":"reutilizar","waste":"desperdício","Critics":"críticos","point out":"apontam"},
+ q:[["Who is the trend especially popular with?",["Companies","Young people","Older people"],1],["What is the environmental argument?",["Reusing clothes reduces waste","Clothes are cheaper","The apps are free"],0],["What is the critics' concern?",["The apps are dangerous","The clothes are dirty","People buy more because it is cheap"],2]]},
+{id:"sleep",t:"Sleep, the Forgotten Study Tool",lvl:"B2",text:"Students often sacrifice sleep to study more, assuming that extra hours will lead to better results. Neuroscience suggests the opposite. During deep sleep, the brain replays and consolidates what we learned during the day, transferring it from short-term to long-term memory. In one well-known experiment, participants who slept after learning a list of words remembered significantly more the next day than those who stayed awake. Language learners can take advantage of this by reviewing new vocabulary shortly before going to bed. Cutting sleep, on the other hand, undermines the very process that makes studying worthwhile.",
+ gloss:{"sacrifice":"sacrificam","assuming":"supondo","deep sleep":"sono profundo","replays":"repassa","consolidates":"consolida","short-term":"curto prazo","significantly":"significativamente","stayed awake":"ficaram acordados","shortly before":"pouco antes de","undermines":"prejudica","worthwhile":"valer a pena"},
+ q:[["What happens during deep sleep?",["The brain erases short-term memory","The brain consolidates what we learned","Nothing relevant to learning"],1],["What does the text suggest language learners do?",["Review new vocabulary shortly before bed","Study all night before a test","Sleep during the day"],0],["What is the effect of cutting sleep?",["It makes studying faster","It has no effect","It undermines the learning process"],2]]}
 ];
 
 const LEVELS = [
@@ -2493,6 +2547,23 @@ function blockWrite(el,opt={}){
 /* ============================================================
    REVIEW TAB
    ============================================================ */
+function markTarget(ex,w){ if(ex.includes("*")) return ex; const i = ex.toLowerCase().indexOf(w.toLowerCase()); return i>=0 ? ex.slice(0,i)+"*"+ex.slice(i,i+w.length)+"*"+ex.slice(i+w.length) : ex; }
+function parseWordList(txt){
+  const out = [];
+  txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).forEach(l=>{
+    const parts = l.split(/\t|\s*;\s*|\s+[-–—=:]\s+/).map(x=>x.trim()).filter(Boolean);
+    if(parts.length<2) return;
+    out.push({w:parts[0].slice(0,80), pt:parts[1].slice(0,120), ex:(parts[2]||"").slice(0,240)});
+  });
+  return out;
+}
+async function aiExamples(words){
+  const r = await AI.json(`For each English word or expression below, write ONE natural example sentence (${isBasic()?"very simple, A1-A2 level":"B1-B2 level"}) and wrap the target expression in asterisks, like "We need to *figure out* the problem." Return ONLY JSON: {"items":[{"w":"the word exactly as given","ex":"sentence with *target*"}]}
+Words:
+${words.map(w=>"- "+w).join("\n")}`,{modelTier:"quick"});
+  const map = {}; (r && Array.isArray(r.items) ? r.items : []).forEach(it=>{ if(it && it.w && it.ex) map[String(it.w).toLowerCase()] = String(it.ex).slice(0,240); });
+  return map;
+}
 function wordDetail(c){
   const st = S.cards[c.id], custom = c.id.startsWith("c");
   return `<div class="wdet stack" id="wdet" data-id="${c.id}">
@@ -2538,7 +2609,14 @@ function renderReviewTab(){
       <div class="grid2"><div class="stack" style="gap:4px"><label for="nw-w">Inglês</label><input type="text" id="nw-w" placeholder="e.g. take for granted"></div>
       <div class="stack" style="gap:4px"><label for="nw-p">Significado</label><input type="text" id="nw-p" placeholder="não dar valor"></div></div>
       <div class="stack" style="gap:4px"><label for="nw-e">Frase de exemplo (onde você viu)</label><input type="text" id="nw-e" placeholder="Don't take your health for granted."></div>
-      <div class="row"><button class="btn" id="add">Adicionar</button></div>
+      <div class="row"><button class="btn" id="add">Adicionar</button>${AI?`<button class="btn ghost" id="genEx">Gerar exemplo com IA</button>`:""}</div>
+      <details><summary class="small" style="cursor:pointer;font-weight:700">Importar uma lista de palavras</summary>
+        <div class="stack" style="margin-top:10px">
+          <p class="small muted">Uma palavra por linha, no formato <span class="mono">palavra - significado</span> (também aceita ponto e vírgula ou tab, e um exemplo opcional como terceiro campo).</p>
+          <textarea id="imp" rows="5" placeholder="take for granted - não dar valor\nhang out - sair, passar tempo junto\nbrand new; novinho em folha; I bought a brand new bike."></textarea>
+          ${AI?`<label class="small row" style="font-weight:400;cursor:pointer"><input type="checkbox" id="impAI" checked style="accent-color:var(--acc)"> Gerar frases de exemplo com IA para as que não têm</label>`:""}
+          <div class="row"><button class="btn" id="impGo">Importar</button><span class="small muted" id="impMsg"></span></div>
+        </div></details>
     </div>
     <div class="card pad stack">
       <div class="row between"><h3>Suas palavras</h3><span class="small muted">${counts.lrn+counts.young+counts.mat} em estudo · ${counts.mat} maduras</span></div>
@@ -2548,6 +2626,21 @@ function renderReviewTab(){
   </div>`;
   $("#go").onclick = ()=>go("review","run");
   const hd = $("#hd"); if(hd) hd.onclick = ()=>go("review","hard");
+  const ge = $("#genEx"); if(ge) ge.onclick = async ()=>{ const w=$("#nw-w").value.trim(); if(!w){ toast("Digite a palavra primeiro"); return; } ge.disabled=true; ge.textContent="Gerando…";
+    try{ const m = await aiExamples([w]); const ex = m[w.toLowerCase()]; if(ex) $("#nw-e").value = ex; else toast("Não veio exemplo; tente de novo"); }catch(e){ toast(aiErr(e)); }
+    ge.disabled=false; ge.textContent="Gerar exemplo com IA"; };
+  $("#impGo").onclick = async ()=>{
+    const list = parseWordList($("#imp").value), msg = $("#impMsg");
+    if(!list.length){ msg.textContent = "Nenhuma linha no formato palavra - significado."; return; }
+    const have = new Set(allCards().map(c=>c.w.toLowerCase()));
+    const fresh = list.filter(x=>!have.has(x.w.toLowerCase()));
+    const skip = list.length - fresh.length;
+    const aiBox = $("#impAI");
+    if(AI && aiBox && aiBox.checked){ const need = fresh.filter(x=>!x.ex).slice(0,30).map(x=>x.w);
+      if(need.length){ msg.textContent = "Gerando exemplos…"; try{ const m = await aiExamples(need); fresh.forEach(x=>{ if(!x.ex && m[x.w.toLowerCase()]) x.ex = m[x.w.toLowerCase()]; }); }catch(e){ toast(aiErr(e)); } } }
+    fresh.forEach((x,k)=>S.custom.push({id:"c"+Date.now().toString(36)+k,w:x.w,pt:x.pt,ex:markTarget(x.ex||x.w,x.w),tag:"importada"}));
+    save(); toast(fresh.length+" palavras importadas"+(skip?" · "+skip+" já existiam":"")); renderReviewTab();
+  };
   $("#add").onclick = ()=>{
     const w=$("#nw-w").value.trim(), p=$("#nw-p").value.trim(); let e=$("#nw-e").value.trim();
     if(!w||!p){ toast("Preencha a palavra e o significado"); return; }

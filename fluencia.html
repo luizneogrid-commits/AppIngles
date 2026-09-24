@@ -2530,6 +2530,23 @@ function blockWrite(el,opt={}){
 /* ============================================================
    REVIEW TAB
    ============================================================ */
+function markTarget(ex,w){ if(ex.includes("*")) return ex; const i = ex.toLowerCase().indexOf(w.toLowerCase()); return i>=0 ? ex.slice(0,i)+"*"+ex.slice(i,i+w.length)+"*"+ex.slice(i+w.length) : ex; }
+function parseWordList(txt){
+  const out = [];
+  txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).forEach(l=>{
+    const parts = l.split(/\t|\s*;\s*|\s+[-–—=:]\s+/).map(x=>x.trim()).filter(Boolean);
+    if(parts.length<2) return;
+    out.push({w:parts[0].slice(0,80), pt:parts[1].slice(0,120), ex:(parts[2]||"").slice(0,240)});
+  });
+  return out;
+}
+async function aiExamples(words){
+  const r = await AI.json(`For each English word or expression below, write ONE natural example sentence (${isBasic()?"very simple, A1-A2 level":"B1-B2 level"}) and wrap the target expression in asterisks, like "We need to *figure out* the problem." Return ONLY JSON: {"items":[{"w":"the word exactly as given","ex":"sentence with *target*"}]}
+Words:
+${words.map(w=>"- "+w).join("\n")}`,{modelTier:"quick"});
+  const map = {}; (r && Array.isArray(r.items) ? r.items : []).forEach(it=>{ if(it && it.w && it.ex) map[String(it.w).toLowerCase()] = String(it.ex).slice(0,240); });
+  return map;
+}
 function wordDetail(c){
   const st = S.cards[c.id], custom = c.id.startsWith("c");
   return `<div class="wdet stack" id="wdet" data-id="${c.id}">
@@ -2575,7 +2592,14 @@ function renderReviewTab(){
       <div class="grid2"><div class="stack" style="gap:4px"><label for="nw-w">Inglês</label><input type="text" id="nw-w" placeholder="e.g. take for granted"></div>
       <div class="stack" style="gap:4px"><label for="nw-p">Significado</label><input type="text" id="nw-p" placeholder="não dar valor"></div></div>
       <div class="stack" style="gap:4px"><label for="nw-e">Frase de exemplo (onde você viu)</label><input type="text" id="nw-e" placeholder="Don't take your health for granted."></div>
-      <div class="row"><button class="btn" id="add">Adicionar</button></div>
+      <div class="row"><button class="btn" id="add">Adicionar</button>${AI?`<button class="btn ghost" id="genEx">Gerar exemplo com IA</button>`:""}</div>
+      <details><summary class="small" style="cursor:pointer;font-weight:700">Importar uma lista de palavras</summary>
+        <div class="stack" style="margin-top:10px">
+          <p class="small muted">Uma palavra por linha, no formato <span class="mono">palavra - significado</span> (também aceita ponto e vírgula ou tab, e um exemplo opcional como terceiro campo).</p>
+          <textarea id="imp" rows="5" placeholder="take for granted - não dar valor\nhang out - sair, passar tempo junto\nbrand new; novinho em folha; I bought a brand new bike."></textarea>
+          ${AI?`<label class="small row" style="font-weight:400;cursor:pointer"><input type="checkbox" id="impAI" checked style="accent-color:var(--acc)"> Gerar frases de exemplo com IA para as que não têm</label>`:""}
+          <div class="row"><button class="btn" id="impGo">Importar</button><span class="small muted" id="impMsg"></span></div>
+        </div></details>
     </div>
     <div class="card pad stack">
       <div class="row between"><h3>Suas palavras</h3><span class="small muted">${counts.lrn+counts.young+counts.mat} em estudo · ${counts.mat} maduras</span></div>
@@ -2585,6 +2609,21 @@ function renderReviewTab(){
   </div>`;
   $("#go").onclick = ()=>go("review","run");
   const hd = $("#hd"); if(hd) hd.onclick = ()=>go("review","hard");
+  const ge = $("#genEx"); if(ge) ge.onclick = async ()=>{ const w=$("#nw-w").value.trim(); if(!w){ toast("Digite a palavra primeiro"); return; } ge.disabled=true; ge.textContent="Gerando…";
+    try{ const m = await aiExamples([w]); const ex = m[w.toLowerCase()]; if(ex) $("#nw-e").value = ex; else toast("Não veio exemplo; tente de novo"); }catch(e){ toast(aiErr(e)); }
+    ge.disabled=false; ge.textContent="Gerar exemplo com IA"; };
+  $("#impGo").onclick = async ()=>{
+    const list = parseWordList($("#imp").value), msg = $("#impMsg");
+    if(!list.length){ msg.textContent = "Nenhuma linha no formato palavra - significado."; return; }
+    const have = new Set(allCards().map(c=>c.w.toLowerCase()));
+    const fresh = list.filter(x=>!have.has(x.w.toLowerCase()));
+    const skip = list.length - fresh.length;
+    const aiBox = $("#impAI");
+    if(AI && aiBox && aiBox.checked){ const need = fresh.filter(x=>!x.ex).slice(0,30).map(x=>x.w);
+      if(need.length){ msg.textContent = "Gerando exemplos…"; try{ const m = await aiExamples(need); fresh.forEach(x=>{ if(!x.ex && m[x.w.toLowerCase()]) x.ex = m[x.w.toLowerCase()]; }); }catch(e){ toast(aiErr(e)); } } }
+    fresh.forEach((x,k)=>S.custom.push({id:"c"+Date.now().toString(36)+k,w:x.w,pt:x.pt,ex:markTarget(x.ex||x.w,x.w),tag:"importada"}));
+    save(); toast(fresh.length+" palavras importadas"+(skip?" · "+skip+" já existiam":"")); renderReviewTab();
+  };
   $("#add").onclick = ()=>{
     const w=$("#nw-w").value.trim(), p=$("#nw-p").value.trim(); let e=$("#nw-e").value.trim();
     if(!w||!p){ toast("Preencha a palavra e o significado"); return; }
