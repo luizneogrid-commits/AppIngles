@@ -285,6 +285,8 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .fc{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:120px}
 .fcd{display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%}
 .fcb{width:70%;max-width:36px;background:var(--acc);border-radius:6px 6px 2px 2px}
+.wk{display:flex;gap:12px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);flex-wrap:wrap}
+.wk .ti{color:var(--acc)}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2780,6 +2782,7 @@ function renderProgress(){
       <div class="heat-wrap"><div class="heat">${cells}</div></div>
       <div class="legend"><span><i style="background:var(--surface2)"></i>nenhuma sessão</span><span><i style="background:color-mix(in srgb,var(--acc) 45%,var(--surface2))"></i>1 sessão</span><span><i style="background:var(--acc)"></i>manhã e noite</span></div>
     </div>
+    ${(()=>{ const w = weaknesses(); return `<div class="card pad stack"><h3>Onde focar agora</h3>${w.length?`<div class="stack" style="gap:10px">${w.map((x,k)=>`<div class="wk"><span class="ti">${ICON[x.icon]}</span><span style="flex:1"><b>${esc(x.t)}</b><span class="small muted" style="display:block">${esc(x.d)}</span></span><button class="btn sm" data-wk="${k}">${esc(x.btn)}</button></div>`).join("")}</div>`:`<p class="small muted">Ainda não há dados suficientes, ou está tudo equilibrado. Continue com as sessões — a análise aparece aqui conforme você pratica.</p>`}</div>`; })()}
     <div class="grid2">
       <div class="card pad stack"><h3>Trilha ${isBasic()?"A1 → B1":"B1 → B2"}</h3>
         <div class="row" style="align-items:baseline"><span class="bignum">${path}%</span><span class="muted small">do conteúdo do app dominado</span></div>
@@ -2831,6 +2834,7 @@ function renderProgress(){
     </div>
   </div>`;
   $("#lt").onclick = ()=>go("practice","test");
+  const wks = weaknesses(); $$("[data-wk]").forEach(b=>b.onclick=()=>{ const g = wks[+b.dataset.wk].go; go(g[0],g[1]); });
   $("#share").onclick = shareProgress;
   $("#s-lvl").onchange = e=>{ const L = LEVELS.find(l=>l.id===e.target.value); S.settings.level = L.id; S.listenLevel = L.listen; save(); toast("Nível: "+L.t+". Palavras, aulas, ditado, fala e escrita foram ajustados."); renderProgress(); };
   $("#s-acc").onchange = e=>{ S.settings.accent=e.target.value; S.settings.voice=""; save(); renderProgress(); };
@@ -2884,6 +2888,28 @@ async function shareProgress(){
     try{ await navigator.share({files:[file], text:"Estou estudando inglês 15 min de manhã e 15 à noite! "+effectiveStreak()+" dias seguidos."}); return; }catch(e){ if(e && e.name==="AbortError") return; }
   }
   if(await saveFile("meu-progresso-ingles.png", blob, "image/png")) toast("Imagem salva");
+}
+/* ---------- análise de pontos fracos ---------- */
+function weaknesses(){
+  const out = [];
+  // vocabulário por categoria
+  const byTag = {};
+  Object.entries(S.cards).forEach(([id,st])=>{ const c = cardById(id); if(!c || st.known) return; const t = c.tag||"outras"; (byTag[t] ||= {n:0,l:0}); byTag[t].n++; byTag[t].l += st.lapses||0; });
+  const tags = Object.entries(byTag).filter(([,v])=>v.n>=3 && v.l>0).map(([t,v])=>({t,rate:v.l/v.n,...v})).sort((a,b)=>b.rate-a.rate);
+  if(tags.length) out.push({icon:"book",t:"Vocabulário: "+tags[0].t,d:"É a categoria que você mais esquece ("+tags[0].l+" esquecimentos em "+tags[0].n+" palavras). Crie frases pessoais para essas palavras na lista.",go:hardIds().length?["review","hard"]:["review",null],btn:hardIds().length?"Treinar difíceis":"Ver palavras"});
+  // gramática fraca
+  const weakG = GRAMMAR.filter(l=>S.grammar[l.id] && S.grammar[l.id].last<=3).sort((a,b)=>S.grammar[a.id].last-S.grammar[b.id].last);
+  if(weakG.length) out.push({icon:"pen",t:"Gramática: "+weakG[0].t,d:"Sua última nota foi "+S.grammar[weakG[0].id].last+"/5."+(weakG.length>1?" Outras aulas com nota baixa: "+weakG.slice(1,3).map(l=>l.t).join("; ")+".":""),go:["practice","g:"+weakG[0].id],btn:"Refazer aula"});
+  // ditado
+  const d = S.dict.slice(-10); const avg = d.length ? d.reduce((a,x)=>a+x.s,0)/d.length : null;
+  if(avg!=null && avg<70) out.push({icon:"ear",t:"Compreensão oral",d:"Média de "+Math.round(avg)+"% nos últimos ditados. Use “Ouvir devagar” e o toque nas palavras vermelhas, e faça o jogo Ouça e entenda.",go:["practice","ear"],btn:"Ouça e entenda"});
+  // deck de erros
+  const m = (S.mistakes||[]).length;
+  if(m>=5) out.push({icon:"chat",t:m+" erros guardados",d:"Revisar os próprios erros é o treino que mais rende. Acerte cada um 2 vezes seguidas para tirá-lo do deck.",go:["practice","mistakes"],btn:"Meus erros"});
+  // fala/escrita pouco praticadas
+  const last14 = Array.from({length:14},(_,k)=>S.days[addDays(todayKey(),-k)]).filter(Boolean);
+  if(last14.length>=5 && !S.journal.some(j=>diffDays(j.d,todayKey())<=7)) out.push({icon:"pen",t:"Escrita parada",d:"Você não salvou nada no diário nesta semana. Escrever é onde a gramática vira hábito.",go:["practice","write"],btn:"Escrever agora"});
+  return out.slice(0,4);
 }
 function confirmBox(msg,label,fn){
   const c = $("#cfm"); c.innerHTML = `<div class="confirm"><span>${esc(msg)}</span><button class="btn sm" id="cy" style="color:var(--bad)">${esc(label)}</button><button class="btn sm ghost" id="cn">Cancelar</button></div>`;
