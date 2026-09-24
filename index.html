@@ -302,6 +302,10 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .wk{display:flex;gap:12px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);flex-wrap:wrap}
 .wk .ti{color:var(--acc)}
 .recap{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.res{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--line)}
+.res:last-child{border-bottom:0}
+.res a{color:var(--acc);text-decoration:none}
+.res a:hover{text-decoration:underline}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1351,6 +1355,24 @@ const LEVELS = [
   {id:"b1p",t:"Intermediário alto (B1+)",d:"Converso sobre vários assuntos com erros; entendo séries com legenda em inglês.",listen:2,newPer:5,rate:0.95,en:"upper-intermediate (B1+), aiming for B2"},
   {id:"b2",t:"Avançado (B2)",d:"Participo de reuniões em inglês, mas quero mais precisão e naturalidade.",listen:2,newPer:8,rate:1,en:"upper-intermediate (B2), aiming for C1"}];
 const LISTEN_NAMES = ["Iniciante","Nível 1","Nível 2","Nível 3"];
+// Recursos externos gratuitos por faixa: a = A1–A2, b = B1–B1+, c = B2
+const RESOURCES = [
+ {band:"a",t:"News in Levels",u:"https://www.newsinlevels.com",k:"Notícias",d:"A mesma notícia em 3 níveis, com áudio. Comece pelo nível 1 e leia ouvindo."},
+ {band:"a",t:"VOA Learning English",u:"https://learningenglish.voanews.com",k:"Notícias e áudio",d:"Inglês falado devagar, com texto. Ouça uma matéria por dia acompanhando a leitura."},
+ {band:"a",t:"BBC Learning English",u:"https://www.bbc.co.uk/learningenglish",k:"Cursos",d:"Cursos gratuitos por nível, com vídeos curtos e exercícios."},
+ {band:"a",t:"Friends (série)",u:"https://www.justwatch.com/br/serie/friends",k:"Série",d:"Episódios curtos, vocabulário do dia a dia. Assista com legenda em inglês — nunca em português."},
+ {band:"b",t:"6 Minute English (BBC)",u:"https://www.bbc.co.uk/learningenglish/english/features/6-minute-english",k:"Podcast",d:"Episódios de 6 minutos com transcrição e vocabulário. Perfeito para o trajeto ou a academia."},
+ {band:"b",t:"Breaking News English",u:"https://breakingnewsenglish.com",k:"Leitura",d:"Notícias em vários níveis com ditado, lacunas e áudio. Faça o ditado e compare com o app."},
+ {band:"b",t:"All Ears English",u:"https://www.allearsenglish.com",k:"Podcast",d:"Conversas naturais sobre inglês americano. Anote 3 expressões por episódio e adicione ao seu baralho."},
+ {band:"b",t:"Rachel's English",u:"https://www.youtube.com/@rachelsenglish",k:"Pronúncia",d:"Pronúncia americana detalhada: ligações, redução e entonação. Ótimo par para o shadowing."},
+ {band:"b",t:"The Office / Modern Family",u:"https://www.justwatch.com/br",k:"Séries",d:"Diálogos rápidos e naturais. Reveja cenas curtas repetindo as falas (shadowing)."},
+ {band:"c",t:"TED Talks",u:"https://www.ted.com/talks",k:"Palestras",d:"Temas variados com transcrição interativa. Ouça sem legenda, depois leia o transcript."},
+ {band:"c",t:"The Economist / The Guardian",u:"https://www.theguardian.com/international",k:"Leitura",d:"Artigos de opinião para vocabulário avançado. Leia um por dia e resuma em 3 frases no diário."},
+ {band:"c",t:"Podcasts nativos",u:"https://www.npr.org/podcasts",k:"Podcast",d:"Podcasts da NPR em velocidade real. Escolha um tema que você já ama em português."},
+ {band:"all",t:"YouGlish",u:"https://youglish.com",k:"Pronúncia",d:"Digite qualquer palavra e ouça como nativos a dizem em vídeos reais."},
+ {band:"all",t:"Cambridge Dictionary",u:"https://dictionary.cambridge.org",k:"Dicionário",d:"Dicionário inglês-inglês com pronúncia, exemplos e tradução para português."},
+ {band:"all",t:"EF SET",u:"https://www.efset.org",k:"Teste oficial",d:"Teste de nível gratuito e padronizado. Faça a cada 3 meses para medir sua evolução."}
+];
 function curLevel(){ return LEVELS.find(l=>l.id===S.settings.level) || LEVELS[2]; }
 function isBasic(){ return S.settings.level==="a1" || S.settings.level==="a2"; }
 const isBasicItem = x=>x.lvl==="A1"||x.lvl==="A2"||x.lvl==="A"||x.lvl==="A1–A2";
@@ -1702,6 +1724,17 @@ async function saveFile(filename, text, mime){
   catch(e){ toast("Não foi possível salvar o arquivo aqui"); return false; }
 }
 const CRLF = String.fromCharCode(13,10);
+async function quickBackup(){
+  const ok = await saveFile("fluencia-backup-"+todayKey()+".json", JSON.stringify(S), "application/json");
+  if(ok){ S.lastBackup = todayKey(); save(); toast("Backup salvo — guarde o arquivo num lugar seguro"); }
+  return ok;
+}
+function needsBackup(){
+  const inClaude = !!(window.claude && typeof window.claude.use==="function");
+  if(inClaude || syncState==="cloud") return false;
+  if(Object.keys(S.cards).length<10) return false;
+  return !S.lastBackup || diffDays(S.lastBackup, todayKey())>=14;
+}
 function icsReminders(){
   const d = addDays(todayKey(),1).replace(/-/g,""), stamp = new Date().toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
   const ev = (id,time,title,desc)=>[
@@ -1771,6 +1804,7 @@ function renderToday(){
   const vs = voiceStatus();
   view.innerHTML = `
   ${voicesChecked && !vs.ok && !voiceNoteHidden?`<div class="note warn stack" style="margin-top:16px;gap:6px" role="alert"><span><b>Áudio indisponível.</b> ${esc(vs.msg)}</span><span class="small">${VOICE_HELP}</span><button class="btn sm" id="vhide" style="align-self:flex-start">Entendi</button></div>`:""}
+  ${needsBackup()?`<div class="note row between" style="margin-top:16px"><span><b>Seu progresso fica só neste aparelho.</b> ${S.lastBackup?"Último backup em "+fmtDate(S.lastBackup)+".":"Você ainda não fez backup."} Salve um arquivo de segurança — leva 5 segundos.</span><button class="btn sm" id="qbk">Salvar backup</button></div>`:""}
   ${atRisk?`<div class="note warn" style="margin-top:16px"><b>Sua sequência de ${streak} ${streak===1?"dia":"dias"} está em risco.</b> Faça ao menos uma sessão hoje${S.freezes?" (você tem "+S.freezes+" proteção, mas melhor não gastar)":""}.</div>`:""}
   <section class="hello">
     <span class="eyebrow">${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</span>
@@ -1810,6 +1844,7 @@ function renderToday(){
   </div>`;
   $$("[data-start]",view).forEach(b=>b.addEventListener("click",()=>startSession(b.dataset.start)));
   const gt = $("#gotest"); if(gt) gt.onclick = ()=>go("practice","test");
+  const qb = $("#qbk"); if(qb) qb.onclick = async ()=>{ if(await quickBackup()) renderToday(); };
   const vh = $("#vhide"); if(vh) vh.onclick = ()=>{ voiceNoteHidden = true; renderToday(); };
 }
 
@@ -2481,6 +2516,7 @@ function renderPractice(){
   if(sub==="reading") return blockReading(shell("Leitura"));
   if(sub==="ear") return blockEarGame(shell("Ouça e entenda"));
   if(sub==="test") return blockLevelTest(shell("Teste de nível"));
+  if(sub==="world") return blockResources(shell("Inglês no mundo real"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -2496,6 +2532,7 @@ function renderPractice(){
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
       <button class="card tile" data-s="speak"><span class="ti">${ICON.mic}</span><h3>Fala livre</h3><p>Um tema aleatório, frases úteis e cronômetro 90/60 s.</p></button>
       <button class="card tile" data-s="write"><span class="ti">${ICON.pen}</span><h3>Escrita livre</h3><p>Mais um texto no diário, com correção.</p></button>
+      <button class="card tile" data-s="world"><span class="ti">${ICON.wave}</span><h3>Inglês no mundo real</h3><p>Podcasts, séries, notícias e sites gratuitos escolhidos para o seu nível, com dica de como usar cada um.</p></button>
       <button class="card tile" data-s="journal"><span class="ti">${ICON.book}</span><h3>Seu diário</h3><p>${S.journal.length} ${S.journal.length===1?"texto salvo":"textos salvos"}. Releia e veja sua evolução.</p></button>
     </div>
     <div class="card pad stack"><h3>Gramática — todas as aulas</h3>
@@ -2785,13 +2822,28 @@ function blockLevelTest(el){
     $("#keepL",el).onclick = ()=>go("progress");
   }
 }
+function blockResources(el){
+  const band = isBasic() ? "a" : S.settings.level==="b2" ? "c" : "b";
+  const names = {a:"Para iniciantes (A1–A2)",b:"Para o intermediário (B1–B1+)",c:"Para o avançado (B2)",all:"Para todos os níveis"};
+  const order = [band,"all"].concat(["a","b","c"].filter(x=>x!==band));
+  el.innerHTML = `<div class="stack">
+    <p class="muted">O app é o treino; o inglês de verdade está lá fora. Regra de ouro: <b>legenda em inglês, nunca em português</b>, e conteúdo que você entende em 70–80%. Mais fácil que isso não ensina; mais difícil cansa.</p>
+    ${order.map(b=>`<div class="card pad stack"><div class="row between"><h3>${names[b]}</h3>${b===band?'<span class="chip">seu nível</span>':""}</div>
+      ${RESOURCES.filter(r=>r.band===b).map(r=>`<div class="res"><div class="row between" style="flex-wrap:nowrap"><a href="${r.u}" target="_blank" rel="noopener noreferrer"><b>${esc(r.t)}</b> ↗</a><span class="tag">${esc(r.k)}</span></div><span class="small muted">${esc(r.d)}</span></div>`).join("")}
+    </div>`).join("")}
+    <p class="small muted">Links externos abrem em outra aba. Nenhum deles tem relação com este app.</p></div>`;
+}
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
-  el.innerHTML = `<div class="stack">${S.journal.map(j=>`<article class="card pad stack">
+  el.innerHTML = `<div class="stack"><div class="row"><button class="btn sm" id="jexp">Exportar diário (.txt)</button><span class="small muted">${S.journal.length} ${S.journal.length===1?"texto":"textos"}</span></div>${S.journal.map(j=>`<article class="card pad stack">
     <div class="row between"><span class="eyebrow">${fmtDate(j.d)}</span>${j.fb&&j.fb.level?`<span class="lvl">${esc(j.fb.level)}</span>`:""}</div>
     <h3>${esc(j.p)}</h3><p style="white-space:pre-wrap">${esc(j.text)}</p>
     ${j.fb&&j.fb.corrected?`<details><summary class="small" style="cursor:pointer;font-weight:700">Versão corrigida</summary><div class="corr" style="margin-top:8px">${esc(j.fb.corrected)}</div></details>`:""}
   </article>`).join("")}</div>`;
+  $("#jexp",el).onclick = async ()=>{
+    const txt = S.journal.slice().reverse().map(j=>"=== "+j.d+" ===\n"+j.p+"\n\n"+j.text+(j.fb&&j.fb.corrected?"\n\n--- Versão corrigida"+(j.fb.level?" ("+j.fb.level+")":"")+" ---\n"+j.fb.corrected:"")).join("\n\n\n");
+    if(await saveFile("meu-diario-em-ingles.txt", txt, "text/plain")) toast("Diário exportado");
+  };
 }
 
 /* ============================================================
@@ -2906,12 +2958,12 @@ function renderProgress(){
   $("#s-theme").onchange = e=>{ S.settings.theme=e.target.value; save(); applyPrefs(); };
   $("#s-big").onchange = e=>{ S.settings.big=e.target.value==="1"; save(); applyPrefs(); };
   $("#tv").onclick = ()=>speak("Consistency beats intensity. Fifteen minutes in the morning and fifteen at night.");
-  $("#ex").onclick = ()=>{ const ta=$("#bk"); ta.value = JSON.stringify(S); ta.select();
+  $("#ex").onclick = ()=>{ const ta=$("#bk"); ta.value = JSON.stringify(S); ta.select(); S.lastBackup = todayKey(); save();
     if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>toast("Backup copiado"),()=>toast("Selecionado — copie com Ctrl+C")); else toast("Selecionado — copie com Ctrl+C"); };
   $("#s-tm").onchange = e=>{ if(e.target.value){ S.settings.tm=e.target.value; save(); } };
   $("#s-tn").onchange = e=>{ if(e.target.value){ S.settings.tn=e.target.value; save(); } };
   $("#ics").onclick = async ()=>{ if(await saveFile("lembretes-ingles-15-15.ics", icsReminders(), "text/calendar")) toast("Abra o arquivo para adicionar ao calendário"); };
-  $("#exf").onclick = async ()=>{ if(await saveFile("fluencia-backup-"+todayKey()+".json", JSON.stringify(S), "application/json")) toast("Backup salvo"); };
+  $("#exf").onclick = quickBackup;
   $("#imf").onchange = e=>{ const f = e.target.files[0]; if(!f) return; const rd = new FileReader(); rd.onload = ()=>{ $("#bk").value = rd.result; $("#im").click(); }; rd.readAsText(f); };
   $("#im").onclick = ()=>{ let o; try{ o = JSON.parse($("#bk").value); if(!o || typeof o!=="object" || !o.cards) throw 0; }catch(e){ toast("Esse texto não é um backup válido"); return; }
     confirmBox("Substituir o progresso atual por este backup?","Importar",()=>{ S = merge(o); save(); toast("Backup importado"); renderProgress(); }); };
