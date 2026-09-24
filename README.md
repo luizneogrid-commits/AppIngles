@@ -17,7 +17,16 @@ App de inglês para quem está no **intermediário (B1)** e quer chegar ao **B2/
 | | Micro-aula de gramática | Babbel |
 | | Diário em inglês | Busuu |
 
-Extras: sequência de dias com proteção, XP e níveis, calendário de constância, pares mínimos de pronúncia, ditado e fala livres, lista de palavras com as suas próprias.
+Extras:
+- **Sessão expressa de 5 min** para dias corridos (mantém a sequência)
+- **Diálogos com roteiro** (sem IA, offline) e **conversa livre com IA** (no Claude)
+- **Meus erros**: questões e falas erradas voltam até você acertar 2× seguidas
+- **Palavras difíceis** (esquecidas 3+ vezes) com treino separado; sua frase pessoal aparece no cartão
+- **Ditado** que aceita contrações, com dica de primeiras letras e áudio por palavra
+- **Gravar e ouvir a própria voz** na fala guiada e no shadowing (no app do celular)
+- Sequência com proteção, XP, níveis, **16 conquistas**, resumo semanal com minutos estudados e alerta de sequência em risco
+- **Lembretes no calendário** (.ics), backup em arquivo, tema claro/escuro e texto grande
+- Tela de boas-vindas com nível, sotaque e horários
 
 **Conteúdo:** 217 palavras e expressões (phrasal verbs, collocations, falsos cognatos, idioms, conectores), 21 aulas de gramática focadas nos erros típicos de brasileiros, 81 frases de ditado em 3 níveis, 50 temas de fala, 60 temas de escrita para o diário e 10 diálogos com roteiro (46 falas) que funcionam sem IA.
 
