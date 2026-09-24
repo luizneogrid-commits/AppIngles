@@ -312,6 +312,8 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .wtile{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer;box-shadow:0 2px 0 var(--line)}
 .wtile.on{background:var(--acc-soft);border-color:var(--acc)}
 .wtile.ghost{opacity:.25;box-shadow:none;cursor:default}
+.quest{display:flex;gap:10px;align-items:center}
+.quest.done .small{text-decoration:line-through;color:var(--muted)}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1438,6 +1440,7 @@ function loadLocal(){
 }
 function merge(o){ const d = defaultState(); const r = Object.assign(d, o||{}); r.settings = Object.assign(defaultState().settings, (o||{}).settings||{}); r.stats = Object.assign(defaultState().stats, (o||{}).stats||{}); return r; }
 function save(){
+  checkQuests();
   checkAch();
   S.updatedAt = Date.now();
   if(S.journal.length>40) S.journal.length = 40;
@@ -1530,6 +1533,35 @@ function checkAch(){
   return fresh.length;
 }
 
+/* ---------- missões do dia ---------- */
+const QUESTS = [
+ {id:"rev",t:"Revise 15 cartões",f:r=>[r.rev||0,15]},
+ {id:"dict3",t:"Faça 3 ditados",f:()=>[S.dict.filter(x=>x.d===todayKey()).length,3]},
+ {id:"dict80",t:"Tire 80% ou mais em 2 ditados",f:()=>[S.dict.filter(x=>x.d===todayKey()&&x.s>=80).length,2]},
+ {id:"new",t:"Aprenda 3 palavras novas",f:r=>[(r.newIds||[]).length,3]},
+ {id:"both",t:"Complete as duas sessões",f:r=>[(r.m.every(Boolean)?1:0)+(r.n.every(Boolean)?1:0),2]},
+ {id:"write",t:"Salve um texto no diário",f:()=>[S.journal.filter(j=>j.d===todayKey()).length,1]},
+ {id:"gram",t:"Tire 4/5 ou mais numa aula",f:()=>[GRAMMAR.some(l=>S.grammar[l.id]&&S.grammar[l.id].date===todayKey()&&S.grammar[l.id].last>=4)?1:0,1]},
+ {id:"min20",t:"Estude 20 minutos",f:r=>[Math.floor((r.sec||0)/60),20]},
+ {id:"dlg",t:"Faça um diálogo",f:r=>[r.dlg||0,1]},
+ {id:"fix",t:"Acerte 5 itens de Meus erros",f:r=>[r.mfix||0,5]},
+ {id:"read",t:"Leia um texto e responda",f:r=>[r.read||0,1]}
+];
+function todayQuests(){
+  const t = todayKey(); let h = 0; for(const ch of t) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+  const pool = QUESTS.filter(q=>q.id!=="fix" || (S.mistakes||[]).length>=5);
+  const out = []; let k = h;
+  while(out.length<3 && out.length<pool.length){ const q = pool[k % pool.length]; if(!out.includes(q)) out.push(q); k = (k*1103515245 + 12345) >>> 0; }
+  return out;
+}
+function checkQuests(){
+  const r = S.days[todayKey()]; if(!r || !r.m) return;
+  r.qd = r.qd || {}; let bonus = 0; const qs = todayQuests();
+  qs.forEach(q=>{ const [c,t] = q.f(r); if(c>=t && !r.qd[q.id]){ r.qd[q.id] = 1; bonus += 15; setTimeout(()=>toast("Missão cumprida: "+q.t+" (+15 XP)"),1200); } });
+  if(qs.every(q=>r.qd[q.id]) && !r.qd.all){ r.qd.all = 1; bonus += 20; setTimeout(()=>toast("Baú do dia: +20 XP!"),3600); }
+  if(bonus){ S.xp += bonus; r.xp += bonus; }
+}
+
 /* ---------- streak ---------- */
 function effectiveStreak(){
   const {count,last} = S.streak; if(!last) return 0;
@@ -1617,7 +1649,7 @@ function blockMistakes(el){
     $$(".opt",el).forEach(b=>b.onclick=()=>{
       const o = opts[+b.dataset.j], ok = !!o[1];
       $$(".opt",el).forEach(x=>{ x.disabled = true; if(opts[+x.dataset.j][1]) x.classList.add("right"); });
-      if(ok){ right++; m.streak++; addXP(2); if(m.streak>=2) S.mistakes = S.mistakes.filter(x=>x!==m); }
+      if(ok){ right++; m.streak++; const rm = dayRec(); rm.mfix = (rm.mfix||0)+1; addXP(2); if(m.streak>=2) S.mistakes = S.mistakes.filter(x=>x!==m); }
       else { b.classList.add("wrong"); m.streak = 0; }
       const why = opts.find(x=>x[1])[2];
       $("#mf",el).innerHTML = `<p class="note small">${ok?(m.streak>=2?"<b>Dominado!</b> Saiu do deck. ":"<b>Certo.</b> Mais um acerto e sai do deck. "):"<b>Ainda não.</b> "}${esc(ok?why:o[2]+" → "+why)}</p><button class="btn primary" id="mn" style="margin-top:10px">Continuar →</button>`;
@@ -1844,6 +1876,9 @@ function renderToday(){
     ${(()=>{ const t=(S.tests||[]); const last=t.length?t[t.length-1].d:null; const due = last ? diffDays(last,todayKey())>=30 : dayIndex()>=7; return due?`<div class="note row between"><span><b>${last?"Faz um mês do seu último teste.":"Que tal medir seu nível?"}</b> Um teste de 5 minutos mostra sua evolução.</span><button class="btn sm" id="gotest">Fazer teste</button></div>`:""; })()}
     <div class="grid2">${card("m")}${card("n")}</div>
     ${!doneM && !doneN && !(rec.x && rec.x.every(Boolean)) ? `<div class="row between card pad x-mode" style="padding-block:12px"><span><b>Dia corrido?</b> <span class="muted">Sessão expressa de 5 min: revisão + um ditado. Mantém a sequência.</span></span><button class="btn" data-start="x">Fazer 5 min</button></div>` : ""}
+    ${(()=>{ const qs = todayQuests(), qd = rec.qd||{}; return `<div class="card pad stack"><div class="row between"><h3>Missões do dia</h3><span class="small muted">+15 XP cada · baú de +20 com as 3</span></div>
+      ${qs.map(q=>{ const [c,t] = q.f(rec), done = !!qd[q.id] || c>=t; return `<div class="quest ${done?"done":""}"><span class="bcheck ${done?"on":""}">${done?ICON.check:""}</span><span style="flex:1"><span class="small" style="font-weight:700">${esc(q.t)}</span><span class="progressbar" style="display:block;margin-top:4px"><span style="width:${Math.min(100,Math.round(c/t*100))}%"></span></span></span><span class="mono small muted">${Math.min(c,t)}/${t}</span></div>`; }).join("")}
+      </div>`; })()}
     <div class="statrow">
       <div class="card stat"><span class="v">${streak}</span><span class="l">dias seguidos${S.freezes?` · ${S.freezes} proteção${S.freezes>1?"ões":""}`:""}</span></div>
       <div class="card stat"><span class="v">${due}</span><span class="l">cartões para revisar</span></div>
@@ -2711,7 +2746,7 @@ function blockDialogs(el,startId){
     }
     function finish(){
       const n = dlgTurns(d), prev = S.dialogs[d.id];
-      S.dialogs[d.id] = Math.max(prev??0, right);
+      S.dialogs[d.id] = Math.max(prev??0, right); const rd = dayRec(); rd.dlg = (rd.dlg||0)+1;
       addXP(right*2+5,"diálogo");
       const mine = d.lines.filter(l=>l[0]==="me").map(l=>l[2].find(o=>o[1])[0]);
       el.innerHTML = `<div class="card pad stack">
@@ -2770,7 +2805,7 @@ function blockReading(el){
       let i = 0, right = 0;
       const box = $("#rqbox",el);
       function q(){
-        if(i>=r.q.length){ if(!S.reading) S.reading={}; S.reading[r.id] = Math.max(S.reading[r.id]??0, right); addXP(right*3+5,"leitura");
+        if(i>=r.q.length){ if(!S.reading) S.reading={}; S.reading[r.id] = Math.max(S.reading[r.id]??0, right); const rr = dayRec(); rr.read = (rr.read||0)+1; addXP(right*3+5,"leitura");
           box.innerHTML = `<div class="note"><b>${right}/${r.q.length} corretas.</b> Agora leia de novo em voz alta junto com o áudio — é leitura e shadowing ao mesmo tempo.</div>`; return; }
         const [qq,o,a] = r.q[i];
         box.innerHTML = `<div class="stack"><span class="eyebrow">Pergunta ${i+1}/${r.q.length}</span><p class="qsent">${esc(qq)}</p><div class="opts">${o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join("")}</div><div id="rf" role="status" aria-live="polite"></div></div>`;
