@@ -2381,6 +2381,7 @@ function renderPractice(){
   if(sub==="dialogs") return blockDialogs(shell("Diálogos"));
   if(sub==="mistakes") return blockMistakes(shell("Meus erros"));
   if(sub==="reading") return blockReading(shell("Leitura"));
+  if(sub==="ear") return blockEarGame(shell("Ouça e entenda"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -2391,6 +2392,7 @@ function renderPractice(){
       <button class="card tile" data-s="chat"><span class="ti">${ICON.chat}</span><h3>Conversa com IA</h3><p>Role-play de situações reais (entrevista, reunião, hotel) com correções na hora.${AI?"":" Disponível quando aberto no Claude."}</p></button>
       <button class="card tile" data-s="reading"><span class="ti">${ICON.book}</span><h3>Leitura</h3><p>${READINGS.length} textos curtos com tradução ao toque, áudio e perguntas. Mande palavras novas para o seu baralho.</p></button>
       <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>As questões de gramática e as falas de diálogo que você errou voltam aqui até você acertar 2 vezes seguidas.</p></button>
+      <button class="card tile" data-s="ear"><span class="ti">${ICON.ear}</span><h3>Ouça e entenda</h3><p>Só áudio: reconheça as palavras do seu baralho de ouvido, sozinhas ou dentro da frase.</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
       <button class="card tile" data-s="speak"><span class="ti">${ICON.mic}</span><h3>Fala livre</h3><p>Um tema aleatório, frases úteis e cronômetro 90/60 s.</p></button>
@@ -2603,6 +2605,35 @@ function blockReading(el){
     };
   }
   list();
+}
+function blockEarGame(el){
+  const known = Object.keys(S.cards).filter(cardById);
+  if(known.length<4){ el.innerHTML = `<div class="card empty"><h3>Aprenda pelo menos 4 palavras primeiro</h3><p>Este jogo usa as palavras do seu baralho. Faça o bloco “Palavras novas” da sessão da noite e volte aqui.</p></div>`; return; }
+  const N = Math.min(10, known.length);
+  const rounds = shuffle(known).slice(0,N);
+  let i = 0, right = 0, useEx = false;
+  function q(){
+    if(i>=N){ addXP(right*2,"escuta"); el.innerHTML = `<div class="card empty"><h3>${right}/${N} entendidas só de ouvido</h3><p>${right===N?"Excelente! Na próxima, ative “ouvir na frase”, que é mais difícil.":"As que você errou provavelmente você reconhece lendo, mas não ouvindo. Repita-as em voz alta algumas vezes."}</p><button class="btn primary" id="ag">Jogar de novo</button></div>`; $("#ag",el).onclick=()=>blockEarGame(el); return; }
+    const c = cardById(rounds[i]);
+    const others = shuffle(allCards().filter(x=>x.id!==c.id && x.pt!==c.pt)).slice(0,3);
+    const opts = shuffle([c,...others]);
+    const say = ()=>speak(useEx ? c.ex : c.w, useEx ? S.settings.rate : 0.85);
+    el.innerHTML = `<div class="card pad stack" style="align-items:center;text-align:center">
+      <span class="eyebrow">Rodada ${i+1}/${N} · o que significa?</span>
+      <button class="btn primary" id="pl" style="min-width:180px">${ICON.speaker} Ouvir de novo</button>
+      <label class="small row" style="font-weight:400;cursor:pointer"><input type="checkbox" id="ex" ${useEx?"checked":""} style="accent-color:var(--acc)"> Ouvir na frase (mais difícil)</label>
+      <div class="opts" style="width:100%">${opts.map(o=>`<button class="opt" data-id="${o.id}">${esc(o.pt)}</button>`).join("")}</div>
+      <div id="ef" role="status" aria-live="polite" style="width:100%"></div></div>`;
+    $("#pl",el).onclick = say; setTimeout(say,200);
+    $("#ex",el).onchange = e=>{ useEx = e.target.checked; say(); };
+    $$(".opt",el).forEach(b=>b.onclick=()=>{
+      const ok = b.dataset.id===c.id; if(ok) right++;
+      $$(".opt",el).forEach(x=>{ x.disabled=true; if(x.dataset.id===c.id) x.classList.add("right"); }); if(!ok) b.classList.add("wrong");
+      $("#ef",el).innerHTML = `<p class="word" style="font-size:1.6rem">${esc(c.w)} ${spk(c.w)}</p><p class="ex">${bolded(c.ex)}</p><button class="btn primary" id="en">Próxima →</button>`;
+      $("#en",el).onclick = ()=>{ i++; q(); };
+    });
+  }
+  q();
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
