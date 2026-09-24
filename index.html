@@ -314,6 +314,8 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .wtile.ghost{opacity:.25;box-shadow:none;cursor:default}
 .quest{display:flex;gap:10px;align-items:center}
 .quest.done .small{text-decoration:line-through;color:var(--muted)}
+.rule{border-top:1px solid var(--line);padding-top:10px}
+.rule summary{cursor:pointer;font-weight:700;font-size:.9rem;color:var(--acc)}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2485,11 +2487,12 @@ function blockGrammar(el,opt={},lessonId){
         <div class="progressbar"><span style="width:${i*20}%"></span></div>
         <p class="qsent">${esc(s).replace("___",'<span class="gap">_____</span>')}</p>
         <div class="opts">${o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join("")}</div>
-        <div id="gf" role="status" aria-live="polite"></div></div>`;
+        <div id="gf" role="status" aria-live="polite"></div>
+        <details class="rule" id="rule"><summary>Rever a explicação</summary><div class="stack" style="margin-top:8px"><p class="lesson-intro">${L.intro}</p><ul class="exlist">${L.ex.map(x=>`<li>${spk(x)}<span lang="en">${esc(x)}</span></li>`).join("")}</ul></div></details></div>`;
       $$(".opt",el).forEach(b=>b.onclick=()=>{
         const j = +b.dataset.j, ok = j===a; if(ok){ right++; addXP(3); } else { addMistake({k:"g",l:L.id,q:L.q.indexOf(qs[i])}); save(); }
         $$(".opt",el).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); });
-        if(!ok) b.classList.add("wrong");
+        if(!ok){ b.classList.add("wrong"); const rl = $("#rule",el); if(rl) rl.open = true; }
         const full = s.replace("___", o[a].replace(" / "," … "));
         $("#gf",el).innerHTML = `<p class="note">${ok?"<b>Certo.</b> ":"<b>Resposta: "+esc(o[a])+".</b> "}${esc(e)}</p><div class="row" style="margin-top:10px">${o[a].includes("/")?"":spk(full,"Ouvir a frase")}<button class="btn primary" id="gn">Continuar →</button></div>`;
         $("#gn",el).onclick = ()=>{ i++; q(); };
