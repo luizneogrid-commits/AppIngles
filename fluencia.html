@@ -2234,9 +2234,13 @@ function blockNew(el,opt={}){
 }
 
 /* ---------- 5. Grammar ---------- */
+const G_STEPS = [2,7,21,60];
+function lessonDue(id){ const g = S.grammar[id]; if(!g) return false; return (g.due || addDays(g.date,G_STEPS[0])) <= todayKey(); }
 function pickLesson(){
   const basic = GRAMMAR.filter(isBasicItem), rest = GRAMMAR.filter(l=>!isBasicItem(l));
   const order = isBasic() ? basic.concat(rest) : rest;
+  const due = order.filter(l=>lessonDue(l.id)).sort((a,b)=>(S.grammar[a.id].due||"")<(S.grammar[b.id].due||"")?-1:1)[0];
+  if(due) return due;
   const undone = order.find(l=>!S.grammar[l.id]); if(undone) return undone;
   const pool = (isBasic() ? basic : rest).filter(l=>S.grammar[l.id]);
   return pool.slice().sort((a,b)=>(S.grammar[a.id].best-S.grammar[b.id].best) || (S.grammar[a.id].date<S.grammar[b.id].date?-1:1))[0];
@@ -2245,7 +2249,7 @@ function blockGrammar(el,opt={},lessonId){
   const L = lessonId ? GRAMMAR.find(l=>l.id===lessonId) : pickLesson();
   const prev = S.grammar[L.id];
   el.innerHTML = `<div class="card pad stack">
-    <div class="row between"><span class="eyebrow">Micro-aula${prev?` · melhor nota ${prev.best}/5`:" · nova"}</span></div>
+    <div class="row between"><span class="eyebrow">${prev&&lessonDue(L.id)?"Revisão programada":"Micro-aula"}${prev?` · melhor nota ${prev.best}/5`:" · nova"}</span></div>
     <h2>${esc(L.t)}</h2>
     <p class="lesson-intro">${L.intro}</p>
     <ul class="exlist">${L.ex.map(x=>`<li>${spk(x)}<span>${esc(x)}</span></li>`).join("")}</ul>
@@ -2257,8 +2261,9 @@ function blockGrammar(el,opt={},lessonId){
     function q(){
       if(i>=qs.length){
         const best = Math.max(prev?prev.best:0, right);
-        S.grammar[L.id] = {best, last:right, date:todayKey()}; save();
-        el.innerHTML = `<div class="card empty"><h3>${right}/5 em “${esc(L.t)}”</h3><p>${right===5?"Perfeito. Tente usar essa estrutura no seu diário de hoje.":right>=3?"Bom! Essa aula volta para você revisar quando todas estiverem feitas.":"Tudo bem errar — é assim que a regra fixa. Releia a explicação e tente de novo."}</p><div class="row"><button class="btn" id="again">Refazer</button></div></div>`;
+        const stage = right>=4 ? Math.min((prev&&prev.stage!=null?prev.stage+1:0), G_STEPS.length-1) : 0;
+        S.grammar[L.id] = {best, last:right, date:todayKey(), stage, due:addDays(todayKey(), right>=4?G_STEPS[stage]:1)}; save();
+        el.innerHTML = `<div class="card empty"><h3>${right}/5 em “${esc(L.t)}”</h3><p>${right>=4?"Ótimo! Esta aula volta para revisão em "+S.grammar[L.id].due.split("-").reverse().slice(0,2).join("/")+" — cada acerto espaça mais.":"Esta aula volta amanhã para você fixar. Releia a explicação e tente usar a regra no diário."}</p><div class="row"><button class="btn" id="again">Refazer</button></div></div>`;
         $("#again",el).onclick = ()=>blockGrammar(el,opt,L.id);
         return;
       }
@@ -2443,7 +2448,7 @@ function renderPractice(){
       <button class="card tile" data-s="journal"><span class="ti">${ICON.book}</span><h3>Seu diário</h3><p>${S.journal.length} ${S.journal.length===1?"texto salvo":"textos salvos"}. Releia e veja sua evolução.</p></button>
     </div>
     <div class="card pad stack"><h3>Gramática — todas as aulas</h3>
-      <div class="kv">${(isBasic()?GRAMMAR.filter(isBasicItem).concat(GRAMMAR.filter(l=>!isBasicItem(l))):GRAMMAR.filter(l=>!isBasicItem(l)).concat(GRAMMAR.filter(isBasicItem))).map(l=>{ const g=S.grammar[l.id]; return `<button class="btn ghost" style="justify-content:flex-start;text-align:left;padding-inline:0;gap:10px" data-g="${l.id}"><span class="tag" style="min-width:2.4em">${l.lvl||"B1+"}</span>${esc(l.t)}</button><span class="mono small ${g?"":"muted"}">${g?g.best+"/5":"—"}</span>`; }).join("")}</div>
+      <div class="kv">${(isBasic()?GRAMMAR.filter(isBasicItem).concat(GRAMMAR.filter(l=>!isBasicItem(l))):GRAMMAR.filter(l=>!isBasicItem(l)).concat(GRAMMAR.filter(isBasicItem))).map(l=>{ const g=S.grammar[l.id]; return `<button class="btn ghost" style="justify-content:flex-start;text-align:left;padding-inline:0;gap:10px" data-g="${l.id}"><span class="tag" style="min-width:2.4em">${l.lvl||"B1+"}</span>${esc(l.t)}</button><span class="mono small ${g?"":"muted"}">${g?g.best+"/5"+(lessonDue(l.id)?" · revisar":" · "+fmtDate(g.due||addDays(g.date,2))):"—"}</span>`; }).join("")}</div>
     </div>
   </div>`;
   $$("[data-s]").forEach(b=>b.onclick=()=>go("practice",b.dataset.s));
