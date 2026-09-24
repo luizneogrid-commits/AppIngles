@@ -1352,6 +1352,9 @@ const SESSIONS = {
     {k:"review",t:"Revisão rápida",d:"Os cartões que vencem hoje",min:3},
     {k:"listen",t:"Um ditado",d:"Ouvir, escrever e repetir",min:2}]}
 };
+function blockSec(k,b){ return k==="x" ? b.min*60 : Math.round(b.min*60*(S.settings.sessMin||15)/15); }
+function blockMin(k,b){ return Math.round(blockSec(k,b)/60); }
+function sessMinOf(k){ return k==="x" ? 5 : (S.settings.sessMin||15); }
 function blocksOf(rec,k){ if(!rec[k]) rec[k] = new Array(SESSIONS[k].blocks.length).fill(0); return rec[k]; }
 function daySessions(r){ if(!r) return 0; const n = (r.m.every(Boolean)?1:0)+(r.n.every(Boolean)?1:0); return n || (r.x && r.x.every(Boolean) ? 1 : 0); }
 
@@ -1379,7 +1382,7 @@ function defaultState(){ return {
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
   dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{}, tests:[],
   stats:{reviews:0,correct:0},
-  settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,tm:"07:30",tn:"21:30"}
+  settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,sessMin:15,tm:"07:30",tn:"21:30"}
 };}
 let S = defaultState();
 let userDoc = null, remoteTimer = null, remoteBusy = false, remoteAgain = false, syncState = "local";
@@ -1739,8 +1742,8 @@ function renderToday(){
     const d = SESSIONS[k], r = rec[k], all = r.every(Boolean), started = r.some(Boolean);
     return `<article class="card sess-card ${k}-mode ${k===recKind&&!all?"rec":""}">
       <div class="sess-head"><div class="sess-ico">${ICON[d.icon]}</div>
-        <div><div class="eyebrow">${k===recKind&&!all?"Sugerida agora · ":""}15 min</div><h2>${d.name} · ${d.sub}</h2></div></div>
-      <ul class="blist">${d.blocks.map((b,i)=>`<li><span class="bcheck ${r[i]?"on":""}">${r[i]?ICON.check:""}</span><span><span class="t">${b.t} <span class="muted small mono">${b.min} min</span></span><span class="d">${b.d}</span></span></li>`).join("")}</ul>
+        <div><div class="eyebrow">${k===recKind&&!all?"Sugerida agora · ":""}${sessMinOf(k)} min</div><h2>${d.name} · ${d.sub}</h2></div></div>
+      <ul class="blist">${d.blocks.map((b,i)=>`<li><span class="bcheck ${r[i]?"on":""}">${r[i]?ICON.check:""}</span><span><span class="t">${b.t} <span class="muted small mono">${blockMin(k,b)} min</span></span><span class="d">${b.d}</span></span></li>`).join("")}</ul>
       <button class="btn ${all?"":"primary"}" data-start="${k}">${all?"Refazer sessão":started?"Continuar":"Começar sessão"}</button>
     </article>`;
   };
@@ -1802,7 +1805,8 @@ function renderOnboarding(){
       <div class="opts">${LEVELS.map(l=>`<button class="opt ${l.id===lvl?"right":""}" data-l="${l.id}"><span style="display:block">${esc(l.t)}</span><span class="small muted" style="font-weight:400">${esc(l.d)}</span></button>`).join("")}</div></div>
     <div class="card pad stack"><h3>2. Qual sotaque você quer ouvir?</h3>
       <div class="row"><select id="ob-acc" style="width:auto"><option value="en-US">Americano</option><option value="en-GB">Britânico</option></select><button class="btn sm" id="ob-t">${ICON.speaker} Ouvir exemplo</button></div></div>
-    <div class="card pad stack"><h3>3. Quando você vai estudar?</h3>
+    <div class="card pad stack"><h3>3. Quanto tempo e quando?</h3>
+      <div class="row"><label for="ob-min">Cada sessão</label><select id="ob-min" style="width:auto">${[10,15,20].map(n=>`<option value="${n}" ${n===15?"selected":""}>${n} min${n===15?" (recomendado)":""}</option>`).join("")}</select></div>
       <p class="small muted">Horário fixo é o que mais sustenta o hábito. Você pode adicionar lembretes ao calendário.</p>
       <div class="row"><label style="display:flex;gap:8px;align-items:center">Manhã <input type="time" id="ob-tm" value="${S.settings.tm}" style="width:auto"></label><label style="display:flex;gap:8px;align-items:center">Noite <input type="time" id="ob-tn" value="${S.settings.tn}" style="width:auto"></label></div>
       <div class="row"><button class="btn sm" id="ob-ics">Adicionar lembretes ao calendário</button></div></div>
@@ -1811,7 +1815,7 @@ function renderOnboarding(){
     <p class="small muted">Dica: se você não fizer nada hoje à noite, ainda pode aprender suas primeiras 5 palavras agora mesmo pela sessão da noite.</p>
   </div>`;
   $$("[data-l]").forEach(b=>b.onclick=()=>{ lvl=b.dataset.l; $$("[data-l]").forEach(x=>x.classList.toggle("right",x===b)); });
-  const readTimes = ()=>{ S.settings.tm = $("#ob-tm").value||S.settings.tm; S.settings.tn = $("#ob-tn").value||S.settings.tn; };
+  const readTimes = ()=>{ S.settings.sessMin = +$("#ob-min").value || 15; S.settings.tm = $("#ob-tm").value||S.settings.tm; S.settings.tn = $("#ob-tn").value||S.settings.tn; };
   $("#ob-acc").value = S.settings.accent;
   $("#ob-acc").onchange = e=>{ S.settings.accent = e.target.value; S.settings.voice = ""; };
   $("#ob-t").onclick = ()=>speak("Hi! Fifteen minutes in the morning, fifteen at night. Let's do this.");
@@ -1837,18 +1841,18 @@ function renderSession(){
     <div class="sess-top">
       <button class="btn ghost" id="sx">‹ Sair</button>
       <div class="sess-title">${ICON[def.icon]} ${def.name} · ${def.sub}</div>
-      <button class="timer mono" id="timer" title="Toque para pausar" aria-label="Cronômetro do bloco; toque para pausar">${fmtTime(b.min*60)}</button>
+      <button class="timer mono" id="timer" title="Toque para pausar" aria-label="Cronômetro do bloco; toque para pausar">${fmtTime(blockSec(session.kind,b))}</button>
     </div>
     <ol class="stepper" style="grid-template-columns:repeat(${def.blocks.length},1fr)">${def.blocks.map((x,j)=>`<li class="${j===session.i?"cur":""} ${rec[session.kind][j]?"done":""}"><button data-j="${j}" aria-label="Bloco ${j+1}: ${esc(x.t)}"><span class="n">${rec[session.kind][j]?ICON.check:j+1}</span><span class="lbl">${esc(x.t)}</span></button></li>`).join("")}</ol>
     <div id="block"></div>
-    <div class="sess-foot"><span class="muted small" id="tmsg">Sugestão: ${b.min} minutos neste bloco. O cronômetro guia, não bloqueia.</span>
+    <div class="sess-foot"><span class="muted small" id="tmsg">Sugestão: ${blockMin(session.kind,b)} minutos neste bloco. O cronômetro guia, não bloqueia.</span>
       <button class="btn primary" id="bdone">${session.i<def.blocks.length-1?"Concluir bloco →":"Concluir sessão"}</button></div>
   </div>`;
   $("#sx").onclick = ()=>{ session=null; go("today"); };
   $$(".stepper [data-j]").forEach(x=>x.onclick=()=>{ session.i=+x.dataset.j; go("session"); });
   $("#bdone").onclick = ()=>completeBlock();
   BLOCKS[b.k]($("#block"),{inSession:true});
-  startTimer(b.min*60);
+  startTimer(blockSec(session.kind,b));
 }
 function startTimer(sec){
   clearInterval(timerI);
@@ -2854,6 +2858,7 @@ function renderProgress(){
         <div class="stack" style="gap:4px"><label for="s-rate">Velocidade da fala: <span class="mono" id="rv">${S.settings.rate.toFixed(2)}×</span></label><input type="range" id="s-rate" min="0.6" max="1.2" step="0.05" value="${S.settings.rate}"></div>
         <div class="stack" style="gap:4px"><label for="s-theme">Tema</label><select id="s-theme"><option value="auto" ${S.settings.theme==="auto"?"selected":""}>Automático (sistema)</option><option value="light" ${S.settings.theme==="light"?"selected":""}>Claro</option><option value="dark" ${S.settings.theme==="dark"?"selected":""}>Escuro</option></select></div>
         <div class="stack" style="gap:4px"><label for="s-big">Tamanho do texto</label><select id="s-big"><option value="0" ${S.settings.big?"":"selected"}>Normal</option><option value="1" ${S.settings.big?"selected":""}>Grande</option></select></div>
+        <div class="stack" style="gap:4px"><label for="s-min">Duração de cada sessão</label><select id="s-min">${[10,15,20].map(n=>`<option value="${n}" ${(S.settings.sessMin||15)===n?"selected":""}>${n} minutos${n===15?" (recomendado)":""}</option>`).join("")}</select></div>
         <div class="stack" style="gap:4px"><label for="s-new">Palavras novas por noite</label><select id="s-new">${[3,5,8,10].map(n=>`<option ${S.settings.newPerDay===n?"selected":""}>${n}</option>`).join("")}</select></div>
       </div>
       <p class="small ${voiceStatus().ok?"muted":""}" ${voiceStatus().ok?"":'style="color:var(--bad)"'}>${esc(voiceStatus().msg)}${voiceStatus().ok?"":"<br>"+VOICE_HELP}</p>
@@ -2879,6 +2884,7 @@ function renderProgress(){
   $("#s-voice").onchange = e=>{ S.settings.voice=e.target.value; save(); };
   $("#s-rate").oninput = e=>{ S.settings.rate=+e.target.value; $("#rv").textContent=S.settings.rate.toFixed(2)+"×"; };
   $("#s-rate").onchange = ()=>save();
+  $("#s-min").onchange = e=>{ S.settings.sessMin = +e.target.value; save(); toast("Sessões de "+S.settings.sessMin+" minutos"); };
   $("#s-new").onchange = e=>{ S.settings.newPerDay=+e.target.value; save(); };
   $("#s-theme").onchange = e=>{ S.settings.theme=e.target.value; save(); applyPrefs(); };
   $("#s-big").onchange = e=>{ S.settings.big=e.target.value==="1"; save(); applyPrefs(); };
