@@ -1168,6 +1168,7 @@ function ivlLabel(d){ return d<30? d+"d" : d<365? Math.round(d/30)+"m" : "1a"; }
 function dueIds(){ const t=todayKey(); return Object.keys(S.cards).filter(id=>cardById(id) && S.cards[id].due<=t); }
 function introduce(id){ if(S.cards[id]) return; S.cards[id]={due:addDays(todayKey(),1),ivl:0,ef:2.5,reps:0,lapses:0,added:todayKey()}; dayRec().newIds.push(id); }
 function nextNewIds(n){ const out=[]; for(const c of S.custom.concat(VOCAB)){ if(out.length>=n) break; if(!S.cards[c.id]) out.push(c.id); } return out; }
+function hardIds(){ return Object.keys(S.cards).filter(id=>cardById(id) && (S.cards[id].lapses||0)>=3).sort((a,b)=>S.cards[b].lapses-S.cards[a].lapses); }
 function stageOf(id){ const c=S.cards[id]; if(!c) return "new"; if(c.ivl>=21) return "mat"; if(c.ivl>=7) return "young"; return "lrn"; }
 const STAGE_LABEL = {new:"Nova",lrn:"Aprendendo",young:"Jovem",mat:"Madura"};
 
@@ -1378,8 +1379,8 @@ const BLOCKS = {review:blockReview, listen:blockListen, speak:blockSpeak, "new":
 
 /* ---------- 1. Spaced repetition ---------- */
 function blockReview(el,opt={}){
-  let queue = shuffle(dueIds()), extra = false, done = 0, total, cur, showing, prod;
-  if(!queue.length){
+  let queue = shuffle(opt.ids || dueIds()), extra = !!opt.ids, done = 0, total, cur, showing, prod;
+  if(!queue.length && !opt.ids){
     const known = Object.keys(S.cards).filter(cardById);
     if(known.length){
       el.innerHTML = `<div class="card empty"><h3>Tudo revisado por hoje</h3><p>Nenhum cartão vence hoje. Quer um treino extra com até 10 palavras que você já viu? Ele não altera os intervalos.</p><button class="btn primary" id="ex">Treino extra</button></div>`;
@@ -1407,7 +1408,7 @@ function blockReview(el,opt={}){
     const face = prod
       ? `<span class="eyebrow">Como se diz em inglês?</span><div class="prompt-pt">${esc(c.pt)}</div><p class="ex">${blanked(c.ex)}</p>${showing?"":`<input type="text" id="guess" placeholder="Pense ou digite (opcional)" autocomplete="off" style="max-width:340px">`}`
       : `<div class="word">${esc(c.w)} ${spk(c.w)}</div><p class="ex">${bolded(c.ex)}</p><span class="muted small">O que significa? Pense antes de virar.</span>`;
-    const back = showing ? `<div class="back">${prod?`<div class="word">${esc(c.w)} ${spk(c.w)}</div>`:`<div class="pt">${esc(c.pt)}</div>`}<p class="ex">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p></div>` : "";
+    const back = showing ? `<div class="back">${prod?`<div class="word">${esc(c.w)} ${spk(c.w)}</div>`:`<div class="pt">${esc(c.pt)}</div>`}<p class="ex">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>${st.own?`<p class="small"><span class="eyebrow">Sua frase</span><br>${esc(st.own)}</p>`:""}${(st.lapses||0)>=3?`<span class="chip" style="background:var(--bad-soft);color:var(--bad)">palavra difícil · crie uma imagem mental ou frase absurda para ela</span>`:""}</div>` : "";
     const grades = showing
       ? `<div class="grades">${["De novo","Difícil","Bom","Fácil"].map((l,q)=>`<button class="g${q}" data-q="${q}">${l}<small>${extra?"—":ivlLabel(schedule(st,q).ivl)}</small><span class="kbd">${q+1}</span></button>`).join("")}</div>`
       : `<button class="btn primary" id="rev" style="width:100%">Mostrar resposta <span class="kbd">espaço</span></button>`;
@@ -1731,12 +1732,18 @@ function renderReviewTab(){
     $("#bk").onclick = ()=>go("review");
     return blockReview($("#block"));
   }
-  const due = dueIds().length, ids = allCards();
+  if(sub==="hard"){
+    view.innerHTML = `<div class="sess"><div class="row"><button class="btn ghost" id="bk">‹ Voltar</button><span class="eyebrow">Palavras difíceis</span></div><div id="block"></div></div>`;
+    $("#bk").onclick = ()=>go("review");
+    return blockReview($("#block"),{ids:hardIds()});
+  }
+  const due = dueIds().length, ids = allCards(), hard = hardIds();
   const counts = {new:0,lrn:0,young:0,mat:0}; ids.forEach(c=>counts[stageOf(c.id)]++);
   view.innerHTML = `<section class="hello"><span class="eyebrow">Revisão espaçada</span><h1>${due?due+" cartões para hoje":"Nada vencendo hoje"}</h1>
     <p class="muted">Avalie com honestidade: “De novo” se não lembrou, “Difícil” se lembrou com esforço, “Bom” se lembrou, “Fácil” se foi instantâneo. O algoritmo espaça cada palavra a partir disso.</p></section>
   <div class="stack">
     <div class="row"><button class="btn primary" id="go" ${Object.keys(S.cards).length?"":"disabled"}>${due?"Revisar agora":"Treino extra"}</button></div>
+    ${hard.length?`<div class="card pad stack"><div class="row between"><h3>Palavras difíceis</h3><span class="chip" style="background:var(--bad-soft);color:var(--bad)">${hard.length}</span></div><p class="small muted">Palavras que você esqueceu 3 vezes ou mais. Treine-as à parte (não altera os intervalos) e escreva uma frase pessoal e exagerada com cada uma — é o que os apps chamam de “leech”.</p><div class="row">${hard.slice(0,12).map(id=>`<span class="chip">${esc(cardById(id).w)}</span>`).join("")}</div><div class="row"><button class="btn" id="hd">Treinar difíceis</button></div></div>`:""}
     <div class="card pad stack">
       <h3>Adicionar sua palavra</h3>
       <p class="muted small">Viu uma palavra numa série, reunião ou podcast? Adicione aqui. Ela entra na fila das palavras novas.</p>
@@ -1752,6 +1759,7 @@ function renderReviewTab(){
     </div>
   </div>`;
   $("#go").onclick = ()=>go("review","run");
+  const hd = $("#hd"); if(hd) hd.onclick = ()=>go("review","hard");
   $("#add").onclick = ()=>{
     const w=$("#nw-w").value.trim(), p=$("#nw-p").value.trim(); let e=$("#nw-e").value.trim();
     if(!w||!p){ toast("Preencha a palavra e o significado"); return; }
