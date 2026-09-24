@@ -82,6 +82,7 @@ p{margin:0}
 .tabs button{border:0;background:none;padding:8px 12px 10px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
 .tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--acc)}
 .tabs .ti{display:none}
+.overlay{position:fixed;inset:0;z-index:60;background:rgba(10,14,25,.55);display:grid;place-items:center;padding:16px}
 h1:focus,h2:focus,h3:focus{outline:none}
 /* mobile: barra de abas inferior, alvos de toque maiores */
 @media (max-width:640px){
@@ -1680,7 +1681,30 @@ function weekStats(offset){
 
 /* ---------- keyboard ---------- */
 let keyH = null;
-document.addEventListener("keydown",e=>{ if(!keyH) return; if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return; keyH(e); });
+const REPLAY_IDS = ["#pl","#p1","#tp","#ob-t"], CONTINUE_IDS = ["#gn","#qn","#rn","#en","#pn","#mn","#cn","#nx","#qnx"], BACK_IDS = ["#helpClose","#bk","#dl","#rl","#sx"];
+function clickFirst(ids){ for(const id of ids){ const b = document.querySelector(id); if(b && !b.disabled && b.offsetParent!==null){ b.click(); return true; } } return false; }
+function showHelp(){
+  if($("#help")) return;
+  const rows = [["?","Abrir esta ajuda"],["Esc","Voltar / sair / fechar"],["1 – 4","Escolher opção (questões, diálogos, jogos) ou dar nota na revisão"],["Enter","Continuar para a próxima"],["Espaço","Mostrar resposta do cartão"],["Z","Desfazer a última nota da revisão"],["R","Repetir o áudio"],["Ctrl + Espaço","Repetir o áudio enquanto digita no ditado"],["Ctrl + Enter","Conferir o ditado"]];
+  document.body.insertAdjacentHTML("beforeend", `<div id="help" class="overlay" role="dialog" aria-modal="true" aria-labelledby="helpT"><div class="card pad stack" style="max-width:460px;width:100%">
+    <div class="row between"><h2 id="helpT">Atalhos de teclado</h2><button class="btn sm ghost" id="helpClose">Fechar</button></div>
+    <div class="kv">${rows.map(r=>`<span class="kbd" style="font-size:.85rem;justify-self:start">${r[0]}</span><span class="small">${r[1]}</span>`).join("")}</div></div></div>`);
+  const close = ()=>{ const h=$("#help"); if(h) h.remove(); };
+  $("#helpClose").onclick = close; $("#help").onclick = e=>{ if(e.target.id==="help") close(); };
+  $("#helpClose").focus();
+}
+document.addEventListener("keydown",e=>{
+  const tag = e.target.tagName, typing = ["INPUT","TEXTAREA","SELECT"].includes(tag);
+  if(typing){ if(e.ctrlKey && e.code==="Space"){ e.preventDefault(); clickFirst(REPLAY_IDS); } return; }
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  if(e.key==="?"){ e.preventDefault(); showHelp(); return; }
+  if(e.key==="Escape"){ if(clickFirst(BACK_IDS)) e.preventDefault(); return; }
+  if($("#help")) return;
+  if(keyH){ keyH(e); if(e.defaultPrevented) return; if(/^[1-4]$/.test(e.key) || e.key==="Enter" || e.code==="Space") return; }
+  if(/^[1-9]$/.test(e.key)){ const opts = $$(".opt:not(:disabled)").filter(b=>b.offsetParent!==null); const b = opts[+e.key-1]; if(b){ e.preventDefault(); b.click(); } return; }
+  if(e.key==="Enter" && !["BUTTON","A"].includes(tag)){ if(clickFirst(CONTINUE_IDS)) e.preventDefault(); return; }
+  if(e.key==="r"||e.key==="R"){ if(clickFirst(REPLAY_IDS)) e.preventDefault(); }
+});
 
 /* ---------- AI helpers ---------- */
 function aiErr(e){
@@ -2931,6 +2955,7 @@ function renderProgress(){
         <div class="stack" style="gap:4px"><label for="s-new">Palavras novas por noite</label><select id="s-new">${[3,5,8,10].map(n=>`<option ${S.settings.newPerDay===n?"selected":""}>${n}</option>`).join("")}</select></div>
       </div>
       <p class="small ${voiceStatus().ok?"muted":""}" ${voiceStatus().ok?"":'style="color:var(--bad)"'}>${esc(voiceStatus().msg)}${voiceStatus().ok?"":"<br>"+VOICE_HELP}</p>
+      <p class="small muted">No computador, pressione <span class="kbd">?</span> para ver os atalhos de teclado.</p>
       <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><span class="small muted"><span class="dot ${syncState==="cloud"?"ok":""}"></span> ${syncState==="cloud"?"Progresso salvo na sua conta — abre igual em outros dispositivos.":"Progresso salvo neste navegador."}</span></div>
       <hr class="sep">
       <h3>Lembretes</h3>
