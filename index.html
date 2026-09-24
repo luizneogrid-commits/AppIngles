@@ -293,6 +293,9 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .typed.close{background:var(--sun-soft);color:var(--warn)}
 .typed.wrong{background:var(--bad-soft);color:var(--bad)}
 .grades button.sug{outline:3px solid currentColor;outline-offset:-3px}
+.fc{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:120px}
+.fcd{display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%}
+.fcb{width:70%;max-width:36px;background:var(--acc);border-radius:6px 6px 2px 2px}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1578,6 +1581,12 @@ function blockMistakes(el){
   }
   q();
 }
+const BACKLOG_LIMIT = 40;
+function forecast(days){
+  const t = todayKey(), out = new Array(days).fill(0);
+  Object.keys(S.cards).forEach(id=>{ if(!cardById(id)) return; const d = diffDays(t, S.cards[id].due); if(d<=0) out[0]++; else if(d<days) out[d]++; });
+  return out;
+}
 function hardIds(){ return Object.keys(S.cards).filter(id=>cardById(id) && (S.cards[id].lapses||0)>=3).sort((a,b)=>S.cards[b].lapses-S.cards[a].lapses); }
 function stageOf(id){ const c=S.cards[id]; if(!c) return "new"; if(c.ivl>=21) return "mat"; if(c.ivl>=7) return "young"; return "lrn"; }
 const STAGE_LABEL = {new:"Nova",lrn:"Aprendendo",young:"Jovem",mat:"Madura"};
@@ -2122,7 +2131,7 @@ function blockSpeak(el,opt={},forceIdx){
 
 /* ---------- 4. New words (+ retrieval quiz) ---------- */
 function blockNew(el,opt={}){
-  const rec = dayRec(), quota = S.settings.newPerDay;
+  const rec = dayRec(), backlog = dueIds().length, capped = backlog>=BACKLOG_LIMIT, quota = capped ? Math.min(2,S.settings.newPerDay) : S.settings.newPerDay;
   let batch = nextNewIds(Math.max(0, quota - rec.newIds.length)), i = 0;
   if(!batch.length){
     const all = nextNewIds(1).length===0;
@@ -2136,6 +2145,7 @@ function blockNew(el,opt={}){
     if(i>=batch.length) return quiz();
     const c = cardById(batch[i]);
     el.innerHTML = `<div class="stack">
+      ${capped&&i===0?`<p class="note warn small">Você tem ${backlog} revisões acumuladas. Hoje são só ${batch.length} palavras novas, para a revisão não virar uma bola de neve. Faça a revisão da manhã e o ritmo normal volta.</p>`:""}
       <div class="row between small muted"><span>Palavra ${i+1} de ${batch.length}</span><span class="tag">${esc(c.tag||"")}</span></div>
       <div class="progressbar"><span style="width:${Math.round(i/batch.length*100)}%"></span></div>
       <div class="card flash">
@@ -2297,6 +2307,10 @@ function renderReviewTab(){
     <p class="muted">Avalie com honestidade: “De novo” se não lembrou, “Difícil” se lembrou com esforço, “Bom” se lembrou, “Fácil” se foi instantâneo. O algoritmo espaça cada palavra a partir disso.</p></section>
   <div class="stack">
     <div class="row"><button class="btn primary" id="go" ${Object.keys(S.cards).length?"":"disabled"}>${due?"Revisar agora":"Treino extra"}</button></div>
+    ${Object.keys(S.cards).length?(()=>{ const f = forecast(7), mx = Math.max(1,...f);
+      return `<div class="card pad stack"><div class="row between"><h3>Próximos 7 dias</h3><span class="small muted">${f.reduce((a,b)=>a+b,0)} revisões previstas</span></div>
+      <div class="fc" role="img" aria-label="Revisões previstas por dia">${f.map((n,k)=>{ const d = keyToDate(addDays(todayKey(),k)); return `<div class="fcd"><span class="mono small">${n}</span><span class="fcb" style="height:${Math.round(n/mx*70)+4}px;${n>=BACKLOG_LIMIT?"background:var(--bad)":""}"></span><span class="small muted">${k===0?"hoje":d.toLocaleDateString("pt-BR",{weekday:"short"}).replace(".","")}</span></div>`; }).join("")}</div>
+      ${f[0]>=BACKLOG_LIMIT?`<p class="small" style="color:var(--bad)">Acúmulo alto: as palavras novas foram reduzidas até você colocar a revisão em dia.</p>`:`<p class="small muted">Com revisões em dia, cada palavra volta cada vez mais espaçada.</p>`}</div>`; })():""}
     ${hard.length?`<div class="card pad stack"><div class="row between"><h3>Palavras difíceis</h3><span class="chip" style="background:var(--bad-soft);color:var(--bad)">${hard.length}</span></div><p class="small muted">Palavras que você esqueceu 3 vezes ou mais. Treine-as à parte (não altera os intervalos) e escreva uma frase pessoal e exagerada com cada uma — é o que os apps chamam de “leech”.</p><div class="row">${hard.slice(0,12).map(id=>`<span class="chip">${esc(cardById(id).w)}</span>`).join("")}</div><div class="row"><button class="btn" id="hd">Treinar difíceis</button></div></div>`:""}
     <div class="card pad stack">
       <h3>Adicionar sua palavra</h3>
