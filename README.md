@@ -1,6 +1,6 @@
 # Fluência 15+15
 
-App de inglês para quem está no **intermediário (B1)** e quer chegar ao **B2/C1** estudando **15 minutos de manhã e 15 à noite**.
+App de inglês **do iniciante (A1) ao avançado (B2)**, estudando **15 minutos de manhã e 15 à noite**. Você escolhe seu nível (ou faz o teste) e o conteúdo se adapta.
 
 **Abrir no celular:** https://luizneogrid-commits.github.io/AppIngles/
 → no Android (Chrome): menu ⋮ → *Instalar app* / *Adicionar à tela inicial*
@@ -26,9 +26,12 @@ Extras:
 - **Gravar e ouvir a própria voz** na fala guiada e no shadowing (no app do celular)
 - Sequência com proteção, XP, níveis, **16 conquistas**, resumo semanal com minutos estudados e alerta de sequência em risco
 - **Lembretes no calendário** (.ics), backup em arquivo, tema claro/escuro e texto grande
-- Tela de boas-vindas com nível, sotaque e horários
+- Tela de boas-vindas com **5 níveis** (A1 a B2), sotaque e horários; **teste de nível** mensal com histórico
+- **Leituras graduadas** com tradução ao toque, **Ouça e entenda** (vocabulário só de ouvido) e **checagem de pronúncia** por reconhecimento de fala
+- Revisão com **desfazer**, correção tolerante a erros de digitação, **previsão de 7 dias** e limite automático de palavras novas quando há acúmulo
+- Diagnóstico de voz em inglês, acessibilidade para leitores de tela e **imagem de progresso** para compartilhar
 
-**Conteúdo:** 217 palavras e expressões (phrasal verbs, collocations, falsos cognatos, idioms, conectores), 21 aulas de gramática focadas nos erros típicos de brasileiros, 81 frases de ditado em 3 níveis, 50 temas de fala, 60 temas de escrita para o diário e 10 diálogos com roteiro (46 falas) que funcionam sem IA.
+**Conteúdo:** 312 palavras e expressões (95 básicas + phrasal verbs, collocations, falsos cognatos, idioms, conectores), 30 aulas de gramática (9 para iniciantes), 101 frases de ditado em 4 níveis (as de iniciante com tradução), 62 temas de fala, 72 temas de escrita, 12 diálogos com roteiro e 8 leituras graduadas.
 
 ## Versões
 
