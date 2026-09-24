@@ -261,6 +261,13 @@ details.method[open] summary::after{content:" −"}
 .bignum{font-family:var(--display);font-size:2.4rem;font-weight:800;line-height:1}
 svg.spark{width:100%;height:70px;display:block}
 
+/* conquistas */
+.ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
+.achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
+.achi.on{opacity:1;background:var(--acc-soft)}
+.medal{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--surface2);color:var(--muted);font-weight:700}
+.achi.on .medal{background:var(--acc);color:var(--on-acc)}
+
 /* toast */
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:50;max-width:calc(100% - 32px);text-align:center}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -1056,7 +1063,7 @@ function defaultState(){ return {
   v:1, created:todayKey(), updatedAt:0, xp:0,
   streak:{count:0,best:0,last:null}, freezes:0,
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
-  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[],
+  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{},
   stats:{reviews:0,correct:0},
   settings:{accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false}
 };}
@@ -1069,6 +1076,7 @@ function loadLocal(){
 }
 function merge(o){ const d = defaultState(); const r = Object.assign(d, o||{}); r.settings = Object.assign(defaultState().settings, (o||{}).settings||{}); r.stats = Object.assign(defaultState().stats, (o||{}).stats||{}); return r; }
 function save(){
+  checkAch();
   S.updatedAt = Date.now();
   if(S.journal.length>40) S.journal.length = 40;
   if(S.dict.length>40) S.dict = S.dict.slice(-40);
@@ -1131,6 +1139,33 @@ function plain(ex){ return String(ex).replace(/\*/g,""); }
 let toastT;
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2200); }
 function addXP(n,label){ if(!n) return; S.xp+=n; dayRec().xp+=n; save(); toast("+"+n+" XP"+(label?" · "+label:"")); }
+
+/* ---------- conquistas ---------- */
+const ACH = [
+ {id:"first",t:"Primeiro passo",d:"Complete sua primeira sessão",f:()=>Object.values(S.days).some(r=>r.m.every(Boolean)||r.n.every(Boolean))},
+ {id:"perfect",t:"Dia perfeito",d:"Faça manhã e noite no mesmo dia",f:()=>Object.values(S.days).some(r=>r.m.every(Boolean)&&r.n.every(Boolean))},
+ {id:"s3",t:"Aquecendo",d:"3 dias seguidos",f:()=>S.streak.best>=3},
+ {id:"s7",t:"Uma semana inteira",d:"7 dias seguidos",f:()=>S.streak.best>=7},
+ {id:"s30",t:"Hábito formado",d:"30 dias seguidos",f:()=>S.streak.best>=30},
+ {id:"s100",t:"Imparável",d:"100 dias seguidos",f:()=>S.streak.best>=100},
+ {id:"w25",t:"Vocabulário em construção",d:"25 palavras em estudo",f:()=>Object.keys(S.cards).length>=25},
+ {id:"w100",t:"Cem palavras",d:"100 palavras em estudo",f:()=>Object.keys(S.cards).length>=100},
+ {id:"m50",t:"Memória de longo prazo",d:"50 palavras maduras (21+ dias)",f:()=>Object.values(S.cards).filter(c=>c.ivl>=21).length>=50},
+ {id:"gAll",t:"Gramático",d:"Faça todas as aulas de gramática",f:()=>GRAMMAR.every(l=>S.grammar[l.id])},
+ {id:"g5",t:"Nota máxima",d:"5/5 em 5 aulas diferentes",f:()=>Object.values(S.grammar).filter(g=>g.best===5).length>=5},
+ {id:"ear",t:"Ouvido afiado",d:"Chegue ao nível 3 do ditado",f:()=>S.listenLevel>=3},
+ {id:"j10",t:"Escritor",d:"10 textos no diário",f:()=>S.journal.length>=10},
+ {id:"dlg",t:"Viajante preparado",d:"Complete todos os diálogos",f:()=>DIALOGS.every(d=>S.dialogs[d.id]!=null)},
+ {id:"x1k",t:"Mil XP",d:"Acumule 1.000 XP",f:()=>S.xp>=1000},
+ {id:"x5k",t:"Cinco mil XP",d:"Acumule 5.000 XP",f:()=>S.xp>=5000}
+];
+function checkAch(){
+  if(!S.ach) S.ach = {};
+  const fresh = ACH.filter(a=>!S.ach[a.id] && (()=>{ try{ return a.f(); }catch(e){ return false; } })());
+  fresh.forEach(a=>{ S.ach[a.id] = todayKey(); });
+  fresh.forEach((a,k)=>setTimeout(()=>toast("Conquista: "+a.t), 2400*(k+1)));
+  return fresh.length;
+}
 
 /* ---------- streak ---------- */
 function effectiveStreak(){
@@ -2113,6 +2148,9 @@ function renderProgress(){
         <p class="small muted">“Madura” = intervalo de 21+ dias. É o sinal de que a palavra está na memória de longo prazo.</p>
         <hr class="sep"><h3>Ditado</h3>${spark()}
       </div>
+    </div>
+    <div class="card pad stack"><div class="row between"><h3>Conquistas</h3><span class="mono small muted">${ACH.filter(a=>S.ach&&S.ach[a.id]).length}/${ACH.length}</span></div>
+      <div class="ach">${ACH.map(a=>{ const on = S.ach && S.ach[a.id]; return `<div class="achi ${on?"on":""}"><span class="medal">${on?ICON.check:"?"}</span><span><b>${esc(a.t)}</b><span class="small muted" style="display:block">${esc(a.d)}${on?" · "+fmtDate(on):""}</span></span></div>`; }).join("")}</div>
     </div>
     <div class="card pad stack"><h3>Ajustes</h3>
       <div class="grid2">
