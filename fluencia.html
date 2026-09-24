@@ -261,6 +261,12 @@ details.method[open] summary::after{content:" −"}
 .bignum{font-family:var(--display);font-size:2.4rem;font-weight:800;line-height:1}
 svg.spark{width:100%;height:70px;display:block}
 
+.kv4{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.kv4>div{display:flex;flex-direction:column}
+.kv4 .v{font-size:1.5rem;font-weight:700}
+.kv4 .v small{font-size:.9rem;color:var(--muted)}
+.kv4 .l{font-size:.82rem;color:var(--muted)}
+.up{color:var(--ok);font-weight:700}.down{color:var(--bad);font-weight:700}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1270,6 +1276,22 @@ function speak(text,rate){
 function spk(text,label){ return `<button class="icon-btn" data-say="${esc(plain(text))}" aria-label="${esc(label||"Ouvir")}" title="Ouvir">${ICON.speaker}</button>`; }
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b){ e.preventDefault(); speak(b.dataset.say); } });
 
+/* ---------- tempo de estudo (uso ativo: interação no último minuto e aba visível) ---------- */
+let lastAct = Date.now(), unsavedSec = 0;
+["click","keydown","input","touchstart"].forEach(ev=>document.addEventListener(ev,()=>{ lastAct = Date.now(); },{passive:true}));
+setInterval(()=>{
+  if(document.visibilityState!=="visible" || Date.now()-lastAct>60000) return;
+  const r = dayRec(); r.sec = (r.sec||0)+5; unsavedSec += 5;
+  if(unsavedSec>=60){ unsavedSec = 0; save(); }
+},5000);
+function weekStats(offset){
+  const t = todayKey(); let min=0, sess=0, xp=0, words=0, days=0;
+  for(let k=0;k<7;k++){ const r = S.days[addDays(t,-(k+offset))]; if(!r) continue;
+    const n = (r.m.every(Boolean)?1:0)+(r.n.every(Boolean)?1:0);
+    min += (r.sec||0)/60; sess += n; xp += r.xp||0; words += (r.newIds||[]).length; if(n) days++; }
+  return {min:Math.round(min),sess,xp,words,days};
+}
+
 /* ---------- keyboard ---------- */
 let keyH = null;
 document.addEventListener("keydown",e=>{ if(!keyH) return; if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return; keyH(e); });
@@ -1353,7 +1375,11 @@ function renderToday(){
     </article>`;
   };
   const streak = effectiveStreak();
+  const wk = weekStats(0), pw = weekStats(7);
+  const trend = (a,b)=> b===0 ? "" : `<span class="small ${a>=b?"up":"down"}">${a>=b?"▲":"▼"} ${Math.abs(Math.round((a-b)/b*100))}%</span>`;
+  const atRisk = streak>0 && h>=18 && !doneM && !doneN && !rec.m.some(Boolean) && !rec.n.some(Boolean);
   view.innerHTML = `
+  ${atRisk?`<div class="note warn" style="margin-top:16px"><b>Sua sequência de ${streak} ${streak===1?"dia":"dias"} está em risco.</b> Faça ao menos uma sessão hoje${S.freezes?" (você tem "+S.freezes+" proteção, mas melhor não gastar)":""}.</div>`:""}
   <section class="hello">
     <span class="eyebrow">${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</span>
     <h1>${greet}! ${doneM&&doneN?"Dia completo.":doneM||doneN?"Falta uma sessão hoje.":"Duas sessões de 15 minutos te esperam."}</h1>
@@ -1366,6 +1392,16 @@ function renderToday(){
       <div class="card stat"><span class="v">${due}</span><span class="l">cartões para revisar</span></div>
       <div class="card stat"><span class="v">${learned}</span><span class="l">palavras em estudo</span></div>
       <div class="card stat"><span class="v">${rec.xp}</span><span class="l">XP hoje</span></div>
+    </div>
+    <div class="card pad stack">
+      <div class="row between"><h3>Últimos 7 dias</h3><span class="small muted">comparado aos 7 anteriores</span></div>
+      <div class="kv4">
+        <div><span class="v mono">${wk.min}</span><span class="l">min estudados ${trend(wk.min,pw.min)}</span></div>
+        <div><span class="v mono">${wk.sess}<small>/14</small></span><span class="l">sessões ${trend(wk.sess,pw.sess)}</span></div>
+        <div><span class="v mono">${wk.words}</span><span class="l">palavras novas</span></div>
+        <div><span class="v mono">${wk.xp}</span><span class="l">XP ${trend(wk.xp,pw.xp)}</span></div>
+      </div>
+      <p class="small muted">${wk.days>=6?"Semana excelente — é essa constância que leva ao B2.":wk.days>=4?"Boa semana. Tente não pular dois dias seguidos.":"Meta: estudar pelo menos 5 dos 7 dias. Mesmo uma sessão curta conta."}</p>
     </div>
     <details class="card method">
       <summary>Por que este método funciona</summary>
@@ -2101,7 +2137,7 @@ function renderProgress(){
   let cells = "";
   for(let i=0;i<84;i++){ const k = addDays(start,i); if(k>t){ cells += `<i style="visibility:hidden"></i>`; continue; }
     const r = S.days[k], n = r ? (r.m.every(Boolean)?1:0)+(r.n.every(Boolean)?1:0) : 0;
-    cells += `<i class="${n?"h"+n:""} ${k===t?"today":""}" title="${fmtDate(k)}: ${n} ${n===1?"sessão":"sessões"}"></i>`; }
+    cells += `<i class="${n?"h"+n:""} ${k===t?"today":""}" title="${fmtDate(k)}: ${n} ${n===1?"sessão":"sessões"}${r&&r.sec?", "+Math.round(r.sec/60)+" min":""}"></i>`; }
   const acc = S.stats.reviews ? Math.round(S.stats.correct/S.stats.reviews*100) : 0;
   const spark = ()=>{
     if(dRecent.length<2) return `<p class="muted small">Faça alguns ditados para ver sua curva de acerto.</p>`;
