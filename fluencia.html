@@ -1674,12 +1674,12 @@ function mistakeItem(m){
   const prev = D.lines.slice(0,m.l).reverse().find(l=>l[0]==="a");
   return {title:D.t, ctx:prev?prev[1]:"", prompt:"Sua vez: "+esc(line[1]), opts:line[2]};
 }
-function blockMistakes(el){
-  const pool = shuffle((S.mistakes||[]).filter(m=>mistakeItem(m))).slice(0,10);
+function blockMistakes(el,opt={}){
+  const pool = shuffle((S.mistakes||[]).filter(m=>mistakeItem(m))).slice(0,opt.limit||10);
   if(!pool.length){ el.innerHTML = `<div class="card empty"><h3>Nenhum erro guardado</h3><p>Quando você erra uma questão de gramática ou uma resposta num diálogo, ela vem para cá. Acerte 2 vezes seguidas e ela sai do deck.</p></div>`; return; }
   let i = 0, right = 0;
   function q(){
-    if(i>=pool.length){ save(); el.innerHTML = `<div class="card empty"><h3>${right}/${pool.length} corretas</h3><p>${(S.mistakes||[]).length} ${S.mistakes.length===1?"item continua":"itens continuam"} no deck. Itens acertados 2 vezes seguidas saem sozinhos.</p><button class="btn primary" id="ag">Mais uma rodada</button></div>`; $("#ag",el).onclick=()=>blockMistakes(el); return; }
+    if(i>=pool.length){ save(); el.innerHTML = `<div class="card empty"><h3>${right}/${pool.length} corretas</h3><p>${(S.mistakes||[]).length} ${S.mistakes.length===1?"item continua":"itens continuam"} no deck. Itens acertados 2 vezes seguidas saem sozinhos.</p>${opt.limit?"":`<button class="btn primary" id="ag">Mais uma rodada</button>`}</div>`; const ag=$("#ag",el); if(ag) ag.onclick=()=>blockMistakes(el); return; }
     const m = pool[i], it = mistakeItem(m), opts = shuffle(it.opts);
     el.innerHTML = `<div class="card pad stack">
       <div class="row between"><span class="eyebrow">${esc(it.title)}</span><span class="mono small muted">${i+1}/${pool.length}</span></div>
@@ -2073,12 +2073,15 @@ const BLOCKS = {review:blockReview, listen:blockListen, speak:blockSpeak, "new":
 
 /* ---------- 1. Spaced repetition ---------- */
 function blockReview(el,opt={}){
+  const bonusBtn = ()=> opt.inSession && (S.mistakes||[]).length ? `<div class="note small" style="text-align:left">Bônus intercalado: revise 3 dos seus erros guardados — misturar tipos de exercício fixa mais.<br><button class="btn sm primary" id="mixB" style="margin-top:8px">Fazer bônus (3 itens)</button></div>` : "";
+  const wireBonus = ()=>{ const b = $("#mixB",el); if(b) b.onclick = ()=>blockMistakes(el,{limit:3}); };
   let queue = shuffle(opt.ids || dueIds()), extra = !!opt.ids, done = 0, total, cur, showing, prod, typed = null, guessTxt = "", last = null;
   if(!queue.length && !opt.ids){
     const known = Object.keys(S.cards).filter(cardById);
     if(known.length){
       el.innerHTML = `<div class="card empty"><h3>Tudo revisado por hoje</h3><p>Nenhum cartão vence hoje. Quer um treino extra com até 10 palavras que você já viu? Ele não altera os intervalos.</p><button class="btn primary" id="ex">Treino extra</button></div>`;
       $("#ex",el).onclick = ()=>{ queue = shuffle(known).slice(0,10); extra = true; total = queue.length; next(); };
+      if(bonusBtn()){ el.firstElementChild.insertAdjacentHTML("beforeend", bonusBtn()); wireBonus(); }
     }else{
       el.innerHTML = `<div class="card empty"><h3>Seu baralho ainda está vazio</h3><p>As palavras entram aqui depois do bloco “Palavras novas” da sessão da noite. Quer aprender as primeiras agora?</p><button class="btn primary" id="nw">Aprender 5 palavras agora</button></div>`;
       $("#nw",el).onclick = ()=>blockNew(el,opt);
@@ -2089,8 +2092,9 @@ function blockReview(el,opt={}){
   function next(){
     if(!queue.length){
       keyH = null;
-      el.innerHTML = `<div class="card empty"><h3>Revisão concluída</h3><p>${done} ${done===1?"cartão revisado":"cartões revisados"}. ${opt.inSession?"Siga para o próximo bloco quando quiser.":"Volte amanhã: os intervalos já foram ajustados."}</p>${last?`<button class="btn sm ghost" id="undoEnd">↶ Desfazer a última nota</button>`:""}</div>`;
+      el.innerHTML = `<div class="card empty"><h3>Revisão concluída</h3><p>${done} ${done===1?"cartão revisado":"cartões revisados"}. ${opt.inSession?"Siga para o próximo bloco quando quiser.":"Volte amanhã: os intervalos já foram ajustados."}</p>${last?`<button class="btn sm ghost" id="undoEnd">↶ Desfazer a última nota</button>`:""}${bonusBtn()}</div>`;
       const ue = $("#undoEnd",el); if(ue) ue.onclick = undo;
+      wireBonus();
       keyH = e=>{ if((e.key==="z"||e.key==="Z") && last) undo(); };
       return;
     }
