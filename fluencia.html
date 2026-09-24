@@ -1277,7 +1277,7 @@ Learner's text:
 let currentTab = "today", sub = null, session = null, timerI = null;
 const view = $("#view");
 function go(tab,subv=null){
-  keyH = null; clearInterval(timerI); stopRec();
+  keyH = null; clearInterval(timerI); stopRec(); stopRecorder();
   if("speechSynthesis" in window) speechSynthesis.cancel();
   currentTab = tab; sub = subv;
   $$("#tabs button").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===(tab==="session"?"today":tab)?"page":"false"));
@@ -1548,12 +1548,36 @@ function blockListen(el,opt={}){
       <h3>Shadowing</h3>
       <p class="muted small">Toque e fale <b>junto</b> com o áudio, imitando ritmo, entonação e as ligações entre palavras. Faça 3 vezes: devagar, normal, normal.</p>
       <div class="row"><button class="btn primary" id="sh">${ICON.speaker} Falar junto <span class="mono" id="shc">0/3</span></button><button class="btn" id="nx">Próxima frase →</button></div>
+      ${recorderHTML("recL","Gravar e comparar")}
     </div>`;
     $("#sh",el).onclick = ()=>{ speak(item[1], shadows===0?0.75:S.settings.rate); shadows=Math.min(3,shadows+1); $("#shc",el).textContent=shadows+"/3"; if(shadows===3) addXP(3,"shadowing"); };
-    $("#nx",el).onclick = ()=>{ pick(); draw(); };
+    $("#nx",el).onclick = ()=>{ stopRecorder(); pick(); draw(); };
+    wireRecorder(el,"recL",20);
     save();
   }
   pick(); draw();
+}
+
+/* ---------- gravador (MediaRecorder) ---------- */
+let activeRec = null;
+function stopRecorder(){ try{ if(activeRec && activeRec.state!=="inactive") activeRec.stop(); }catch(e){} activeRec = null; }
+function recorderHTML(id,label){ return `<div class="stack" style="gap:6px"><div class="row"><button class="btn" id="${id}">${ICON.mic} ${label}</button><span class="small muted" id="${id}-st"></span></div><div id="${id}-out"></div></div>`; }
+function wireRecorder(el,id,maxSec){
+  const btn = $("#"+id,el), st = $("#"+id+"-st",el), out = $("#"+id+"-out",el);
+  if(!btn) return;
+  if(!navigator.mediaDevices || !window.MediaRecorder){ btn.disabled = true; st.textContent = "Gravação não disponível neste navegador."; return; }
+  let chunks = [], stream = null, timer = null;
+  btn.onclick = async ()=>{
+    if(activeRec && activeRec.state==="recording"){ stopRecorder(); return; }
+    try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(e){ st.textContent = "Microfone bloqueado aqui. No app do celular (link do GitHub) a gravação funciona."; btn.disabled = true; return; }
+    chunks = []; const r = new MediaRecorder(stream); activeRec = r;
+    r.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
+    r.onstop = ()=>{ clearTimeout(timer); stream.getTracks().forEach(t=>t.stop()); btn.classList.remove("primary"); btn.innerHTML = ICON.mic+" Gravar de novo"; st.textContent = "Ouça e compare com o original.";
+      const url = URL.createObjectURL(new Blob(chunks,{type:r.mimeType||"audio/webm"})); out.innerHTML = `<audio controls src="${url}" style="width:100%"></audio>`; };
+    r.start(); btn.classList.add("primary"); btn.innerHTML = "■ Parar gravação"; st.textContent = "Gravando…";
+    timer = setTimeout(stopRecorder, (maxSec||120)*1000);
+  };
 }
 
 /* ---------- 3. Guided speaking ---------- */
@@ -1576,6 +1600,7 @@ function blockSpeak(el,opt={},forceIdx){
       </ol>
       <div class="row"><button class="btn primary" id="go">${ICON.mic} Falar 90 s</button><button class="btn" id="go2">Repetir 60 s</button><span class="mono bigtime" id="st">—</span></div>
       <div id="micnote"></div>
+      ${recorderHTML("recS","Gravar minha resposta")}
       <div class="transcript" id="tr" hidden></div>
       <label for="said">O que você disse (opcional: digite um resumo para receber feedback)</label>
       <textarea id="said" rows="3" placeholder="I tend to wake up at…"></textarea>
@@ -1591,6 +1616,7 @@ function blockSpeak(el,opt={},forceIdx){
     $("#go",el).onclick = ()=>run(90);
     $("#go2",el).onclick = ()=>run(60);
     if(AI){ $("#fb",el).onclick = feedback; $("#model",el).onclick = model; }
+    wireRecorder(el,"recS",150);
   }
   function run(sec){
     clearInterval(countdown); stopRec();
