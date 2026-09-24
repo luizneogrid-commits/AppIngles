@@ -1393,6 +1393,7 @@ function updateHeader(){
    TODAY
    ============================================================ */
 function renderToday(){
+  if(!S.onboarded){ if(S.xp>0) S.onboarded = true; else return renderOnboarding(); }
   const rec = dayRec(), h = new Date().getHours();
   const greet = h<12?"Bom dia":h<18?"Boa tarde":"Boa noite";
   const recKind = h<14?"m":"n";
@@ -1449,6 +1450,35 @@ function renderToday(){
     </details>
   </div>`;
   $$("[data-start]",view).forEach(b=>b.addEventListener("click",()=>startSession(b.dataset.start)));
+}
+
+function renderOnboarding(){
+  const LEVELS = [
+    {id:"b1",t:"Intermediário (B1)",d:"Me viro em conversas simples, mas travo para explicar ideias e entendo pouco sem legenda.",listen:1,newPer:5},
+    {id:"b1p",t:"Intermediário alto (B1+)",d:"Converso sobre vários assuntos com erros, entendo séries com legenda em inglês.",listen:2,newPer:5},
+    {id:"b2",t:"Quase avançado (B2)",d:"Participo de reuniões em inglês, mas quero mais precisão, vocabulário e naturalidade.",listen:2,newPer:8}];
+  let lvl = "b1";
+  view.innerHTML = `<section class="hello"><span class="eyebrow">Bem-vindo</span><h1>15 minutos de manhã, 15 à noite.</h1>
+    <p class="muted">Este app junta o que funciona nos principais apps de idiomas num plano diário curto. Três ajustes rápidos e você começa.</p></section>
+  <div class="stack">
+    <div class="card pad stack"><h3>1. Como está seu inglês hoje?</h3>
+      <div class="opts">${LEVELS.map(l=>`<button class="opt ${l.id===lvl?"right":""}" data-l="${l.id}"><span style="display:block">${esc(l.t)}</span><span class="small muted" style="font-weight:400">${esc(l.d)}</span></button>`).join("")}</div></div>
+    <div class="card pad stack"><h3>2. Qual sotaque você quer ouvir?</h3>
+      <div class="row"><select id="ob-acc" style="width:auto"><option value="en-US">Americano</option><option value="en-GB">Britânico</option></select><button class="btn sm" id="ob-t">${ICON.speaker} Ouvir exemplo</button></div></div>
+    <div class="card pad stack"><h3>3. Quando você vai estudar?</h3>
+      <p class="small muted">Horário fixo é o que mais sustenta o hábito. Você pode adicionar lembretes ao calendário.</p>
+      <div class="row"><label style="display:flex;gap:8px;align-items:center">Manhã <input type="time" id="ob-tm" value="${S.settings.tm}" style="width:auto"></label><label style="display:flex;gap:8px;align-items:center">Noite <input type="time" id="ob-tn" value="${S.settings.tn}" style="width:auto"></label></div>
+      <div class="row"><button class="btn sm" id="ob-ics">Adicionar lembretes ao calendário</button></div></div>
+    <button class="btn primary" id="ob-go">Começar meu plano</button>
+    <p class="small muted">Dica: se você não fizer nada hoje à noite, ainda pode aprender suas primeiras 5 palavras agora mesmo pela sessão da noite.</p>
+  </div>`;
+  $$("[data-l]").forEach(b=>b.onclick=()=>{ lvl=b.dataset.l; $$("[data-l]").forEach(x=>x.classList.toggle("right",x===b)); });
+  const readTimes = ()=>{ S.settings.tm = $("#ob-tm").value||S.settings.tm; S.settings.tn = $("#ob-tn").value||S.settings.tn; };
+  $("#ob-acc").value = S.settings.accent;
+  $("#ob-acc").onchange = e=>{ S.settings.accent = e.target.value; S.settings.voice = ""; };
+  $("#ob-t").onclick = ()=>speak("Hi! Fifteen minutes in the morning, fifteen at night. Let's do this.");
+  $("#ob-ics").onclick = async ()=>{ readTimes(); if(await saveFile("lembretes-ingles-15-15.ics", icsReminders(), "text/calendar")) toast("Abra o arquivo para adicionar ao calendário"); };
+  $("#ob-go").onclick = ()=>{ const L = LEVELS.find(l=>l.id===lvl); readTimes(); S.listenLevel = L.listen; S.settings.newPerDay = L.newPer; S.level0 = lvl; S.onboarded = true; S.created = todayKey(); save(); go("today"); toast("Plano pronto — bons estudos!"); };
 }
 
 /* ============================================================
