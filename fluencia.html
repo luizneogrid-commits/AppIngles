@@ -1533,12 +1533,20 @@ function nextNewIds(n){ const out=[]; const basic = VOCAB.filter(isBasicItem), r
 /* ---------- deck de erros ---------- */
 function addMistake(m){
   if(!Array.isArray(S.mistakes)) S.mistakes = [];
-  const key = m.k==="g" ? "g:"+m.l+":"+m.q : "d:"+m.d+":"+m.l;
+  const key = m.k==="g" ? "g:"+m.l+":"+m.q : m.k==="w" ? "w:"+m.o.toLowerCase() : "d:"+m.d+":"+m.l;
   const ex = S.mistakes.find(x=>x.key===key);
   if(ex) ex.streak = 0; else S.mistakes.push(Object.assign({key,streak:0,date:todayKey()},m));
   if(S.mistakes.length>80) S.mistakes = S.mistakes.slice(-80);
 }
+function addAIErrors(r){
+  const errs = r && Array.isArray(r.errors) ? r.errors : [];
+  let n = 0;
+  errs.forEach(e=>{ const o = String(e.original||"").trim().slice(0,160), f = String(e.fix||"").trim().slice(0,160);
+    if(o && f && o.toLowerCase()!==f.toLowerCase()){ addMistake({k:"w",o,f,y:String(e.why||"").slice(0,200)}); n++; } });
+  if(n){ save(); toast(n+(n===1?" erro foi para":" erros foram para")+" o deck Meus erros"); }
+}
 function mistakeItem(m){
+  if(m.k==="w") return {title:"Do seu texto", ctx:"", prompt:"Qual é a forma correta?", opts:[[m.f,1,m.y||"Correção feita no seu texto."],[m.o,0,"Essa foi a sua versão original."]]};
   if(m.k==="g"){ const L = GRAMMAR.find(l=>l.id===m.l); const q = L && L.q[m.q]; if(!q) return null;
     return {title:L.t, ctx:"", prompt:esc(q[0]).replace("___",'<span class="gap">_____</span>'), opts:q[1].map((o,j)=>[o,j===q[2],q[3]])}; }
   const D = DIALOGS.find(d=>d.id===m.d); const line = D && D.lines[m.l]; if(!line || line[0]!=="me") return null;
@@ -2181,7 +2189,7 @@ function blockSpeak(el,opt={},forceIdx){
     const text = $("#said",el).value.trim();
     if(text.split(/\s+/).length<8){ toast("Escreva pelo menos uma ou duas frases do que você disse"); return; }
     const out = $("#aiout",el); out.innerHTML = loadingHTML("Analisando sua resposta…");
-    try{ const r = await AI.json(correctionPrompt("speak",POOL[idx].q,text,POOL[idx].p)); out.innerHTML = feedbackHTML(r); addXP(5,"feedback"); }
+    try{ const r = await AI.json(correctionPrompt("speak",POOL[idx].q,text,POOL[idx].p)); out.innerHTML = feedbackHTML(r); addXP(5,"feedback"); addAIErrors(r); }
     catch(e){ out.innerHTML = `<p class="note warn">${aiErr(e)}</p>`; }
   }
   async function model(){
@@ -2345,7 +2353,7 @@ function blockWrite(el,opt={}){
   if(AI) $("#ai",el).onclick = async ()=>{
     const text = ta.value.trim(); if(text.split(/\s+/).length<minAI){ toast("Escreva pelo menos "+minAI+" palavras antes de pedir correção"); return; }
     const out = $("#aiout",el); out.innerHTML = loadingHTML("Corrigindo seu texto…");
-    try{ lastFb = await AI.json(correctionPrompt("write",prompt,text,targets)); out.innerHTML = feedbackHTML(lastFb) + `<p class="small muted">Dica: reescreva as frases corrigidas à mão (ou digite de novo). Copiar e colar não fixa.</p>`; }
+    try{ lastFb = await AI.json(correctionPrompt("write",prompt,text,targets)); out.innerHTML = feedbackHTML(lastFb) + `<p class="small muted">Os erros foram guardados em Praticar → Meus erros. Reescreva as frases corrigidas à mão — copiar e colar não fixa.</p>`; addAIErrors(lastFb); }
     catch(e){ out.innerHTML = `<p class="note warn">${aiErr(e)}</p>`; }
   };
   $("#sv",el).onclick = ()=>{
@@ -2461,7 +2469,7 @@ function renderPractice(){
       <button class="card tile" data-s="dialogs"><span class="ti">${ICON.chat}</span><h3>Diálogos</h3><p>${DIALOGS.length} situações com roteiro: café, aeroporto, entrevista, médico… Escolha a resposta natural e repita. Sem IA, funciona offline.</p></button>
       <button class="card tile" data-s="chat"><span class="ti">${ICON.chat}</span><h3>Conversa com IA</h3><p>Role-play de situações reais (entrevista, reunião, hotel) com correções na hora.${AI?"":" Disponível quando aberto no Claude."}</p></button>
       <button class="card tile" data-s="reading"><span class="ti">${ICON.book}</span><h3>Leitura</h3><p>${READINGS.length} textos curtos com tradução ao toque, áudio e perguntas. Mande palavras novas para o seu baralho.</p></button>
-      <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>As questões de gramática e as falas de diálogo que você errou voltam aqui até você acertar 2 vezes seguidas.</p></button>
+      <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>Questões de gramática, falas de diálogo e correções da IA no seu diário voltam aqui até você acertar 2 vezes seguidas.</p></button>
       <button class="card tile" data-s="ear"><span class="ti">${ICON.ear}</span><h3>Ouça e entenda</h3><p>Só áudio: reconheça as palavras do seu baralho de ouvido, sozinhas ou dentro da frase.</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
