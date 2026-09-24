@@ -2754,7 +2754,7 @@ function renderProgress(){
       <div class="row between small muted"><span>últimos ${dRecent.length} ditados · linha tracejada = 50%</span><span class="mono">média ${Math.round(dAvg*100)}%</span></div>`;
   };
   const voiceOpts = voices.map(v=>`<option value="${esc(v.name)}" ${S.settings.voice===v.name?"selected":""}>${esc(v.name)} (${esc(v.lang)})</option>`).join("");
-  view.innerHTML = `<section class="hello"><span class="eyebrow">Seu progresso</span><h1>Nível ${level}</h1>
+  view.innerHTML = `<section class="hello"><div class="row between"><span class="eyebrow">Seu progresso</span><button class="btn sm" id="share">Compartilhar progresso</button></div><h1>${esc(curLevel().t)} <span class="muted" style="font-size:.6em;font-weight:500">· XP nível ${level}</span></h1>
     <div class="progressbar" style="max-width:420px"><span style="width:${into/LV*100}%"></span></div>
     <p class="muted small mono">${S.xp.toLocaleString("pt-BR")} XP · faltam ${LV-into} para o nível ${level+1}</p></section>
   <div class="stack">
@@ -2819,6 +2819,7 @@ function renderProgress(){
     </div>
   </div>`;
   $("#lt").onclick = ()=>go("practice","test");
+  $("#share").onclick = shareProgress;
   $("#s-lvl").onchange = e=>{ const L = LEVELS.find(l=>l.id===e.target.value); S.settings.level = L.id; S.listenLevel = L.listen; save(); toast("Nível: "+L.t+". Palavras, aulas, ditado, fala e escrita foram ajustados."); renderProgress(); };
   $("#s-acc").onchange = e=>{ S.settings.accent=e.target.value; S.settings.voice=""; save(); renderProgress(); };
   $("#s-voice").onchange = e=>{ S.settings.voice=e.target.value; save(); };
@@ -2838,6 +2839,39 @@ function renderProgress(){
   $("#im").onclick = ()=>{ let o; try{ o = JSON.parse($("#bk").value); if(!o || typeof o!=="object" || !o.cards) throw 0; }catch(e){ toast("Esse texto não é um backup válido"); return; }
     confirmBox("Substituir o progresso atual por este backup?","Importar",()=>{ S = merge(o); save(); toast("Backup importado"); renderProgress(); }); };
   $("#rs").onclick = ()=>confirmBox("Apagar XP, sequência, palavras e diário? Isso não pode ser desfeito.","Apagar tudo",()=>{ const keep=S.settings; S = defaultState(); S.settings=keep; save(); toast("Progresso apagado"); renderProgress(); });
+}
+/* ---------- imagem para compartilhar ---------- */
+async function progressImage(){
+  try{ await document.fonts.ready; }catch(e){}
+  const W = 1080, c = document.createElement("canvas"); c.width = W; c.height = W;
+  const g = c.getContext("2d");
+  g.fillStyle = "#131C33"; g.fillRect(0,0,W,W);
+  g.fillStyle = "#C9701C"; g.fillRect(0,0,W/2,14); g.fillStyle = "#4A4EC2"; g.fillRect(W/2,0,W/2,14);
+  const disp = '"Bricolage Grotesque", "Segoe UI", sans-serif', body = '"Atkinson Hyperlegible", "Segoe UI", sans-serif';
+  g.textBaseline = "alphabetic";
+  g.font = "800 64px "+disp; g.fillStyle = "#C9701C"; g.fillText("15", 80, 150); const w15 = g.measureText("15").width;
+  g.fillStyle = "#FFFFFF"; g.fillText("+", 80+w15, 150); const wp = g.measureText("+").width;
+  g.fillStyle = "#9A9EF7"; g.fillText("15", 80+w15+wp, 150);
+  g.font = "400 34px "+body; g.fillStyle = "#9BA4BC"; g.fillText("Meu inglês, 15 minutos de manhã e 15 à noite", 80, 205);
+  const streak = effectiveStreak();
+  g.font = "800 300px "+disp; g.fillStyle = "#F2A45A"; g.fillText(String(streak), 70, 520);
+  const sw = g.measureText(String(streak)).width;
+  g.font = "700 56px "+disp; g.fillStyle = "#FFFFFF"; g.fillText(streak===1?"dia seguido":"dias seguidos", 90+sw, 505);
+  const words = Object.keys(S.cards).length, mature = Object.values(S.cards).filter(x=>x.ivl>=21).length;
+  const stats = [[curLevel().t,"nível atual"],[String(words),"palavras em estudo"],[String(mature),"palavras maduras"],[S.xp.toLocaleString("pt-BR"),"XP"]];
+  stats.forEach(([v,l],k)=>{ const x = 80 + (k%2)*470, y = 660 + Math.floor(k/2)*170;
+    g.font = "700 "+(k===0?46:64)+"px "+disp; g.fillStyle = "#FFFFFF"; g.fillText(v, x, y);
+    g.font = "400 30px "+body; g.fillStyle = "#9BA4BC"; g.fillText(l, x, y+46); });
+  g.font = "400 28px "+body; g.fillStyle = "#6F7894"; g.fillText(new Date().toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"}), 80, 1010);
+  return new Promise(res=>c.toBlob(res,"image/png"));
+}
+async function shareProgress(){
+  const blob = await progressImage(); if(!blob){ toast("Não foi possível gerar a imagem"); return; }
+  const file = new File([blob],"meu-progresso-ingles.png",{type:"image/png"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], text:"Estou estudando inglês 15 min de manhã e 15 à noite! "+effectiveStreak()+" dias seguidos."}); return; }catch(e){ if(e && e.name==="AbortError") return; }
+  }
+  if(await saveFile("meu-progresso-ingles.png", blob, "image/png")) toast("Imagem salva");
 }
 function confirmBox(msg,label,fn){
   const c = $("#cfm"); c.innerHTML = `<div class="confirm"><span>${esc(msg)}</span><button class="btn sm" id="cy" style="color:var(--bad)">${esc(label)}</button><button class="btn sm ghost" id="cn">Cancelar</button></div>`;
