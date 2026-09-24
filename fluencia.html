@@ -2003,14 +2003,53 @@ function blockListen(el,opt={}){
       <h3>Shadowing</h3>
       <p class="muted small">Toque e fale <b>junto</b> com o áudio, imitando ritmo, entonação e as ligações entre palavras. Faça 3 vezes: devagar, normal, normal.</p>
       <div class="row"><button class="btn primary" id="sh">${ICON.speaker} Falar junto <span class="mono" id="shc">0/3</span></button><button class="btn" id="nx">Próxima frase →</button></div>
+      ${pronCheckHTML()}
       ${recorderHTML("recL","Gravar e comparar")}
     </div>`;
     $("#sh",el).onclick = ()=>{ speak(item[1], shadows===0?0.75:S.settings.rate); shadows=Math.min(3,shadows+1); $("#shc",el).textContent=shadows+"/3"; if(shadows===3) addXP(3,"shadowing"); };
     $("#nx",el).onclick = ()=>{ stopRecorder(); pick(); draw(); };
     wireRecorder(el,"recL",20);
+    wirePronCheck(el,item[1]);
     save();
   }
   pick(); draw();
+}
+
+/* ---------- checagem de pronúncia (reconhecimento de fala) ---------- */
+function listenOnce(){
+  return new Promise((resolve,reject)=>{
+    const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!R) return reject({code:"none"});
+    let r; try{ r = new R(); }catch(e){ return reject({code:"none"}); }
+    r.lang = S.settings.accent; r.interimResults = false; r.maxAlternatives = 3; r.continuous = false;
+    let done = false; const t = setTimeout(()=>{ try{ r.stop(); }catch(e){} }, 9000);
+    r.onresult = ev=>{ done = true; clearTimeout(t); const alts = Array.from(ev.results[0]).map(a=>a.transcript); resolve(alts); };
+    r.onerror = ev=>{ if(done) return; done = true; clearTimeout(t); reject({code:ev.error}); };
+    r.onend = ()=>{ if(!done){ done = true; clearTimeout(t); reject({code:"no-speech"}); } };
+    try{ r.start(); }catch(e){ reject({code:"x"}); }
+  });
+}
+function pronCheckHTML(){ return (window.SpeechRecognition || window.webkitSpeechRecognition) ? `<div class="stack" style="gap:6px"><div class="row"><button class="btn" id="pron">${ICON.mic} Dizer a frase (checar pronúncia)</button></div><div id="pronOut" role="status" aria-live="polite"></div></div>` : ""; }
+function wirePronCheck(el,sentence){
+  const b = $("#pron",el); if(!b) return;
+  b.onclick = async ()=>{
+    const out = $("#pronOut",el); b.disabled = true; out.innerHTML = loadingHTML("Ouvindo… fale a frase inteira");
+    try{
+      const alts = await listenOnce();
+      const words = sentence.split(" "), owner = [], t = [];
+      words.forEach((w,wi)=>toks(w).forEach(x=>{ t.push(x); owner.push(wi); }));
+      let best = null;
+      alts.forEach(a=>{ const okT = lcsOk(t,toks(a)); const ok = words.map((w,wi)=>okT.every((v,k)=>owner[k]!==wi||v)); const sc = ok.filter(Boolean).length/ok.length; if(!best||sc>best.sc) best = {ok,sc,a}; });
+      const pct = Math.round(best.sc*100);
+      if(pct>=80) addXP(2,"pronúncia");
+      out.innerHTML = `<div class="stack" style="gap:6px"><div class="row"><span class="score" style="font-size:1.5rem">${pct}%</span><span class="muted small">${pct>=90?"Muito claro!":pct>=70?"Bom — as palavras em vermelho não foram reconhecidas.":"Tente de novo mais devagar, articulando cada palavra."}</span></div>
+        <div class="diff">${words.map((w,i)=>`<span class="${best.ok[i]?"ok":"miss"}">${esc(w)}</span>`).join(" ")}</div>
+        <p class="small muted">Entendido: “${esc(best.a)}”</p></div>`;
+    }catch(e){
+      out.innerHTML = `<p class="note warn small">${e.code==="not-allowed"||e.code==="service-not-allowed"?"O microfone está bloqueado aqui. No app do celular (link do GitHub) a checagem funciona.":e.code==="no-speech"?"Não ouvi nada. Toque de novo e fale logo depois.":"O reconhecimento de fala não está disponível agora."}</p>`;
+    }
+    b.disabled = false;
+  };
 }
 
 /* ---------- gravador (MediaRecorder) ---------- */
