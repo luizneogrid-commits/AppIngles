@@ -1371,7 +1371,7 @@ function defaultState(){ return {
   v:1, created:todayKey(), updatedAt:0, xp:0,
   streak:{count:0,best:0,last:null}, freezes:0,
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
-  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{},
+  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{}, tests:[],
   stats:{reviews:0,correct:0},
   settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,tm:"07:30",tn:"21:30"}
 };}
@@ -1731,6 +1731,7 @@ function renderToday(){
     <p class="muted">${doneM&&doneN?"Excelente — você fechou manhã e noite. Consistência é o que mais faz o inglês subir de nível.":"De manhã você treina ouvido e fala; à noite aprende palavras novas, gramática e escreve. A revisão da manhã fixa o que você aprendeu na noite anterior."}</p>
   </section>
   <div class="stack">
+    ${(()=>{ const t=(S.tests||[]); const last=t.length?t[t.length-1].d:null; const due = last ? diffDays(last,todayKey())>=30 : dayIndex()>=7; return due?`<div class="note row between"><span><b>${last?"Faz um mês do seu último teste.":"Que tal medir seu nível?"}</b> Um teste de 5 minutos mostra sua evolução.</span><button class="btn sm" id="gotest">Fazer teste</button></div>`:""; })()}
     <div class="grid2">${card("m")}${card("n")}</div>
     ${!doneM && !doneN && !(rec.x && rec.x.every(Boolean)) ? `<div class="row between card pad x-mode" style="padding-block:12px"><span><b>Dia corrido?</b> <span class="muted">Sessão expressa de 5 min: revisão + um ditado. Mantém a sequência.</span></span><button class="btn" data-start="x">Fazer 5 min</button></div>` : ""}
     <div class="statrow">
@@ -1761,6 +1762,7 @@ function renderToday(){
     </details>
   </div>`;
   $$("[data-start]",view).forEach(b=>b.addEventListener("click",()=>startSession(b.dataset.start)));
+  const gt = $("#gotest"); if(gt) gt.onclick = ()=>go("practice","test");
 }
 
 function renderOnboarding(){
@@ -1777,6 +1779,7 @@ function renderOnboarding(){
       <div class="row"><label style="display:flex;gap:8px;align-items:center">Manhã <input type="time" id="ob-tm" value="${S.settings.tm}" style="width:auto"></label><label style="display:flex;gap:8px;align-items:center">Noite <input type="time" id="ob-tn" value="${S.settings.tn}" style="width:auto"></label></div>
       <div class="row"><button class="btn sm" id="ob-ics">Adicionar lembretes ao calendário</button></div></div>
     <button class="btn primary" id="ob-go">Começar meu plano</button>
+    <button class="btn ghost" id="ob-test">Não sei meu nível — fazer o teste (5 min)</button>
     <p class="small muted">Dica: se você não fizer nada hoje à noite, ainda pode aprender suas primeiras 5 palavras agora mesmo pela sessão da noite.</p>
   </div>`;
   $$("[data-l]").forEach(b=>b.onclick=()=>{ lvl=b.dataset.l; $$("[data-l]").forEach(x=>x.classList.toggle("right",x===b)); });
@@ -1785,6 +1788,7 @@ function renderOnboarding(){
   $("#ob-acc").onchange = e=>{ S.settings.accent = e.target.value; S.settings.voice = ""; };
   $("#ob-t").onclick = ()=>speak("Hi! Fifteen minutes in the morning, fifteen at night. Let's do this.");
   $("#ob-ics").onclick = async ()=>{ readTimes(); if(await saveFile("lembretes-ingles-15-15.ics", icsReminders(), "text/calendar")) toast("Abra o arquivo para adicionar ao calendário"); };
+  $("#ob-test").onclick = ()=>{ readTimes(); S.onboarded = true; S.created = todayKey(); save(); go("practice","test"); };
   $("#ob-go").onclick = ()=>{ const L = LEVELS.find(l=>l.id===lvl); readTimes(); S.listenLevel = L.listen; S.settings.newPerDay = L.newPer; S.settings.level = lvl; S.settings.rate = L.rate; S.level0 = lvl; S.onboarded = true; S.created = todayKey(); save(); go("today"); toast("Plano pronto — bons estudos!"); };
 }
 
@@ -2382,6 +2386,7 @@ function renderPractice(){
   if(sub==="mistakes") return blockMistakes(shell("Meus erros"));
   if(sub==="reading") return blockReading(shell("Leitura"));
   if(sub==="ear") return blockEarGame(shell("Ouça e entenda"));
+  if(sub==="test") return blockLevelTest(shell("Teste de nível"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -2635,6 +2640,47 @@ function blockEarGame(el){
   }
   q();
 }
+/* ---------- teste de nível ---------- */
+function buildTest(){
+  const qs = [], pick = a=>a[Math.floor(Math.random()*a.length)];
+  const gB = GRAMMAR.filter(isBasicItem), gI = GRAMMAR.filter(l=>!isBasicItem(l));
+  shuffle(gB).slice(0,2).concat(shuffle(gI).slice(0,4)).forEach(L=>{ const q = pick(L.q); qs.push({k:"g",w:isBasicItem(L)?1:2,prompt:esc(q[0]).replace("___",'<span class="gap">_____</span>'),opts:q[1].map((o,j)=>({t:o,ok:j===q[2]}))}); });
+  const vB = VOCAB.filter(isBasicItem), vI = VOCAB.filter(c=>!isBasicItem(c));
+  shuffle(vB).slice(0,2).concat(shuffle(vI).slice(0,3)).forEach(c=>{ const pool = isBasicItem(c)?vB:vI; const others = shuffle(pool.filter(x=>x.id!==c.id)).slice(0,3);
+    qs.push({k:"v",w:isBasicItem(c)?1:1.5,prompt:"O que significa <b>"+esc(c.w)+"</b>?",opts:shuffle([c,...others]).map(x=>({t:x.pt,ok:x.id===c.id}))}); });
+  [0,1,2,3].forEach(l=>{ const pool = LISTEN.filter(x=>x[0]===l); const it = pick(pool); const others = shuffle(pool.filter(x=>x!==it)).slice(0,2);
+    qs.push({k:"l",w:[1,1.5,2,2.5][l],say:it[1],prompt:"Qual frase você ouviu?",opts:shuffle([it,...others]).map(x=>({t:x[1],ok:x===it}))}); });
+  return qs;
+}
+function estimateLevel(pct){ return pct<30?"a1":pct<50?"a2":pct<65?"b1":pct<80?"b1p":"b2"; }
+function blockLevelTest(el){
+  const qs = buildTest(); let i = 0, got = 0, total = qs.reduce((a,q)=>a+q.w,0);
+  el.innerHTML = `<div class="card pad stack"><h2>Teste de nível</h2><p class="muted">15 questões: 6 de gramática, 5 de vocabulário e 4 de compreensão oral (o áudio toca uma vez sozinho; você pode repetir). Leva uns 5 minutos. Não chute: se não souber, escolha a que parecer mais provável e siga.</p><button class="btn primary" id="ts">Começar</button></div>`;
+  $("#ts",el).onclick = q;
+  function q(){
+    if(i>=qs.length) return result();
+    const it = qs[i], opts = it.opts;
+    el.innerHTML = `<div class="card pad stack">
+      <div class="row between"><span class="eyebrow">${{g:"Gramática",v:"Vocabulário",l:"Compreensão oral"}[it.k]}</span><span class="mono small muted">${i+1}/${qs.length}</span></div>
+      <div class="progressbar"><span style="width:${i/qs.length*100}%"></span></div>
+      ${it.say?`<button class="btn" id="tp">${ICON.speaker} Ouvir de novo</button>`:""}
+      <p class="qsent">${it.prompt}</p>
+      <div class="opts">${opts.map((o,j)=>`<button class="opt" data-j="${j}">${esc(o.t)}</button>`).join("")}</div></div>`;
+    if(it.say){ $("#tp",el).onclick = ()=>speak(it.say); setTimeout(()=>speak(it.say),200); }
+    $$(".opt",el).forEach(b=>b.onclick=()=>{ if(opts[+b.dataset.j].ok) got += it.w; i++; q(); });
+  }
+  function result(){
+    const pct = Math.round(got/total*100), est = estimateLevel(pct), L = LEVELS.find(l=>l.id===est), cur = curLevel();
+    if(!Array.isArray(S.tests)) S.tests = [];
+    S.tests.push({d:todayKey(),pct,est}); S.tests = S.tests.slice(-24); addXP(10,"teste");
+    el.innerHTML = `<div class="card pad stack" style="text-align:center;align-items:center">
+      <span class="eyebrow">Resultado</span><div class="bignum">${esc(L.t)}</div><p class="muted">${pct}% de acerto ponderado (questões difíceis valem mais)</p>
+      ${est!==cur.id?`<p>Seu nível no app está como <b>${esc(cur.t)}</b>. Quer ajustar para <b>${esc(L.t)}</b>? Palavras, aulas, ditado, fala e escrita mudam junto.</p><div class="row"><button class="btn primary" id="useL">Usar ${esc(L.t)}</button><button class="btn" id="keepL">Manter o atual</button></div>`:`<p>Seu nível no app já está certo. Refaça o teste daqui a um mês para ver sua evolução.</p><button class="btn primary" id="keepL">Voltar</button>`}
+      <p class="small muted">Estimativa rápida do app, não certificação. Para um resultado oficial, faça o EF SET (gratuito).</p></div>`;
+    const u = $("#useL",el); if(u) u.onclick = ()=>{ S.settings.level = est; S.listenLevel = L.listen; save(); toast("Nível ajustado: "+L.t); go("progress"); };
+    $("#keepL",el).onclick = ()=>go("progress");
+  }
+}
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
   el.innerHTML = `<div class="stack">${S.journal.map(j=>`<article class="card pad stack">
@@ -2710,6 +2756,9 @@ function renderProgress(){
         <hr class="sep"><h3>Ditado</h3>${spark()}
       </div>
     </div>
+    <div class="card pad stack"><div class="row between"><h3>Teste de nível</h3><button class="btn sm primary" id="lt">Fazer teste (5 min)</button></div>
+      ${(S.tests||[]).length?`<div class="kv">${S.tests.slice(-6).reverse().map(t=>`<span>${fmtDate(t.d)}</span><span class="mono small">${esc((LEVELS.find(l=>l.id===t.est)||{}).t||t.est)} · ${t.pct}%</span>`).join("")}</div>`:`<p class="small muted">Meça seu nível agora e refaça a cada mês para ver a evolução de verdade.</p>`}
+    </div>
     <div class="card pad stack"><div class="row between"><h3>Conquistas</h3><span class="mono small muted">${ACH.filter(a=>S.ach&&S.ach[a.id]).length}/${ACH.length}</span></div>
       <div class="ach">${ACH.map(a=>{ const on = S.ach && S.ach[a.id]; return `<div class="achi ${on?"on":""}"><span class="medal">${on?ICON.check:"?"}</span><span><b>${esc(a.t)}</b><span class="small muted" style="display:block">${esc(a.d)}${on?" · "+fmtDate(on):""}</span></span></div>`; }).join("")}</div>
     </div>
@@ -2737,6 +2786,7 @@ function renderProgress(){
       <div id="cfm"></div>
     </div>
   </div>`;
+  $("#lt").onclick = ()=>go("practice","test");
   $("#s-lvl").onchange = e=>{ const L = LEVELS.find(l=>l.id===e.target.value); S.settings.level = L.id; S.listenLevel = L.listen; save(); toast("Nível: "+L.t+". Palavras, aulas, ditado, fala e escrita foram ajustados."); renderProgress(); };
   $("#s-acc").onchange = e=>{ S.settings.accent=e.target.value; S.settings.voice=""; save(); renderProgress(); };
   $("#s-voice").onchange = e=>{ S.settings.voice=e.target.value; save(); };
