@@ -1545,6 +1545,10 @@ function checkQuests(){
   if(bonus){ S.xp += bonus; r.xp += bonus; }
 }
 
+const FREEZE_COST = 300, FREEZE_MAX = 2;
+function xpBalance(){ return S.xp - (S.spent||0); }
+function buyFreeze(){ if(S.freezes>=FREEZE_MAX){ toast("Você já tem o máximo de "+FREEZE_MAX+" proteções"); return false; } if(xpBalance()<FREEZE_COST){ toast("Saldo insuficiente: faltam "+(FREEZE_COST-xpBalance())+" XP"); return false; } S.spent = (S.spent||0)+FREEZE_COST; S.freezes++; save(); toast("Proteção de sequência comprada!"); return true; }
+
 /* ---------- streak ---------- */
 function effectiveStreak(){
   const {count,last} = S.streak; if(!last) return 0;
@@ -3000,6 +3004,9 @@ function renderProgress(){
         <hr class="sep"><h3>Ditado</h3>${spark()}
       </div>
     </div>
+    <div class="card pad stack"><div class="row between"><h3>Loja</h3><span class="mono small">saldo: ${xpBalance().toLocaleString("pt-BR")} XP</span></div>
+      <div class="wk"><span class="ti">${ICON.flame}</span><span style="flex:1"><b>Proteção de sequência</b><span class="small muted" style="display:block">Se você perder um dia, ela mantém sua sequência. Você tem ${S.freezes}/${FREEZE_MAX}. Gastar saldo não reduz seu nível.</span></span><button class="btn sm" id="buyF" ${S.freezes>=FREEZE_MAX||xpBalance()<FREEZE_COST?"disabled":""}>${FREEZE_COST} XP</button></div>
+    </div>
     <div class="card pad stack"><div class="row between"><h3>Teste de nível</h3><button class="btn sm primary" id="lt">Fazer teste (5 min)</button></div>
       ${(S.tests||[]).length?`<div class="kv">${S.tests.slice(-6).reverse().map(t=>`<span>${fmtDate(t.d)}</span><span class="mono small">${esc((LEVELS.find(l=>l.id===t.est)||{}).t||t.est)} · ${t.pct}%</span>`).join("")}</div>`:`<p class="small muted">Meça seu nível agora e refaça a cada mês para ver a evolução de verdade.</p>`}
     </div>
@@ -3034,6 +3041,7 @@ function renderProgress(){
     </div>
   </div>`;
   $("#lt").onclick = ()=>go("practice","test");
+  $("#buyF").onclick = ()=>{ if(buyFreeze()) renderProgress(); };
   const wks = weaknesses(); $$("[data-wk]").forEach(b=>b.onclick=()=>{ const g = wks[+b.dataset.wk].go; go(g[0],g[1]); });
   $("#share").onclick = shareProgress;
   $("#s-lvl").onchange = e=>{ const L = LEVELS.find(l=>l.id===e.target.value); S.settings.level = L.id; S.listenLevel = L.listen; save(); toast("Nível: "+L.t+". Palavras, aulas, ditado, fala e escrita foram ajustados."); renderProgress(); };
