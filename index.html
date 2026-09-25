@@ -322,6 +322,8 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .ring>span{width:92px;height:92px;border-radius:50%;background:var(--surface);display:grid;place-items:center}
 svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .flashsent{min-height:70px;display:grid;place-items:center;text-align:center;font-size:1.25rem;font-weight:700;background:var(--bg);border-radius:12px;padding:12px}
+.pgroup{display:flex;flex-direction:column;gap:10px}
+.pgroup h2{font-size:1.1rem}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2869,29 +2871,45 @@ function renderPractice(){
   if(sub==="write") return blockWrite(shell("Escrita livre"));
   view.innerHTML = `<section class="hello"><span class="eyebrow">Treino livre</span><h1>Praticar</h1><p class="muted">Tempo sobrando? Escolha um treino. As sessões diárias continuam sendo o principal.</p></section>
   <div class="stack">
+    ${(()=>{ const w = weaknesses()[0]; return w ? `<div class="note row between"><span><b>Sugestão para agora:</b> ${esc(w.t)}</span><button class="btn sm" id="recGo">${esc(w.btn)}</button></div>` : ""; })()}
+    <section class="pgroup" aria-label="Conversar"><div class="row between" style="align-items:baseline"><h2>Conversar</h2><span class="small muted">Diálogos e situações reais</span></div>
     <div class="tiles">
       <button class="card tile" data-s="dialogs"><span class="ti">${ICON.chat}</span><h3>Diálogos</h3><p>${DIALOGS.length} situações com roteiro: café, aeroporto, entrevista, médico… Escolha a resposta natural e repita. Sem IA, funciona offline.</p></button>
       <button class="card tile" data-s="chat"><span class="ti">${ICON.chat}</span><h3>Conversa com IA</h3><p>Role-play de situações reais (entrevista, reunião, hotel) com correções na hora.${AI?"":" Disponível quando aberto no Claude."}</p></button>
       <button class="card tile" data-s="phr"><span class="ti">${ICON.chat}</span><h3>Frases prontas</h3><p>${PHRASES.reduce((a,c)=>a+c.p.length,0)} frases por situação: reuniões, e-mails, viagem, opinião, restaurante e conversa informal.</p></button>
-      <button class="card tile" data-s="reading"><span class="ti">${ICON.book}</span><h3>Leitura</h3><p>${READINGS.length} textos curtos com tradução ao toque, áudio e perguntas. Mande palavras novas para o seu baralho.</p></button>
-      <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>Questões de gramática, falas de diálogo e correções da IA no seu diário voltam aqui até você acertar 2 vezes seguidas.</p></button>
-      <button class="card tile" data-s="build"><span class="ti">${ICON.pen}</span><h3>Monte a frase</h3><p>Ouça e toque nas palavras na ordem certa. Treina a estrutura da frase em inglês, sem digitar.</p></button>
+      <button class="card tile" data-s="quick"><span class="ti">${ICON.mic}</span><h3>Pergunta rápida</h3><p>6 perguntas em áudio, 20 segundos cada. Treina responder sem traduzir na cabeça.</p></button>
+      <button class="card tile" data-s="speak"><span class="ti">${ICON.mic}</span><h3>Fala livre</h3><p>Um tema aleatório, frases úteis e cronômetro 90/60 s.</p></button>
+    </div></section>
+    <section class="pgroup" aria-label="Ouvir e pronunciar"><div class="row between" style="align-items:baseline"><h2>Ouvir e pronunciar</h2><span class="small muted">Ouvido e sotaque</span></div>
+    <div class="tiles">
+      <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
       <button class="card tile" data-s="ear"><span class="ti">${ICON.ear}</span><h3>Ouça e entenda</h3><p>Só áudio: reconheça as palavras do seu baralho de ouvido, sozinhas ou dentro da frase.</p></button>
       <button class="card tile" data-s="pron"><span class="ti">${ICON.mic}</span><h3>Pronúncia para brasileiros</h3><p>O -ed do passado, a sílaba tônica e as letras mudas — os erros que mais denunciam o sotaque.</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
-      <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
-      <button class="card tile" data-s="quick"><span class="ti">${ICON.mic}</span><h3>Pergunta rápida</h3><p>6 perguntas em áudio, 20 segundos cada. Treina responder sem traduzir na cabeça.</p></button>
-      <button class="card tile" data-s="speak"><span class="ti">${ICON.mic}</span><h3>Fala livre</h3><p>Um tema aleatório, frases úteis e cronômetro 90/60 s.</p></button>
+    </div></section>
+    <section class="pgroup" aria-label="Ler e escrever"><div class="row between" style="align-items:baseline"><h2>Ler e escrever</h2><span class="small muted">Vocabulário em contexto</span></div>
+    <div class="tiles">
+      <button class="card tile" data-s="reading"><span class="ti">${ICON.book}</span><h3>Leitura</h3><p>${READINGS.length} textos curtos com tradução ao toque, áudio e perguntas. Mande palavras novas para o seu baralho.</p></button>
+      <button class="card tile" data-s="build"><span class="ti">${ICON.pen}</span><h3>Monte a frase</h3><p>Ouça e toque nas palavras na ordem certa. Treina a estrutura da frase em inglês, sem digitar.</p></button>
       <button class="card tile" data-s="write"><span class="ti">${ICON.pen}</span><h3>Escrita livre</h3><p>Mais um texto no diário, com correção.</p></button>
-      <button class="card tile" data-s="guide"><span class="ti">${ICON.book}</span><h3>Como usar o app</h3><p>Rotina ideal, o que fazer se faltar um dia, onde fica o progresso, microfone e áudio.</p></button>
-      <button class="card tile" data-s="world"><span class="ti">${ICON.wave}</span><h3>Inglês no mundo real</h3><p>Podcasts, séries, notícias e sites gratuitos escolhidos para o seu nível, com dica de como usar cada um.</p></button>
       <button class="card tile" data-s="journal"><span class="ti">${ICON.book}</span><h3>Seu diário</h3><p>${S.journal.length} ${S.journal.length===1?"texto salvo":"textos salvos"}. Releia e veja sua evolução.</p></button>
-    </div>
+    </div></section>
+    <section class="pgroup" aria-label="Revisar e medir"><div class="row between" style="align-items:baseline"><h2>Revisar e medir</h2><span class="small muted">Seus erros e seu nível</span></div>
+    <div class="tiles">
+      <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>Questões de gramática, falas de diálogo e correções da IA no seu diário voltam aqui até você acertar 2 vezes seguidas.</p></button>
+      <button class="card tile" data-s="test"><span class="ti">${ICON.book}</span><h3>Teste de nível</h3><p>15 questões em 5 minutos. Mede seu nível e sugere ajustes; refaça todo mês.</p></button>
+    </div></section>
+    <section class="pgroup" aria-label="Recursos"><div class="row between" style="align-items:baseline"><h2>Recursos</h2><span class="small muted">Fora do app e ajuda</span></div>
+    <div class="tiles">
+      <button class="card tile" data-s="world"><span class="ti">${ICON.wave}</span><h3>Inglês no mundo real</h3><p>Podcasts, séries, notícias e sites gratuitos escolhidos para o seu nível, com dica de como usar cada um.</p></button>
+      <button class="card tile" data-s="guide"><span class="ti">${ICON.book}</span><h3>Como usar o app</h3><p>Rotina ideal, o que fazer se faltar um dia, onde fica o progresso, microfone e áudio.</p></button>
+    </div></section>
     <div class="card pad stack"><h3>Gramática — todas as aulas</h3>
       <div class="kv">${(isBasic()?GRAMMAR.filter(isBasicItem).concat(GRAMMAR.filter(l=>!isBasicItem(l))):GRAMMAR.filter(l=>!isBasicItem(l)).concat(GRAMMAR.filter(isBasicItem))).map(l=>{ const g=S.grammar[l.id]; return `<button class="btn ghost" style="justify-content:flex-start;text-align:left;padding-inline:0;gap:10px" data-g="${l.id}"><span class="tag" style="min-width:2.4em">${l.lvl||"B1+"}</span>${esc(l.t)}</button><span class="mono small ${g?"":"muted"}">${g?g.best+"/5"+(lessonDue(l.id)?" · revisar":" · "+fmtDate(g.due||addDays(g.date,2))):"—"}</span>`; }).join("")}</div>
     </div>
   </div>`;
   $$("[data-s]").forEach(b=>b.onclick=()=>go("practice",b.dataset.s));
+  const rg = $("#recGo"); if(rg) rg.onclick = ()=>{ const g = weaknesses()[0].go; go(g[0],g[1]); };
   $$("[data-g]").forEach(b=>b.onclick=()=>go("practice","g:"+b.dataset.g));
 }
 function blockPairs(el){
