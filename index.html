@@ -1724,7 +1724,7 @@ function defaultState(){ return {
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
   dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{}, tests:[], pron:{},
   stats:{reviews:0,correct:0},
-  settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,sessMin:15,chime:true,tm:"07:30",tn:"21:30"}
+  settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,sessMin:15,chime:true,retention:0.9,tm:"07:30",tn:"21:30"}
 };}
 let S = defaultState();
 let userDoc = null, remoteTimer = null, remoteBusy = false, remoteAgain = false, syncState = "local";
@@ -1908,20 +1908,44 @@ function bumpStreak(){
   if(st.count%7===0 && S.freezes<2){ S.freezes++; setTimeout(()=>toast("7 dias seguidos! Você ganhou 1 proteção de sequência"),2400); }
 }
 
-/* ---------- SRS (SM-2 simplificado, 4 botões estilo Anki) ---------- */
-function schedule(st,q){
-  let ivl=st.ivl||0, ef=st.ef||2.5, reps=st.reps||0, lapses=st.lapses||0;
-  if(q===0){ reps=0; lapses++; ef=Math.max(1.3,ef-0.2); ivl=1; }
-  else{
-    if(reps===0) ivl = q===3?4:1;
-    else if(reps===1) ivl = q===1?2:q===2?3:6;
-    else ivl = Math.round(ivl*(q===1?1.2:q===2?ef:ef*1.3));
-    if(q===1) ef=Math.max(1.3,ef-0.15);
-    if(q===3) ef+=0.15;
-    reps++; ivl=Math.max(1,Math.min(ivl,365));
-  }
-  return {ivl,ef,reps,lapses};
+/* ---------- SRS: FSRS-4.5 (Free Spaced Repetition Scheduler, o algoritmo que o Anki adotou em 2023) ----------
+   Modelo de memória com dois estados por cartão: estabilidade S (dias até a lembrança cair para 90%) e dificuldade D (1-10).
+   Pesos padrão publicados do FSRS-4.5 (otimizados em milhões de revisões reais). Notas: 1 De novo, 2 Difícil, 3 Bom, 4 Fácil. */
+const FSRS_W = [0.4872,1.4003,3.7145,13.8206,5.1618,1.2298,0.8975,0.031,1.6474,0.1367,1.0461,2.1072,0.0793,0.3246,1.587,0.2272,2.8755];
+const FSRS_DECAY = -0.5, FSRS_FACTOR = 19/81;
+const clampD = d=>Math.min(10, Math.max(1, d));
+function fsrsR(t,S){ return Math.pow(1 + FSRS_FACTOR*t/S, FSRS_DECAY); }
+function fsrsInterval(S){ const r = S0ret(); return Math.max(1, Math.min(1095, Math.round(S/FSRS_FACTOR*(Math.pow(r,1/FSRS_DECAY)-1)))); }
+function S0ret(){ const r = +((S.settings && S.settings.retention) || 0.9); return Math.min(0.97, Math.max(0.8, r)); }
+function fsrsD0(G){ return clampD(FSRS_W[4] - (G-3)*FSRS_W[5]); }
+// converte cartões antigos (SM-2) para o modelo FSRS sem perder o histórico
+function fsrsState(st){
+  if(st.s!=null && st.d!=null) return {S:st.s, D:st.d, last:st.last||addDays(st.due,-(st.ivl||1))};
+  if(!(st.reps>0) && !st.known) return null; // nunca revisado: primeira nota inicializa
+  const ef = st.ef||2.5;
+  return {S:Math.max(1, st.ivl||1), D:clampD(5 + (2.5-ef)*3.3), last:addDays(st.due, -Math.max(1, st.ivl||1))};
 }
+function schedule(st,q){
+  const G = q+1, today = todayKey();
+  let reps = st.reps||0, lapses = st.lapses||0, S1, D1;
+  const cur = fsrsState(st);
+  if(!cur){ S1 = FSRS_W[G-1]; D1 = fsrsD0(G); }
+  else{
+    const t = Math.max(0, diffDays(cur.last, today)), R = fsrsR(t, cur.S), D = cur.D;
+    D1 = clampD(FSRS_W[7]*fsrsD0(3) + (1-FSRS_W[7])*(D - FSRS_W[6]*(G-3)));
+    if(G===1){
+      S1 = Math.min(cur.S, FSRS_W[11]*Math.pow(D,-FSRS_W[12])*(Math.pow(cur.S+1,FSRS_W[13])-1)*Math.exp(FSRS_W[14]*(1-R)));
+    }else{
+      const hard = G===2 ? FSRS_W[15] : 1, easy = G===4 ? FSRS_W[16] : 1;
+      S1 = cur.S*(Math.exp(FSRS_W[8])*(11-D)*Math.pow(cur.S,-FSRS_W[9])*(Math.exp(FSRS_W[10]*(1-R))-1)*hard*easy + 1);
+    }
+  }
+  S1 = Math.max(0.1, S1);
+  if(G===1){ lapses++; reps = 0; } else reps++;
+  const ivl = G===1 ? 1 : fsrsInterval(S1);
+  return {ivl, s:+S1.toFixed(3), d:+D1.toFixed(3), reps, lapses, last:today};
+}
+function cardRecall(st){ const c = fsrsState(st); if(!c) return null; return fsrsR(Math.max(0,diffDays(c.last,todayKey())), c.S); }
 function lev(a,b){ const m=a.length,n=b.length; if(!m) return n; if(!n) return m; let prev=Array.from({length:n+1},(_,j)=>j);
   for(let i=1;i<=m;i++){ const cur=[i]; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur; } return prev[n]; }
 function checkTyped(guess,target){
@@ -1934,7 +1958,7 @@ function checkTyped(guess,target){
 }
 function ivlLabel(d){ return d<30? d+"d" : d<365? Math.round(d/30)+"m" : "1a"; }
 function dueIds(){ const t=todayKey(); return Object.keys(S.cards).filter(id=>cardById(id) && S.cards[id].due<=t); }
-function introduce(id){ if(S.cards[id]) return; S.cards[id]={due:addDays(todayKey(),1),ivl:0,ef:2.5,reps:0,lapses:0,added:todayKey()}; dayRec().newIds.push(id); }
+function introduce(id){ if(S.cards[id]) return; S.cards[id]={due:addDays(todayKey(),1),ivl:0,reps:0,lapses:0,added:todayKey()}; dayRec().newIds.push(id); }
 function nextNewIds(n){ const out=[]; const basic = VOCAB.filter(isBasicItem), rest = VOCAB.filter(c=>!isBasicItem(c));
   const order = S.custom.concat(isBasic() ? basic.concat(rest) : rest.concat(basic));
   for(const c of order){ if(out.length>=n) break; if(!S.cards[c.id]) out.push(c.id); } return out; }
@@ -1992,7 +2016,7 @@ function forecast(days){
   Object.keys(S.cards).forEach(id=>{ if(!cardById(id)) return; const d = diffDays(t, S.cards[id].due); if(d<=0) out[0]++; else if(d<days) out[d]++; });
   return out;
 }
-function markKnown(id){ S.cards[id] = {due:addDays(todayKey(),30),ivl:30,ef:2.6,reps:3,lapses:0,added:todayKey(),known:true}; save(); }
+function markKnown(id){ S.cards[id] = {due:addDays(todayKey(),30),ivl:30,s:30,d:3,last:todayKey(),reps:3,lapses:0,added:todayKey(),known:true}; save(); }
 function hardIds(){ return Object.keys(S.cards).filter(id=>cardById(id) && (S.cards[id].lapses||0)>=3).sort((a,b)=>S.cards[b].lapses-S.cards[a].lapses); }
 function stageOf(id){ const c=S.cards[id]; if(!c) return "new"; if(c.ivl>=21) return "mat"; if(c.ivl>=7) return "young"; return "lrn"; }
 const STAGE_LABEL = {new:"Nova",lrn:"Aprendendo",young:"Jovem",mat:"Madura"};
@@ -3672,6 +3696,7 @@ function renderProgress(){
         <div class="stack" style="gap:4px"><label for="s-big">Tamanho do texto</label><select id="s-big"><option value="0" ${S.settings.big?"":"selected"}>Normal</option><option value="1" ${S.settings.big?"selected":""}>Grande</option></select></div>
         <div class="stack" style="gap:4px"><label for="s-min">Duração de cada sessão</label><select id="s-min">${[10,15,20].map(n=>`<option value="${n}" ${(S.settings.sessMin||15)===n?"selected":""}>${n} minutos${n===15?" (recomendado)":""}</option>`).join("")}</select></div>
         <div class="stack" style="gap:4px"><label for="s-chime">Fim do bloco</label><select id="s-chime"><option value="1" ${S.settings.chime?"selected":""}>Som suave e vibração</option><option value="0" ${S.settings.chime?"":"selected"}>Sem aviso</option></select></div>
+        <div class="stack" style="gap:4px"><label for="s-ret">Retenção desejada (FSRS)</label><select id="s-ret">${[[0.85,"85% — menos revisões"],[0.9,"90% — equilíbrio (recomendado)"],[0.95,"95% — lembrar mais, revisar mais"]].map(([v,l])=>`<option value="${v}" ${S0ret()===v?"selected":""}>${l}</option>`).join("")}</select></div>
         <div class="stack" style="gap:4px"><label for="s-new">Palavras novas por noite</label><select id="s-new">${[3,5,8,10].map(n=>`<option ${S.settings.newPerDay===n?"selected":""}>${n}</option>`).join("")}</select></div>
       </div>
       <p class="small ${voiceStatus().ok?"muted":""}" ${voiceStatus().ok?"":'style="color:var(--bad)"'}>${esc(voiceStatus().msg)}${voiceStatus().ok?"":"<br>"+VOICE_HELP}</p>
@@ -3700,6 +3725,7 @@ function renderProgress(){
   $("#s-rate").oninput = e=>{ S.settings.rate=+e.target.value; $("#rv").textContent=S.settings.rate.toFixed(2)+"×"; };
   $("#s-rate").onchange = ()=>save();
   $("#s-chime").onchange = e=>{ S.settings.chime = e.target.value==="1"; save(); if(S.settings.chime) chime(); };
+  $("#s-ret").onchange = e=>{ S.settings.retention = +e.target.value; save(); toast("Retenção desejada: "+Math.round(S.settings.retention*100)+"%. Vale para as próximas revisões."); };
   $("#s-min").onchange = e=>{ S.settings.sessMin = +e.target.value; save(); toast("Sessões de "+S.settings.sessMin+" minutos"); };
   $("#s-new").onchange = e=>{ S.settings.newPerDay=+e.target.value; save(); };
   $("#s-theme").onchange = e=>{ S.settings.theme=e.target.value; save(); applyPrefs(); };
