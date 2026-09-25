@@ -2830,16 +2830,29 @@ function wireRecorder(el,id,maxSec){
   };
 }
 
+/* ---------- repetição de tarefa na fala: o mesmo tema volta em 2 e 7 dias ---------- */
+function speakRepFor(q){ return (S.speakRep && S.speakRep[q]) || null; }
+function recordSpeak(q){
+  if(!S.speakRep || typeof S.speakRep!=="object") S.speakRep = {};
+  const r = S.speakRep[q] || {n:0, first:todayKey()};
+  if(r.last===todayKey()) return;
+  r.n++; r.last = todayKey(); r.next = r.n===1 ? addDays(todayKey(),2) : r.n===2 ? addDays(todayKey(),7) : null;
+  S.speakRep[q] = r;
+}
+function dueSpeakIdx(pool){ const t = todayKey(); return pool.findIndex(p=>{ const r = speakRepFor(p.q); return r && r.next && r.next<=t; }); }
+
 /* ---------- 3. Guided speaking ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;
 function stopRec(){ try{ rec && rec.stop(); }catch(e){} rec = null; }
 function blockSpeak(el,opt={},forceIdx){
   const POOL = speakPool();
-  let idx = forceIdx==="rand" ? Math.floor(Math.random()*POOL.length) : (dayIndex() % POOL.length), countdown = null, gave = false;
+  const dueRep = forceIdx==="rand" ? -1 : dueSpeakIdx(POOL);
+  let idx = forceIdx==="rand" ? Math.floor(Math.random()*POOL.length) : dueRep>=0 ? dueRep : (dayIndex() % POOL.length), countdown = null, gave = false;
   function draw(){
     const p = POOL[idx];
     el.innerHTML = `<div class="card pad stack">
+      ${(()=>{ const r = speakRepFor(p.q); return r && r.last!==todayKey() ? `<p class="note small"><b>Repetição de tarefa · ${r.n+1}ª vez.</b> Você falou sobre este tema há ${diffDays(r.last,todayKey())} ${diffDays(r.last,todayKey())===1?"dia":"dias"}. Responder de novo — mais rápido, com mais detalhes e menos pausas — é o que transforma o que você sabe em fala automática.</p>` : ""; })()}
       <div class="row between"><span class="eyebrow">Tema ${opt.inSession?"de hoje":""}</span><button class="btn sm ghost" id="other">Outro tema ↻</button></div>
       <div class="row" style="align-items:flex-start;flex-wrap:nowrap"><h3 class="prompt" lang="en">${esc(p.q)}</h3>${spk(p.q)}</div>
       ${p.pt?`<p class="muted">${esc(p.pt)}</p>`:""}
@@ -2875,7 +2888,7 @@ function blockSpeak(el,opt={},forceIdx){
   function run(sec){
     clearInterval(countdown); stopRec();
     let left = sec; const st = $("#st",el); st.textContent = fmtTime(left);
-    countdown = setInterval(()=>{ if(!document.body.contains(st)){ clearInterval(countdown); stopRec(); return; } left--; st.textContent = fmtTime(left); if(left<=0){ clearInterval(countdown); stopRec(); st.textContent="Pronto!"; if(!gave){ gave=true; addXP(15,"fala"); } } },1000);
+    countdown = setInterval(()=>{ if(!document.body.contains(st)){ clearInterval(countdown); stopRec(); return; } left--; st.textContent = fmtTime(left); if(left<=0){ clearInterval(countdown); stopRec(); st.textContent="Pronto!"; if(!gave){ gave=true; recordSpeak(POOL[idx].q); addXP(15,"fala"); } } },1000);
     if(SR){
       try{
         rec = new SR(); rec.lang = S.settings.accent; rec.continuous = true; rec.interimResults = true;
