@@ -2702,6 +2702,16 @@ ${words.map(w=>"- "+w).join("\n")}`,{modelTier:"quick"});
   const map = {}; (r && Array.isArray(r.items) ? r.items : []).forEach(it=>{ if(it && it.w && it.ex) map[String(it.w).toLowerCase()] = String(it.ex).slice(0,240); });
   return map;
 }
+function ankiExport(onlyStudied){
+  const clean = x=>String(x||"").replace(/[\t\r\n]+/g," ").trim();
+  const list = allCards().filter(c=>!onlyStudied || S.cards[c.id]);
+  const lines = ["#separator:tab","#html:true","#tags column:4"].concat(list.map(c=>{
+    const st = S.cards[c.id];
+    const back = esc(clean(c.pt)) + "<br><br><i>" + esc(clean(c.ex)).replace(/\*(.+?)\*/g,"<b>$1</b>") + "</i>" + (st && st.own ? "<br><br>Minha frase: " + esc(clean(st.own)) : "");
+    return [esc(clean(c.w)), back, esc(clean(c.ex).replace(/\*/g,"")), "fluencia15 " + clean(c.tag||"").replace(/\s+/g,"_")].join("\t");
+  }));
+  return {txt: lines.join("\n"), n: list.length};
+}
 function wordDetail(c){
   const st = S.cards[c.id], custom = c.id.startsWith("c");
   return `<div class="wdet stack" id="wdet" data-id="${c.id}">
@@ -2757,12 +2767,19 @@ function renderReviewTab(){
         </div></details>
     </div>
     <div class="card pad stack">
+      <h3>Levar para o Anki</h3>
+      <p class="small muted">Gera um arquivo de texto que o Anki importa direto (Arquivo → Importar): frente com a palavra, verso com significado, exemplo e a sua frase. As etiquetas mantêm as categorias.</p>
+      <div class="row"><button class="btn sm" id="ankiS">Exportar palavras em estudo (${Object.keys(S.cards).filter(cardById).length})</button><button class="btn sm ghost" id="ankiA">Exportar todas (${allCards().length})</button></div>
+    </div>
+    <div class="card pad stack">
       <div class="row between"><h3>Suas palavras</h3><span class="small muted">${counts.lrn+counts.young+counts.mat} em estudo · ${counts.mat} maduras</span></div>
       <input type="text" id="flt" placeholder="Filtrar…" aria-label="Filtrar palavras">
       <div class="wlist" id="wl"></div>
     </div>
   </div>`;
   $("#go").onclick = ()=>go("review","run");
+  const exA = async only=>{ const r = ankiExport(only); if(!r.n){ toast("Nenhuma palavra para exportar ainda"); return; } if(await saveFile("fluencia-anki.txt", r.txt, "text/plain")) toast(r.n+" palavras exportadas para o Anki"); };
+  $("#ankiS").onclick = ()=>exA(true); $("#ankiA").onclick = ()=>exA(false);
   const hd = $("#hd"); if(hd) hd.onclick = ()=>go("review","hard");
   const ge = $("#genEx"); if(ge) ge.onclick = async ()=>{ const w=$("#nw-w").value.trim(); if(!w){ toast("Digite a palavra primeiro"); return; } ge.disabled=true; ge.textContent="Gerando…";
     try{ const m = await aiExamples([w]); const ex = m[w.toLowerCase()]; if(ex) $("#nw-e").value = ex; else toast("Não veio exemplo; tente de novo"); }catch(e){ toast(aiErr(e)); }
