@@ -1421,6 +1421,16 @@ const LEVELS = [
   {id:"b1p",t:"Intermediário alto (B1+)",d:"Converso sobre vários assuntos com erros; entendo séries com legenda em inglês.",listen:2,newPer:5,rate:0.95,en:"upper-intermediate (B1+), aiming for B2"},
   {id:"b2",t:"Avançado (B2)",d:"Participo de reuniões em inglês, mas quero mais precisão e naturalidade.",listen:2,newPer:8,rate:1,en:"upper-intermediate (B2), aiming for C1"}];
 const LISTEN_NAMES = ["Iniciante","Nível 1","Nível 2","Nível 3"];
+// Frases prontas por situação: [inglês, português]
+const PHRASES = [
+ {t:"Reuniões",p:[["Could you walk me through it?","Pode me explicar passo a passo?"],["Let's get started.","Vamos começar."],["Sorry, could you repeat the last part?","Desculpe, pode repetir a última parte?"],["Just to clarify, do you mean…?","Só para esclarecer, você quer dizer…?"],["I'll keep you posted.","Vou te mantendo informado."],["Let's take this offline.","Vamos falar disso depois, fora da reunião."],["I'm afraid I have to drop off.","Infelizmente preciso sair (da chamada)."],["Can we circle back to that later?","Podemos voltar a isso depois?"]]},
+ {t:"E-mails",p:[["I hope this email finds you well.","Espero que esteja tudo bem."],["I'm reaching out regarding…","Estou entrando em contato sobre…"],["Please find attached…","Segue em anexo…"],["Could you please confirm…?","Você poderia confirmar…?"],["Sorry for the late reply.","Desculpe a demora para responder."],["Looking forward to hearing from you.","Aguardo seu retorno."],["Let me know if you have any questions.","Qualquer dúvida, me avise."],["Thanks in advance.","Obrigado desde já."]]},
+ {t:"Não entendi / esclarecer",p:[["Sorry, I didn't catch that.","Desculpe, não peguei."],["Could you speak a bit more slowly?","Pode falar um pouco mais devagar?"],["What do you mean by…?","O que você quer dizer com…?"],["How do you spell that?","Como se escreve isso?"],["So, if I understand correctly…","Então, se entendi bem…"],["Sorry, I'm not following.","Desculpe, não estou acompanhando."]]},
+ {t:"Opinião",p:[["In my opinion,…","Na minha opinião,…"],["I see your point, but…","Entendo seu ponto, mas…"],["That's a good point.","Bem lembrado."],["I couldn't agree more.","Concordo totalmente."],["I'm not so sure about that.","Não tenho tanta certeza disso."],["It depends on…","Depende de…"],["To be fair,…","Para ser justo,…"]]},
+ {t:"Viagem",p:[["I have a reservation under the name…","Tenho uma reserva no nome de…"],["Could you call me a taxi?","Pode chamar um táxi para mim?"],["How do I get to…?","Como eu chego a…?"],["Is it within walking distance?","Dá para ir a pé?"],["What time is check-out?","Que horas é o check-out?"],["I'd like a window seat, please.","Eu gostaria de um assento na janela, por favor."],["My luggage didn't arrive.","Minha bagagem não chegou."]]},
+ {t:"Restaurante e compras",p:[["Could we get the check, please?","Pode trazer a conta, por favor?"],["I'll have the…","Eu vou querer o…"],["What do you recommend?","O que você recomenda?"],["Could I get this to go?","Pode embalar para viagem?"],["I'm just looking, thanks.","Só estou olhando, obrigado."],["Do you have this in a different size?","Tem esse em outro tamanho?"],["Can I pay by card?","Posso pagar com cartão?"]]},
+ {t:"Conversa informal",p:[["How's it going?","E aí, tudo certo?"],["What have you been up to?","O que você tem feito?"],["Long time no see!","Quanto tempo!"],["That sounds great!","Que ótimo!"],["No worries.","Sem problemas."],["I'm down for that.","Tô dentro."],["Catch you later!","Até mais!"]]}
+];
 // Pronúncia para brasileiros: [palavra, opções, índice correto, observação]
 const PRON = [
  {id:"ed",t:"O -ed do passado",intro:"O -ed quase nunca vira uma sílaba extra. Depois de sons surdos (p, k, f, s, sh, ch) soa <b>/t/</b>: <i>worked = “workt”</i>. Depois de sons sonoros e vogais soa <b>/d/</b>: <i>played = “playd”</i>. Só depois de <b>t</b> ou <b>d</b> vira sílaba <b>/ɪd/</b>: <i>wanted, needed</i>. Dizer “work-ed” é um dos sotaques mais marcantes de brasileiros.",
@@ -2753,6 +2763,7 @@ function renderPractice(){
   if(sub==="build") return blockBuild(shell("Monte a frase"));
   if(sub==="guide") return blockGuide(shell("Como usar o app"));
   if(sub==="pron") return blockPron(shell("Pronúncia"));
+  if(sub==="phr") return blockPhrases(shell("Frases prontas"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -2761,6 +2772,7 @@ function renderPractice(){
     <div class="tiles">
       <button class="card tile" data-s="dialogs"><span class="ti">${ICON.chat}</span><h3>Diálogos</h3><p>${DIALOGS.length} situações com roteiro: café, aeroporto, entrevista, médico… Escolha a resposta natural e repita. Sem IA, funciona offline.</p></button>
       <button class="card tile" data-s="chat"><span class="ti">${ICON.chat}</span><h3>Conversa com IA</h3><p>Role-play de situações reais (entrevista, reunião, hotel) com correções na hora.${AI?"":" Disponível quando aberto no Claude."}</p></button>
+      <button class="card tile" data-s="phr"><span class="ti">${ICON.chat}</span><h3>Frases prontas</h3><p>${PHRASES.reduce((a,c)=>a+c.p.length,0)} frases por situação: reuniões, e-mails, viagem, opinião, restaurante e conversa informal.</p></button>
       <button class="card tile" data-s="reading"><span class="ti">${ICON.book}</span><h3>Leitura</h3><p>${READINGS.length} textos curtos com tradução ao toque, áudio e perguntas. Mande palavras novas para o seu baralho.</p></button>
       <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>Questões de gramática, falas de diálogo e correções da IA no seu diário voltam aqui até você acertar 2 vezes seguidas.</p></button>
       <button class="card tile" data-s="build"><span class="ti">${ICON.pen}</span><h3>Monte a frase</h3><p>Ouça e toque nas palavras na ordem certa. Treina a estrutura da frase em inglês, sem digitar.</p></button>
@@ -3178,6 +3190,21 @@ function blockPron(el){
     q();
   }
   list();
+}
+function blockPhrases(el){
+  let cat = 0;
+  function draw(){
+    const have = new Set(allCards().map(c=>c.w.toLowerCase()));
+    el.innerHTML = `<div class="stack">
+      <p class="muted">Blocos prontos que nativos usam o tempo todo. Aprenda a frase inteira, não palavra por palavra — é o jeito mais rápido de soar natural.</p>
+      <div class="row" role="tablist">${PHRASES.map((c,i)=>`<button class="chip" role="tab" aria-selected="${i===cat}" data-c="${i}" style="${i===cat?"background:var(--acc);color:var(--on-acc)":""}">${esc(c.t)}</button>`).join("")}</div>
+      <div class="card pad stack">${PHRASES[cat].p.map(([en,pt],k)=>`<div class="res"><div class="row between" style="flex-wrap:nowrap"><span class="row" style="flex-wrap:nowrap">${spk(en)}<b lang="en">${esc(en)}</b></span>${have.has(en.toLowerCase())?'<span class="small muted">no baralho</span>':`<button class="btn sm" data-add="${k}">+ Baralho</button>`}</div><span class="small muted" style="padding-left:44px">${esc(pt)}</span></div>`).join("")}</div>
+    </div>`;
+    $$("[data-c]",el).forEach(b=>b.onclick=()=>{ cat = +b.dataset.c; draw(); });
+    $$("[data-add]",el).forEach(b=>b.onclick=()=>{ const [en,pt] = PHRASES[cat].p[+b.dataset.add];
+      S.custom.push({id:"c"+Date.now().toString(36),w:en,pt,ex:"*"+en+"*",tag:"frase pronta"}); save(); toast("Adicionada — entra nas próximas palavras novas"); draw(); });
+  }
+  draw();
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
