@@ -34,9 +34,11 @@ Extras:
 - Sessões de **10, 15 ou 20 min**, **Inglês no mundo real** (recursos gratuitos por nível), lembrete de backup, exportação do diário e **atalhos de teclado** (tecla ?)
 - **Monte a frase** (ordem das palavras), **missões do dia** com baú de XP, **loja** (troque XP por proteção de sequência) e **palavra do dia**
 - Importação de listas de palavras, **exemplos e leituras gerados por IA** no seu nível (no Claude), bônus intercalado com seus erros na revisão da manhã, explicação da regra dentro do exercício e guia **Como usar o app**
+- **Pronúncia para brasileiros** (-ed, sílaba tônica, letras mudas), **frases prontas** por situação, **Pergunta rápida** (fluência) e **modo sem áudio** com ditado visual
+- Gráfico de XP de 30 dias, confirmação ao sair da sessão, sinal no fim do bloco, **exportação para o Anki**, sincronização ao vivo entre aparelhos (no Claude) e proteção contra dados corrompidos
 - Diagnóstico de voz em inglês, acessibilidade para leitores de tela e **imagem de progresso** para compartilhar
 
-**Conteúdo:** 312 palavras e expressões (95 básicas + phrasal verbs, collocations, falsos cognatos, idioms, conectores), 30 aulas de gramática (9 para iniciantes), 101 frases de ditado em 4 níveis (as de iniciante com tradução), 62 temas de fala, 72 temas de escrita, 16 diálogos com roteiro e 12 leituras graduadas.
+**Conteúdo:** 312 palavras e expressões (95 básicas + phrasal verbs, collocations, falsos cognatos, idioms, conectores), 34 aulas de gramática (9 para iniciantes), 101 frases de ditado em 4 níveis (as de iniciante com tradução), 62 temas de fala, 72 temas de escrita, 16 diálogos com roteiro e 12 leituras graduadas.
 
 ## Versões
 
