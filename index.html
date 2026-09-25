@@ -1545,7 +1545,7 @@ function defaultState(){ return {
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
   dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{}, tests:[], pron:{},
   stats:{reviews:0,correct:0},
-  settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,sessMin:15,tm:"07:30",tn:"21:30"}
+  settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,sessMin:15,chime:true,tm:"07:30",tn:"21:30"}
 };}
 let S = defaultState();
 let userDoc = null, remoteTimer = null, remoteBusy = false, remoteAgain = false, syncState = "local";
@@ -2138,11 +2138,28 @@ function renderSession(){
     <div class="sess-foot"><span class="muted small" id="tmsg">Sugestão: ${blockMin(session.kind,b)} minutos neste bloco. O cronômetro guia, não bloqueia.</span>
       <button class="btn primary" id="bdone">${session.i<def.blocks.length-1?"Concluir bloco →":"Concluir sessão"}</button></div>
   </div>`;
-  $("#sx").onclick = ()=>{ session=null; go("today"); };
+  $("#sx").onclick = ()=>{
+    const rec2 = dayRec();
+    if(rec2[session.kind] && rec2[session.kind][session.i]){ session=null; go("today"); return; }
+    const top = $(".sess-top");
+    if($("#sxc")) return;
+    top.insertAdjacentHTML("afterend", `<div class="confirm" id="sxc"><span>Sair agora? O bloco atual ainda não foi concluído (os blocos já feitos continuam salvos).</span><button class="btn sm" id="sxy">Sair</button><button class="btn sm primary" id="sxn">Continuar estudando</button></div>`);
+    $("#sxy").onclick = ()=>{ session=null; go("today"); };
+    $("#sxn").onclick = ()=>$("#sxc").remove();
+  };
   $$(".stepper [data-j]").forEach(x=>x.onclick=()=>{ session.i=+x.dataset.j; go("session"); });
   $("#bdone").onclick = ()=>completeBlock();
   BLOCKS[b.k]($("#block"),{inSession:true});
   startTimer(blockSec(session.kind,b));
+}
+function chime(){
+  if(!S.settings.chime) return;
+  try{ navigator.vibrate && navigator.vibrate([120,80,120]); }catch(e){}
+  try{ const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return; const ctx = new AC();
+    [659.25, 880].forEach((f,k)=>{ const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "sine"; o.frequency.value = f;
+      const t0 = ctx.currentTime + k*0.22; g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.18,t0+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.5);
+      o.connect(g).connect(ctx.destination); o.start(t0); o.stop(t0+0.55); });
+    setTimeout(()=>ctx.close(),1500); }catch(e){}
 }
 function startTimer(sec){
   clearInterval(timerI);
@@ -2151,7 +2168,7 @@ function startTimer(sec){
   timerI = setInterval(()=>{
     if(paused || !document.body.contains(el)) return;
     left--; el.textContent = fmtTime(left);
-    if(left<=0){ clearInterval(timerI); el.classList.add("over"); el.textContent="00:00"; const m=$("#tmsg"); if(m) m.textContent="Tempo! Termine o que está fazendo e conclua o bloco."; }
+    if(left<=0){ clearInterval(timerI); el.classList.add("over"); el.textContent="00:00"; chime(); const m=$("#tmsg"); if(m) m.textContent="Tempo! Termine o que está fazendo e conclua o bloco."; }
   },1000);
 }
 function completeBlock(){
@@ -3366,6 +3383,7 @@ function renderProgress(){
         <div class="stack" style="gap:4px"><label for="s-theme">Tema</label><select id="s-theme"><option value="auto" ${S.settings.theme==="auto"?"selected":""}>Automático (sistema)</option><option value="light" ${S.settings.theme==="light"?"selected":""}>Claro</option><option value="dark" ${S.settings.theme==="dark"?"selected":""}>Escuro</option></select></div>
         <div class="stack" style="gap:4px"><label for="s-big">Tamanho do texto</label><select id="s-big"><option value="0" ${S.settings.big?"":"selected"}>Normal</option><option value="1" ${S.settings.big?"selected":""}>Grande</option></select></div>
         <div class="stack" style="gap:4px"><label for="s-min">Duração de cada sessão</label><select id="s-min">${[10,15,20].map(n=>`<option value="${n}" ${(S.settings.sessMin||15)===n?"selected":""}>${n} minutos${n===15?" (recomendado)":""}</option>`).join("")}</select></div>
+        <div class="stack" style="gap:4px"><label for="s-chime">Fim do bloco</label><select id="s-chime"><option value="1" ${S.settings.chime?"selected":""}>Som suave e vibração</option><option value="0" ${S.settings.chime?"":"selected"}>Sem aviso</option></select></div>
         <div class="stack" style="gap:4px"><label for="s-new">Palavras novas por noite</label><select id="s-new">${[3,5,8,10].map(n=>`<option ${S.settings.newPerDay===n?"selected":""}>${n}</option>`).join("")}</select></div>
       </div>
       <p class="small ${voiceStatus().ok?"muted":""}" ${voiceStatus().ok?"":'style="color:var(--bad)"'}>${esc(voiceStatus().msg)}${voiceStatus().ok?"":"<br>"+VOICE_HELP}</p>
@@ -3393,6 +3411,7 @@ function renderProgress(){
   $("#s-voice").onchange = e=>{ S.settings.voice=e.target.value; save(); };
   $("#s-rate").oninput = e=>{ S.settings.rate=+e.target.value; $("#rv").textContent=S.settings.rate.toFixed(2)+"×"; };
   $("#s-rate").onchange = ()=>save();
+  $("#s-chime").onchange = e=>{ S.settings.chime = e.target.value==="1"; save(); if(S.settings.chime) chime(); };
   $("#s-min").onchange = e=>{ S.settings.sessMin = +e.target.value; save(); toast("Sessões de "+S.settings.sessMin+" minutos"); };
   $("#s-new").onchange = e=>{ S.settings.newPerDay=+e.target.value; save(); };
   $("#s-theme").onchange = e=>{ S.settings.theme=e.target.value; save(); applyPrefs(); };
@@ -3468,7 +3487,7 @@ function xpChart(){
   const N = 30, t = todayKey(), days = Array.from({length:N},(_,k)=>addDays(t,k-(N-1)));
   const vals = days.map(d=>Math.max(0,(S.days[d]&&S.days[d].xp)||0));
   const active = vals.filter(v=>v>0), avg = active.length ? active.reduce((a,b)=>a+b,0)/active.length : 0;
-  const mx = Math.max(50, ...vals), W = 600, H = 150, L = 34, B = 22, T = 8, bw = (W-L-4)/N;
+  const mx = Math.max(50, Math.ceil(Math.max(...vals)/50)*50), W = 600, H = 150, L = 34, B = 22, T = 8, bw = (W-L-4)/N;
   const y = v=>T + (H-T-B)*(1 - v/mx);
   const ticks = [0, Math.round(mx/2), mx];
   const bars = vals.map((v,k)=>{ const x = L + k*bw + 1.5, h = (H-T-B)*v/mx; return `<rect x="${x.toFixed(1)}" y="${(H-B-h).toFixed(1)}" width="${(bw-3).toFixed(1)}" height="${Math.max(h, v?2:0).toFixed(1)}" rx="2" fill="${k===N-1?"var(--acc)":"color-mix(in srgb,var(--acc) 55%,var(--surface2))"}"><title>${fmtDate(days[k])}: ${v} XP</title></rect>`; }).join("");
