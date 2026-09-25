@@ -1740,7 +1740,7 @@ function defaultState(){ return {
   v:1, created:todayKey(), updatedAt:0, xp:0,
   streak:{count:0,best:0,last:null}, freezes:0,
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
-  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{}, tests:[], pron:{},
+  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{}, tests:[], pron:{}, gcards:{},
   stats:{reviews:0,correct:0},
   settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,sessMin:15,chime:true,retention:0.9,planM:"",planN:"",tm:"07:30",tn:"21:30"}
 };}
@@ -1758,7 +1758,7 @@ function merge(o){
   r.stats = Object.assign(defaultState().stats, o.stats && typeof o.stats==="object" ? o.stats : {});
   // tipos esperados: listas e mapas corrompidos voltam ao padrão em vez de quebrar a tela
   ["journal","dict","custom","mistakes","tests","recentListen","pairs"].forEach(k=>{ if(!Array.isArray(r[k])) r[k] = []; });
-  ["cards","days","grammar","dialogs","ach","reading"].forEach(k=>{ if(!r[k] || typeof r[k]!=="object" || Array.isArray(r[k])) r[k] = {}; });
+  ["cards","days","grammar","dialogs","ach","reading","gcards"].forEach(k=>{ if(!r[k] || typeof r[k]!=="object" || Array.isArray(r[k])) r[k] = {}; });
   const D = defaultState();
   ["xp","freezes","spent","listenLevel"].forEach(k=>{ if(r[k]==null) return; r[k] = Number.isFinite(+r[k]) ? +r[k] : (D[k]||0); });
   if(!r.streak || typeof r.streak!=="object") r.streak = {count:0,best:0,last:null};
@@ -2064,6 +2064,32 @@ function contextLine(c,st){
   const html = i>=0 ? esc(sent.slice(0,i))+"<b>"+esc(sent.slice(i,i+w.length))+"</b>"+esc(sent.slice(i+w.length)) : esc(sent);
   return `<p class="small ctx" lang="en"><span class="eyebrow">Em outro contexto</span><br>${html} ${spk(sent,"Ouvir frase")}</p>`;
 }
+/* ---------- gramática item a item na revisão espaçada (FSRS) ---------- */
+function gKey(lid,qi){ return "g:"+lid+":"+qi; }
+function isG(id){ return typeof id==="string" && id.startsWith("g:"); }
+function gItem(key){ const p = key.split(":"); const L = GRAMMAR.find(l=>l.id===p[1]); const q = L && L.q[+p[2]]; return q ? {L,q,qi:+p[2]} : null; }
+function seedGrammarCards(lid, spread){
+  const L = GRAMMAR.find(l=>l.id===lid); if(!L) return;
+  if(!S.gcards || typeof S.gcards!=="object") S.gcards = {};
+  // questões da mesma aula vencem em dias diferentes: espaçadas e misturadas às outras
+  L.q.forEach((q,qi)=>{ const k = gKey(lid,qi); if(!S.gcards[k]) S.gcards[k] = {due:addDays(todayKey(), spread ? 1+Math.floor(Math.random()*7) : 1+qi%3), ivl:0, reps:0, lapses:0}; });
+}
+function dueGIds(){
+  if(!S.gcards || typeof S.gcards!=="object") S.gcards = {};
+  const keys = Object.keys(S.gcards);
+  Object.keys(S.grammar||{}).forEach(lid=>{ if(!keys.some(k=>k.startsWith("g:"+lid+":"))) seedGrammarCards(lid,true); });
+  const t = todayKey(); return Object.keys(S.gcards).filter(k=>gItem(k) && S.gcards[k].due<=t);
+}
+const G_DAILY = 6;
+/* ---------- autoexplicação: escolher o porquê antes de ler a explicação ---------- */
+function explainWhy(box, correct, lid, cb){
+  const others = shuffle(GRAMMAR.filter(l=>l.id!==lid).flatMap(l=>l.q.map(q=>q[3]))).filter((x,k,a)=>x!==correct && a.indexOf(x)===k).slice(0,2);
+  const opts = shuffle([correct,...others]);
+  box.innerHTML = `<div class="confbox"><span class="small"><b>Antes da explicação:</b> por que a resposta certa está certa? Escolher o motivo fixa a regra.</span><div class="opts">${opts.map((x,k)=>`<button class="opt why" data-w="${k}">${esc(x)}</button>`).join("")}</div></div>`;
+  $$(".why",box).forEach(b=>b.onclick=()=>{ const ok = opts[+b.dataset.w]===correct;
+    S.selfexp = S.selfexp||{n:0,ok:0}; S.selfexp.n++; if(ok) S.selfexp.ok++;
+    cb(ok ? "<b>Isso — você identificou a regra.</b> " : "<b>O motivo é outro.</b> "); });
+}
 function hardIds(){ return Object.keys(S.cards).filter(id=>cardById(id) && (S.cards[id].lapses||0)>=3).sort((a,b)=>S.cards[b].lapses-S.cards[a].lapses); }
 function stageOf(id){ const c=S.cards[id]; if(!c) return "new"; if(c.ivl>=21) return "mat"; if(c.ivl>=7) return "young"; return "lrn"; }
 const STAGE_LABEL = {new:"Nova",lrn:"Aprendendo",young:"Jovem",mat:"Madura"};
@@ -2293,7 +2319,7 @@ function updateHeader(){
   $("#flameIco").innerHTML = ICON.flame;
   $("#hStreak").textContent = effectiveStreak();
   $("#hXP").textContent = S.xp.toLocaleString("pt-BR");
-  const n = dueIds().length, b = $("#dueBadge");
+  const n = dueIds().length + Math.min(G_DAILY, dueGIds().length), b = $("#dueBadge");
   b.hidden = !n; b.textContent = n;
 }
 
@@ -2536,7 +2562,7 @@ const BLOCKS = {review:blockReview, listen:blockListen, speak:blockSpeak, "new":
 function blockReview(el,opt={}){
   const bonusBtn = ()=> opt.inSession && (S.mistakes||[]).length ? `<div class="note small" style="text-align:left">Bônus intercalado: revise 3 dos seus erros guardados — misturar tipos de exercício fixa mais.<br><button class="btn sm primary" id="mixB" style="margin-top:8px">Fazer bônus (3 itens)</button></div>` : "";
   const wireBonus = ()=>{ const b = $("#mixB",el); if(b) b.onclick = ()=>blockMistakes(el,{limit:3}); };
-  let queue = shuffle(opt.ids || dueIds()), extra = !!opt.ids, done = 0, total, cur, showing, prod, typed = null, guessTxt = "", last = null;
+  let queue = shuffle(opt.ids || dueIds().concat(shuffle(dueGIds()).slice(0,G_DAILY))), extra = !!opt.ids, done = 0, total, cur, showing, prod, typed = null, guessTxt = "", last = null;
   if(!queue.length && !opt.ids){
     const known = Object.keys(S.cards).filter(cardById);
     if(known.length){
@@ -2560,6 +2586,7 @@ function blockReview(el,opt={}){
       return;
     }
     cur = queue.shift(); showing = false; typed = null; guessTxt = "";
+    if(isG(cur)) return drawG();
     const st = S.cards[cur]; prod = (st.reps||0)>=2 && Math.random()<0.5;
     draw();
   }
@@ -2592,6 +2619,30 @@ function blockReview(el,opt={}){
       if(prod) speak(c.w);
     }
   }
+  function drawG(){
+    const it = gItem(cur); if(!it){ next(); return; }
+    const [sq,o,a,e] = it.q, pct = Math.round(done/(done+queue.length+1)*100);
+    el.innerHTML = `<div class="stack">
+      <div class="row between small muted"><span>${queue.length+1} restantes</span><span class="tag">gramática</span></div>
+      <div class="progressbar"><span style="width:${pct}%"></span></div>
+      <div class="card pad stack"><span class="eyebrow">Revisão de gramática · complete a frase</span>
+        <p class="qsent">${esc(sq).replace("___",'<span class="gap">_____</span>')}</p>
+        <div class="opts">${o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join("")}</div>
+        <div id="gf" role="status" aria-live="polite"></div></div></div>`;
+    $$(".opt:not(.why)",el).forEach(b=>b.onclick=()=>{
+      const ok = +b.dataset.j===a;
+      $$(".opt",el).forEach(x=>{ x.disabled = true; if(+x.dataset.j===a) x.classList.add("right"); }); if(!ok) b.classList.add("wrong");
+      const fin = (pre="")=>{ $("#gf",el).innerHTML = `<p class="note">${pre}${ok?"<b>Certo.</b> ":"<b>Resposta: "+esc(o[a])+".</b> "}<b>Regra: ${esc(it.L.t)}.</b> ${esc(e)}</p><button class="btn primary" id="gn" style="margin-top:10px">Continuar →</button>`; $("#gn",el).onclick = ()=>gradeG(ok); };
+      if(ok) fin(); else explainWhy($("#gf",el), e, it.L.id, fin);
+    });
+  }
+  function gradeG(ok){
+    last = null;
+    const st = S.gcards[cur], n = schedule(st, ok?2:0); Object.assign(st, n, {due:addDays(todayKey(), n.ivl)});
+    const r0 = dayRec(); r0.rev = (r0.rev||0)+1;
+    if(!ok){ queue.push(cur); const p = cur.split(":"); addMistake({k:"g",l:p[1],q:+p[2]}); } else done++;
+    S.xp += ok?2:1; dayRec().xp += ok?2:1; save(); next();
+  }
   function reveal(){ const g=$("#guess",el); if(g && g.value.trim()){ guessTxt = g.value.trim(); typed = checkTyped(guessTxt, cardById(cur).w); } showing = true; draw(); }
   function undo(){
     if(!last) return;
@@ -2608,7 +2659,8 @@ function blockReview(el,opt={}){
     S.xp += q===0?1:2; dayRec().xp += q===0?1:2; save();
     next();
   }
-  keyH = e=>{ if(e.code==="Space" && !showing){ e.preventDefault(); reveal(); } else if(showing && /^[1-4]$/.test(e.key)) grade(+e.key-1); else if((e.key==="z"||e.key==="Z") && last){ e.preventDefault(); undo(); } };
+  keyH = e=>{ if(isG(cur)){ if(/^[1-4]$/.test(e.key)){ const b = $$(".opt:not(:disabled)",el)[+e.key-1]; if(b){ e.preventDefault(); b.click(); } } else if(e.key==="Enter"){ const g = $("#gn",el); if(g){ e.preventDefault(); g.click(); } } return; }
+    if(e.code==="Space" && !showing){ e.preventDefault(); reveal(); } else if(showing && /^[1-4]$/.test(e.key)) grade(+e.key-1); else if((e.key==="z"||e.key==="Z") && last){ e.preventDefault(); undo(); } };
   next();
 }
 
@@ -2964,7 +3016,7 @@ function blockGrammar(el,opt={},lessonId){
       if(i>=qs.length){
         const best = Math.max(prev?prev.best:0, right);
         const stage = right>=4 ? Math.min((prev&&prev.stage!=null?prev.stage+1:0), G_STEPS.length-1) : 0;
-        S.grammar[L.id] = {best, last:right, date:todayKey(), stage, due:addDays(todayKey(), right>=4?G_STEPS[stage]:1)}; save();
+        S.grammar[L.id] = {best, last:right, date:todayKey(), stage, due:addDays(todayKey(), right>=4?G_STEPS[stage]:1)}; seedGrammarCards(L.id,false); save();
         el.innerHTML = `<div class="card empty"><h3>${right}/5 em “${esc(L.t)}”</h3><p>${right>=4?"Ótimo! Esta aula volta para revisão em "+S.grammar[L.id].due.split("-").reverse().slice(0,2).join("/")+" — cada acerto espaça mais.":"Esta aula volta amanhã para você fixar. Releia a explicação e tente usar a regra no diário."}</p><div class="row"><button class="btn" id="again">Refazer</button></div></div>`;
         $("#again",el).onclick = ()=>blockGrammar(el,opt,L.id);
         return;
@@ -2981,10 +3033,14 @@ function blockGrammar(el,opt={},lessonId){
         const j = +b.dataset.j, ok = j===a; recordConf(conf, ok);
         if(ok){ right++; addXP(3); } else { addMistake({k:"g",l:L.id,q:L.q.indexOf(qs[i]),hi:conf===2?1:0}); save(); }
         $$(".opt",el).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); });
-        if(!ok){ b.classList.add("wrong"); const rl = $("#rule",el); if(rl) rl.open = true; }
+        if(!ok) b.classList.add("wrong");
         const full = s.replace("___", o[a].replace(" / "," … "));
-        $("#gf",el).innerHTML = `<p class="note ${!ok&&conf===2?"warn":""}">${confNote(conf,ok)}${ok?"<b>Certo.</b> ":"<b>Resposta: "+esc(o[a])+".</b> "}${esc(e)}</p><div class="row" style="margin-top:10px">${o[a].includes("/")?"":spk(full,"Ouvir a frase")}<button class="btn primary" id="gn">Continuar →</button></div>`;
-        $("#gn",el).onclick = ()=>{ i++; q(); };
+        const showFb = (pre="")=>{
+          if(!ok){ const rl = $("#rule",el); if(rl) rl.open = true; }
+          $("#gf",el).innerHTML = `<p class="note ${!ok&&conf===2?"warn":""}">${pre}${confNote(conf,ok)}${ok?"<b>Certo.</b> ":"<b>Resposta: "+esc(o[a])+".</b> "}${esc(e)}</p><div class="row" style="margin-top:10px">${o[a].includes("/")?"":spk(full,"Ouvir a frase")}<button class="btn primary" id="gn">Continuar →</button></div>`;
+          $("#gn",el).onclick = ()=>{ i++; q(); };
+        };
+        if(ok) showFb(); else explainWhy($("#gf",el), e, L.id, showFb);
       }));
     }
     q();
@@ -3040,8 +3096,8 @@ function blockGrammarMix(el,opt={}){
       const ok = +b.dataset.j===a; recordConf(conf, ok);
       if(ok) right++; else { addMistake({k:"g",l:L.id,q:L.q.indexOf(qs[i].q),hi:conf===2?1:0}); save(); }
       $$(".opt",el).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); }); if(!ok) b.classList.add("wrong");
-      $("#gf",el).innerHTML = `<p class="note ${!ok&&conf===2?"warn":""}">${confNote(conf,ok)}<b>Regra: ${esc(L.t)}.</b> ${esc(e)}</p><button class="btn primary" id="gn" style="margin-top:10px">Continuar →</button>`;
-      $("#gn",el).onclick = ()=>{ i++; q(); };
+      const showFb = (pre="")=>{ $("#gf",el).innerHTML = `<p class="note ${!ok&&conf===2?"warn":""}">${pre}${confNote(conf,ok)}<b>Regra: ${esc(L.t)}.</b> ${esc(e)}</p><button class="btn primary" id="gn" style="margin-top:10px">Continuar →</button>`; $("#gn",el).onclick = ()=>{ i++; q(); }; };
+      if(ok) showFb(); else explainWhy($("#gf",el), e, L.id, showFb);
     }));
   }
 }
