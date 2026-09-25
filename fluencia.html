@@ -2530,10 +2530,16 @@ function renderSessionDone(){
     <h1>${k==="x"?"Sessão expressa concluída":"Sessão da "+def.name.toLowerCase()+" concluída"}</h1>
     <p>+20 XP de bônus. Você tem <b>${effectiveStreak()}</b> ${effectiveStreak()===1?"dia":"dias"} de sequência e <b>${rec.xp} XP</b> hoje.</p>
     <p>${k==="x"?"Sequência mantida! Nos dias normais, as sessões de 15 minutos rendem muito mais — mas 5 minutos é infinitamente melhor que zero.":otherDone?"Manhã e noite completas. Amanhã tem mais — a revisão da manhã vai trazer as palavras de hoje de volta.":k==="m"?"À noite: palavras novas, uma micro-aula de gramática e o seu diário.":"Amanhã de manhã a revisão espaçada vai trazer de volta as palavras de hoje. Dormir entre aprender e revisar ajuda a memória."}</p>
+    ${k==="n" && (rec.newIds||[]).length ? `<div class="note" style="text-align:left;max-width:560px"><b>Último passo, 1 minuto:</b> relembre as palavras de hoje logo antes de dormir. Recuperar à noite e dormir em seguida é uma das combinações que mais fixam memória.<br><button class="btn sm primary" id="sleepRecall" style="margin-top:8px">Relembrar antes de dormir</button></div>` : ""}
     ${todayRecap()}
     <button class="btn primary" id="home">Voltar para Hoje</button>
   </div></div>`;
   $("#home").onclick = ()=>{ session=null; go("today"); };
+  const sr = $("#sleepRecall"); if(sr) sr.onclick = ()=>{
+    const box = view.querySelector(".sess"); box.innerHTML = '<div id="slp"></div>';
+    recallQuiz($("#slp"), dayRec().newIds, {title:"Antes de dormir", intro:"Sem olhar nada: lembre e digite cada palavra de hoje. Depois, direto para a cama — o sono consolida o que você acabou de recuperar.",
+      done:(right,n)=>{ dayRec().sleepRecall = 1; save(); $("#slp").innerHTML = `<div class="card empty"><h3>${right}/${n} lembradas</h3><p>Pronto. Amanhã de manhã a revisão vai mostrar o quanto o sono ajudou. Boa noite!</p><button class="btn primary" id="home2">Voltar para Hoje</button></div>`; $("#home2").onclick = ()=>{ session=null; go("today"); }; }});
+  };
 }
 
 /* ============================================================
@@ -2945,29 +2951,44 @@ function blockNew(el,opt={}){
     $("#own",el).addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } });
   }
   function quiz(){
-    let qi = 0, right = 0; const order = shuffle(batch);
-    function q(){
-      if(qi>=order.length){
-        el.innerHTML = `<div class="card empty"><h3>${right}/${order.length} no mini-quiz</h3><p>As palavras entraram no seu baralho e voltam amanhã de manhã. ${opt.inSession?"Siga para a gramática.":""}</p></div>`;
-        return;
-      }
-      const c = cardById(order[qi]);
-      const distract = shuffle(allCards().filter(x=>x.id!==c.id && x.tag===c.tag)).slice(0,3);
-      const opts = shuffle([c,...(distract.length<3?shuffle(allCards().filter(x=>x.id!==c.id)).slice(0,3):distract)]);
-      el.innerHTML = `<div class="card pad stack"><div class="row between"><span class="eyebrow">Mini-quiz · ${qi+1}/${order.length}</span></div>
-        <div class="prompt-pt">${esc(c.pt)}</div><div class="opts">${opts.map(o=>`<button class="opt" data-id="${o.id}">${esc(o.w)}</button>`).join("")}</div><div id="qf" role="status" aria-live="polite"></div></div>`;
-      $$(".opt",el).forEach(b=>b.onclick=()=>{
-        const ok = b.dataset.id===c.id; if(ok){ right++; addXP(2); }
-        $$(".opt",el).forEach(x=>{ x.disabled=true; if(x.dataset.id===c.id) x.classList.add("right"); });
-        if(!ok) b.classList.add("wrong");
-        speak(c.w);
-        $("#qf",el).innerHTML = `<p class="ex" style="margin-top:6px">${bolded(c.ex)}</p><button class="btn primary" id="qn" style="margin-top:10px">Continuar →</button>`;
-        $("#qn",el).onclick = ()=>{ qi++; q(); };
-      });
-    }
-    q();
+    recallQuiz(el, batch, {title:"Mini-teste", intro:"Agora sem opções: lembre e digite a palavra. Lembrar sozinho dá mais trabalho que reconhecer — e por isso fixa mais.",
+      done:(right,n)=>{ el.innerHTML = `<div class="card empty"><h3>${right}/${n} lembradas</h3><p>As palavras entraram no seu baralho e voltam amanhã de manhã. ${opt.inSession?"Siga para a gramática.":""}</p></div>`; }});
   }
   learn();
+}
+
+/* ---------- recordação com pista: lembrar e digitar (mais eficaz que múltipla escolha) ---------- */
+function cueHint(w){ return w.split(" ").map(x=>x.replace(/^([^A-Za-z]*[A-Za-z])([A-Za-z'’]*)/,(m,a,b)=>a+b.replace(/[A-Za-z]/g,"_"))).join(" "); }
+function recallQuiz(el, ids, o={}){
+  const order = shuffle(ids.filter(cardById)); let qi = 0, right = 0;
+  if(!order.length){ o.done && o.done(0,0); return; }
+  function q(){
+    if(qi>=order.length){ o.done && o.done(right, order.length); return; }
+    const c = cardById(order[qi]);
+    el.innerHTML = `<div class="card pad stack">
+      <div class="row between"><span class="eyebrow">${esc(o.title||"Lembre e digite")} · ${qi+1}/${order.length}</span></div>
+      ${qi===0&&o.intro?`<p class="small muted">${o.intro}</p>`:""}
+      <div class="prompt-pt">${esc(c.pt)}</div>
+      <p class="ex" lang="en">${blanked(c.ex)}</p>
+      <p class="mono muted" aria-label="Dica">${esc(cueHint(c.w))}</p>
+      <div class="row" style="flex-wrap:nowrap"><input type="text" id="rq-in" placeholder="Digite em inglês" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Sua resposta"><button class="btn primary" id="rq-ok">Conferir</button></div>
+      <button class="btn ghost sm" id="rq-skip" style="align-self:flex-start">Não lembro</button>
+      <div id="rq-fb" role="status" aria-live="polite"></div></div>`;
+    const inp = $("#rq-in",el); inp.focus();
+    const check = give=>{
+      const r = give ? {v:"wrong"} : checkTyped(inp.value, c.w);
+      if(!give && !r){ toast("Digite sua tentativa ou toque em Não lembro"); return; }
+      const ok = r.v==="exact" || r.v==="close"; if(ok){ right++; addXP(2); }
+      inp.disabled = true; $("#rq-ok",el).disabled = true; $("#rq-skip",el).disabled = true;
+      speak(c.w);
+      $("#rq-fb",el).innerHTML = `<p class="typed ${r.v}">${r.v==="exact"?"Exato!":r.v==="close"?"Quase — confira a grafia:":give?"Resposta:":"Não era essa. Resposta:"} <b lang="en">${esc(c.w)}</b></p><p class="ex" lang="en">${bolded(c.ex)}</p><button class="btn primary" id="qn" style="margin-top:6px">Continuar →</button>`;
+      $("#qn",el).onclick = ()=>{ qi++; q(); }; $("#qn",el).focus();
+    };
+    $("#rq-ok",el).onclick = ()=>check(false);
+    $("#rq-skip",el).onclick = ()=>check(true);
+    inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); check(false); } });
+  }
+  q();
 }
 
 /* ---------- 5. Grammar ---------- */
