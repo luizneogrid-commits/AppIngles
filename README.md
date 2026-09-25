@@ -43,13 +43,16 @@ Extras:
 
 ## Base científica
 
-O app aplica técnicas da ciência da aprendizagem, cada uma documentada no app em **Praticar → A ciência por trás**, com a força da evidência e as referências:
+O app aplica técnicas da ciência da aprendizagem, 21 técnicas, cada uma documentada no app em **Praticar → A ciência por trás**, com a força da evidência e as referências:
 
 - **Prática de recuperação** e **repetição espaçada** com o agendador **FSRS-4.5** (o mesmo do Anki desde 2023), retenção desejada ajustável
 - **Pré-teste** (palpite pelo contexto antes de ver o significado) e **efeito de geração** (sua própria frase)
 - **Intercalação**: prática mista de gramática a cada 3 dias
 - **Confiança antes do feedback** e **hipercorreção**, com cartão de calibração
 - **Variabilidade de contexto** (a palavra em outras frases) e **âncoras de memória** para palavras-problema
+- **Gramática item a item na revisão espaçada**, **reaprendizagem sucessiva** e **autoexplicação** ao errar
+- **Recordação com pista** (digitar em vez de escolher), **recordação livre** na leitura e **revisão antes de dormir**
+- **Repetição de tarefa** na fala (temas voltam em 2 e 7 dias) e **meta semanal** com acompanhamento e reflexão
 - **Sono e consolidação**, **feedback corretivo**, **4/3/2** para fluência, **shadowing** e **intenções de implementação** (“depois de X, eu estudo”)
 
 ## Versões
