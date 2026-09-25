@@ -324,6 +324,9 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .flashsent{min-height:70px;display:grid;place-items:center;text-align:center;font-size:1.25rem;font-weight:700;background:var(--bg);border-radius:12px;padding:12px}
 .pgroup{display:flex;flex-direction:column;gap:10px}
 .pgroup h2{font-size:1.1rem}
+.wkd summary{cursor:pointer;padding:14px 18px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.wkd summary::after{content:"+";color:var(--acc);font-weight:700}
+.wkd[open] summary::after{content:"−"}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2037,18 +2040,25 @@ function renderToday(){
   const trend = (a,b)=> b===0 ? "" : `<span class="small ${a>=b?"up":"down"}">${a>=b?"▲":"▼"} ${Math.abs(Math.round((a-b)/b*100))}%</span>`;
   const atRisk = streak>0 && h>=18 && !doneM && !doneN && !rec.m.some(Boolean) && !rec.n.some(Boolean);
   const vs = voiceStatus();
+  // avisos por prioridade: no máximo 2 de cada vez, para não empurrar as sessões para baixo
+  const tests = S.tests||[], lastT = tests.length ? tests[tests.length-1].d : null;
+  const testDue = lastT ? diffDays(lastT,todayKey())>=30 : dayIndex()>=7;
+  const banners = [
+    voicesChecked && !vs.ok && !voiceNoteHidden ? `<div class="note warn stack" style="gap:6px" role="alert"><span><b>Áudio indisponível.</b> ${esc(vs.msg)}</span><span class="small">${VOICE_HELP}</span><button class="btn sm" id="vhide" style="align-self:flex-start">Entendi</button></div>` : "",
+    atRisk ? `<div class="note warn"><b>Sua sequência de ${streak} ${streak===1?"dia":"dias"} está em risco.</b> Faça ao menos uma sessão hoje${S.freezes?" (você tem "+S.freezes+" proteção, mas melhor não gastar)":""}.</div>` : "",
+    needsBackup() ? `<div class="note row between"><span><b>Seu progresso fica só neste aparelho.</b> ${S.lastBackup?"Último backup em "+fmtDate(S.lastBackup)+".":"Você ainda não fez backup."} Salve um arquivo de segurança — leva 5 segundos.</span><button class="btn sm" id="qbk">Salvar backup</button></div>` : "",
+    testDue ? `<div class="note row between"><span><b>${lastT?"Faz um mês do seu último teste.":"Que tal medir seu nível?"}</b> Um teste de 5 minutos mostra sua evolução.</span><button class="btn sm" id="gotest">Fazer teste</button></div>` : ""
+  ].filter(Boolean).slice(0,2);
+  let wkOpen = false; try{ wkOpen = localStorage.getItem("fluencia:wkOpen")==="1"; }catch(e){}
   view.innerHTML = `
-  ${voicesChecked && !vs.ok && !voiceNoteHidden?`<div class="note warn stack" style="margin-top:16px;gap:6px" role="alert"><span><b>Áudio indisponível.</b> ${esc(vs.msg)}</span><span class="small">${VOICE_HELP}</span><button class="btn sm" id="vhide" style="align-self:flex-start">Entendi</button></div>`:""}
-  ${needsBackup()?`<div class="note row between" style="margin-top:16px"><span><b>Seu progresso fica só neste aparelho.</b> ${S.lastBackup?"Último backup em "+fmtDate(S.lastBackup)+".":"Você ainda não fez backup."} Salve um arquivo de segurança — leva 5 segundos.</span><button class="btn sm" id="qbk">Salvar backup</button></div>`:""}
-  ${atRisk?`<div class="note warn" style="margin-top:16px"><b>Sua sequência de ${streak} ${streak===1?"dia":"dias"} está em risco.</b> Faça ao menos uma sessão hoje${S.freezes?" (você tem "+S.freezes+" proteção, mas melhor não gastar)":""}.</div>`:""}
   <section class="hello">
     <span class="eyebrow">${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</span>
     <div class="row"><button class="chip" id="silentT" aria-pressed="${isSilent()}" style="${isSilent()?"background:var(--acc);color:var(--on-acc)":""}">${isSilent()?"Modo sem áudio: ligado":"Sem fone agora? Ligar modo sem áudio"}</button></div>
-    <h1>${greet}! ${doneM&&doneN?"Dia completo.":doneM||doneN?"Falta uma sessão hoje.":"Duas sessões de 15 minutos te esperam."}</h1>
+    <h1>${greet}! ${doneM&&doneN?"Dia completo.":doneM||doneN?"Falta uma sessão hoje.":"Duas sessões de "+(S.settings.sessMin||15)+" minutos te esperam."}</h1>
     <p class="muted">${doneM&&doneN?"Excelente — você fechou manhã e noite. Consistência é o que mais faz o inglês subir de nível.":"De manhã você treina ouvido e fala; à noite aprende palavras novas, gramática e escreve. A revisão da manhã fixa o que você aprendeu na noite anterior."}</p>
   </section>
   <div class="stack">
-    ${(()=>{ const t=(S.tests||[]); const last=t.length?t[t.length-1].d:null; const due = last ? diffDays(last,todayKey())>=30 : dayIndex()>=7; return due?`<div class="note row between"><span><b>${last?"Faz um mês do seu último teste.":"Que tal medir seu nível?"}</b> Um teste de 5 minutos mostra sua evolução.</span><button class="btn sm" id="gotest">Fazer teste</button></div>`:""; })()}
+    ${banners.join("")}
     <div class="grid2">${card("m")}${card("n")}</div>
     ${!doneM && !doneN && !(rec.x && rec.x.every(Boolean)) ? `<div class="row between card pad x-mode" style="padding-block:12px"><span><b>Dia corrido?</b> <span class="muted">Sessão expressa de 5 min: revisão + um ditado. Mantém a sequência.</span></span><button class="btn" data-start="x">Fazer 5 min</button></div>` : ""}
     ${(()=>{ const qs = todayQuests(), qd = rec.qd||{}; return `<div class="card pad stack"><div class="row between"><h3>Missões do dia</h3><span class="small muted">+15 XP cada · baú de +20 com as 3</span></div>
@@ -2060,8 +2070,9 @@ function renderToday(){
       <div class="card stat"><span class="v">${learned}</span><span class="l">palavras em estudo</span></div>
       <div class="card stat"><span class="v">${rec.xp}</span><span class="l">XP hoje</span></div>
     </div>
-    <div class="card pad stack">
-      <div class="row between"><h3>Últimos 7 dias</h3><span class="small muted">comparado aos 7 anteriores</span></div>
+    <details class="card wkd" id="wkd" ${wkOpen?"open":""}>
+      <summary><span><b>Últimos 7 dias</b> <span class="small muted">· ${wk.min} min · ${wk.sess}/14 sessões ${trend(wk.sess,pw.sess)}</span></span></summary>
+      <div class="stack" style="padding:0 18px 16px">
       <div class="kv4">
         <div><span class="v mono">${wk.min}</span><span class="l">min estudados ${trend(wk.min,pw.min)}</span></div>
         <div><span class="v mono">${wk.sess}<small>/14</small></span><span class="l">sessões ${trend(wk.sess,pw.sess)}</span></div>
@@ -2069,7 +2080,8 @@ function renderToday(){
         <div><span class="v mono">${wk.xp}</span><span class="l">XP ${trend(wk.xp,pw.xp)}</span></div>
       </div>
       <p class="small muted">${wk.days>=6?"Semana excelente — é essa constância que leva ao B2.":wk.days>=4?"Boa semana. Tente não pular dois dias seguidos.":"Meta: estudar pelo menos 5 dos 7 dias. Mesmo uma sessão curta conta."}</p>
-    </div>
+      <span class="small muted">comparado aos 7 dias anteriores</span>
+    </div></details>
     ${(()=>{ const w = wordOfDay(), st = S.cards[w.id]; return `<div class="card pad stack wod"><div class="row between"><span class="eyebrow">Palavra do dia</span><span class="tag">${esc(w.tag||"")}</span></div>
       <div class="row" style="align-items:center"><span class="word" lang="en" style="font-size:1.6rem;justify-content:flex-start">${esc(w.w)}</span>${spk(w.w)}<span class="muted">— ${esc(w.pt)}</span></div>
       <p class="ex" lang="en" style="max-width:none">${bolded(w.ex)} ${spk(w.ex,"Ouvir exemplo")}</p>
@@ -2095,6 +2107,7 @@ function renderToday(){
   $("#toGuide").onclick = ()=>go("practice","guide");
   const qb = $("#qbk"); if(qb) qb.onclick = async ()=>{ if(await quickBackup()) renderToday(); };
   const vh = $("#vhide"); if(vh) vh.onclick = ()=>{ voiceNoteHidden = true; renderToday(); };
+  $("#wkd").addEventListener("toggle", e=>{ try{ localStorage.setItem("fluencia:wkOpen", e.target.open?"1":"0"); }catch(err){} });
 }
 
 function renderOnboarding(){
