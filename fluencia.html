@@ -313,6 +313,10 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .wkd summary{cursor:pointer;padding:14px 18px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px}
 .wkd summary::after{content:"+";color:var(--acc);font-weight:700}
 .wkd[open] summary::after{content:"−"}
+.opt.picked{outline:3px solid var(--acc);outline-offset:-3px}
+.confbox{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;background:var(--acc-soft)}
+.confbox .row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.opt.conf{text-align:center;font-size:.92rem;padding:10px 6px}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1948,9 +1952,10 @@ function nextNewIds(n){ const out=[]; const basic = VOCAB.filter(isBasicItem), r
 /* ---------- deck de erros ---------- */
 function addMistake(m){
   if(!Array.isArray(S.mistakes)) S.mistakes = [];
+  if(m.hi==null) m.hi = 0;
   const key = m.k==="g" ? "g:"+m.l+":"+m.q : m.k==="w" ? "w:"+m.o.toLowerCase() : "d:"+m.d+":"+m.l;
   const ex = S.mistakes.find(x=>x.key===key);
-  if(ex) ex.streak = 0; else S.mistakes.push(Object.assign({key,streak:0,date:todayKey()},m));
+  if(ex){ ex.streak = 0; if(m.hi) ex.hi = 1; } else S.mistakes.push(Object.assign({key,streak:0,date:todayKey()},m));
   if(S.mistakes.length>80) S.mistakes = S.mistakes.slice(-80);
 }
 function addAIErrors(r){
@@ -1969,7 +1974,7 @@ function mistakeItem(m){
   return {title:D.t, ctx:prev?prev[1]:"", prompt:"Sua vez: "+esc(line[1]), opts:line[2]};
 }
 function blockMistakes(el,opt={}){
-  const pool = shuffle((S.mistakes||[]).filter(m=>mistakeItem(m))).slice(0,opt.limit||10);
+  const pool = shuffle((S.mistakes||[]).filter(m=>mistakeItem(m))).sort((a,b)=>(b.hi||0)-(a.hi||0)).slice(0,opt.limit||10);
   if(!pool.length){ el.innerHTML = `<div class="card empty"><h3>Nenhum erro guardado</h3><p>Quando você erra uma questão de gramática ou uma resposta num diálogo, ela vem para cá. Acerte 2 vezes seguidas e ela sai do deck.</p></div>`; return; }
   let i = 0, right = 0;
   function q(){
@@ -2460,7 +2465,7 @@ function renderSessionDone(){
 /* ============================================================
    BLOCKS
    ============================================================ */
-const BLOCKS = {review:blockReview, listen:blockListen, speak:blockSpeak, "new":blockNew, grammar:blockGrammar, write:blockWrite};
+const BLOCKS = {review:blockReview, listen:blockListen, speak:blockSpeak, "new":blockNew, grammar:(el,opt)=> isMixDay() ? blockGrammarMix(el,opt) : blockGrammar(el,opt), write:blockWrite};
 
 /* ---------- 1. Spaced repetition ---------- */
 function blockReview(el,opt={}){
@@ -2902,16 +2907,72 @@ function blockGrammar(el,opt={},lessonId){
         <div class="opts">${o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join("")}</div>
         <div id="gf" role="status" aria-live="polite"></div>
         <details class="rule" id="rule"><summary>Rever a explicação</summary><div class="stack" style="margin-top:8px"><p class="lesson-intro">${L.intro}</p><ul class="exlist">${L.ex.map(x=>`<li>${spk(x)}<span lang="en">${esc(x)}</span></li>`).join("")}</ul></div></details></div>`;
-      $$(".opt",el).forEach(b=>b.onclick=()=>{
-        const j = +b.dataset.j, ok = j===a; if(ok){ right++; addXP(3); } else { addMistake({k:"g",l:L.id,q:L.q.indexOf(qs[i])}); save(); }
+      $$(".opt:not(.conf)",el).forEach(b=>b.onclick=()=>askConf(el, b, conf=>{
+        const j = +b.dataset.j, ok = j===a; recordConf(conf, ok);
+        if(ok){ right++; addXP(3); } else { addMistake({k:"g",l:L.id,q:L.q.indexOf(qs[i]),hi:conf===2?1:0}); save(); }
         $$(".opt",el).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); });
         if(!ok){ b.classList.add("wrong"); const rl = $("#rule",el); if(rl) rl.open = true; }
         const full = s.replace("___", o[a].replace(" / "," … "));
-        $("#gf",el).innerHTML = `<p class="note">${ok?"<b>Certo.</b> ":"<b>Resposta: "+esc(o[a])+".</b> "}${esc(e)}</p><div class="row" style="margin-top:10px">${o[a].includes("/")?"":spk(full,"Ouvir a frase")}<button class="btn primary" id="gn">Continuar →</button></div>`;
+        $("#gf",el).innerHTML = `<p class="note ${!ok&&conf===2?"warn":""}">${confNote(conf,ok)}${ok?"<b>Certo.</b> ":"<b>Resposta: "+esc(o[a])+".</b> "}${esc(e)}</p><div class="row" style="margin-top:10px">${o[a].includes("/")?"":spk(full,"Ouvir a frase")}<button class="btn primary" id="gn">Continuar →</button></div>`;
         $("#gn",el).onclick = ()=>{ i++; q(); };
-      });
+      }));
     }
     q();
+  }
+}
+
+/* ---------- confiança antes do feedback (metacognição e efeito de hipercorreção) ---------- */
+const CONF_LABELS = ["Chutei","Acho que sim","Tenho certeza"];
+function askConf(el, picked, cb){
+  $$(".opt",el).forEach(x=>x.disabled = true); picked.classList.add("picked");
+  const box = document.createElement("div");
+  box.className = "confbox"; box.setAttribute("role","group"); box.setAttribute("aria-label","Qual sua confiança?");
+  box.innerHTML = `<span class="small muted">Antes de ver: qual sua confiança?</span><div class="row">${CONF_LABELS.map((l,k)=>`<button class="opt conf" data-c="${k}">${l}</button>`).join("")}</div>`;
+  picked.closest(".opts").after(box);
+  $$("[data-c]",box).forEach(b=>b.onclick=()=>{ box.remove(); cb(+b.dataset.c); });
+}
+function recordConf(conf, ok){
+  if(!Array.isArray(S.calib) || S.calib.length!==3) S.calib = [{n:0,ok:0},{n:0,ok:0},{n:0,ok:0}];
+  S.calib[conf].n++; if(ok) S.calib[conf].ok++;
+}
+function confNote(conf, ok){
+  if(!ok && conf===2) return `<b>Erro com certeza.</b> Esses são os erros que a memória mais corrige quando você presta atenção agora (efeito de hipercorreção). Leia a explicação com calma e diga a frase certa em voz alta. `;
+  if(ok && conf===0) return `<b>Acertou no chute.</b> Vale revisar a regra: acerto sem certeza ainda não é conhecimento firme. `;
+  return "";
+}
+
+/* ---------- prática mista de gramática (intercalação: escolher QUAL regra usar) ---------- */
+function mixLessons(){ return GRAMMAR.filter(l=>S.grammar[l.id]); }
+function isMixDay(){ return mixLessons().length>=3 && dayIndex()%3===2 && !(S.mix && S.mix.date===todayKey()); }
+function blockGrammarMix(el,opt={}){
+  const lessons = shuffle(mixLessons());
+  if(lessons.length<3){ el.innerHTML = `<div class="card empty"><h3>Faça pelo menos 3 aulas primeiro</h3><p>A prática mista embaralha questões de aulas diferentes. Ela só faz sentido depois que você conhece algumas regras.</p></div>`; return; }
+  // intercala: nunca duas questões seguidas da mesma aula
+  const qs = []; let k = 0;
+  while(qs.length<8 && k<40){ const L = lessons[k % lessons.length]; const q = L.q[Math.floor(Math.random()*L.q.length)]; if(!qs.some(x=>x.q===q) && (!qs.length || qs[qs.length-1].L!==L)) qs.push({L,q}); k++; }
+  let i = 0, right = 0;
+  el.innerHTML = `<div class="card pad stack"><span class="eyebrow">Prática mista</span><h2>Qual regra se aplica?</h2>
+    <p class="lesson-intro">Hoje, em vez de uma aula, questões de ${lessons.length} aulas diferentes, misturadas e sem título. Parece mais difícil — e é por isso que funciona: você treina <b>reconhecer</b> qual regra usar, como numa conversa de verdade.</p>
+    <div class="row"><button class="btn primary" id="mx">Começar (8 questões)</button>${opt.inSession?`<button class="btn ghost" id="mxl">Prefiro uma aula hoje</button>`:""}</div></div>`;
+  $("#mx",el).onclick = q;
+  const ml = $("#mxl",el); if(ml) ml.onclick = ()=>blockGrammar(el,opt);
+  function q(){
+    if(i>=qs.length){ S.mix = {date:todayKey(), score:right, n:qs.length}; addXP(right*3,"prática mista");
+      el.innerHTML = `<div class="card empty"><h3>${right}/${qs.length} na prática mista</h3><p>Errou mais do que nas aulas isoladas? É normal — e esperado. Estudos mostram que a prática misturada rende menos na hora, mas muito mais na prova e na vida real.</p></div>`; return; }
+    const {L,q:[sq,o,a,e]} = qs[i];
+    el.innerHTML = `<div class="card pad stack">
+      <div class="row between"><span class="eyebrow">Prática mista · qual regra?</span><span class="mono small muted">${i+1}/${qs.length}</span></div>
+      <div class="progressbar"><span style="width:${i/qs.length*100}%"></span></div>
+      <p class="qsent">${esc(sq).replace("___",'<span class="gap">_____</span>')}</p>
+      <div class="opts">${o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join("")}</div>
+      <div id="gf" role="status" aria-live="polite"></div></div>`;
+    $$(".opt:not(.conf)",el).forEach(b=>b.onclick=()=>askConf(el, b, conf=>{
+      const ok = +b.dataset.j===a; recordConf(conf, ok);
+      if(ok) right++; else { addMistake({k:"g",l:L.id,q:L.q.indexOf(qs[i].q),hi:conf===2?1:0}); save(); }
+      $$(".opt",el).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); }); if(!ok) b.classList.add("wrong");
+      $("#gf",el).innerHTML = `<p class="note ${!ok&&conf===2?"warn":""}">${confNote(conf,ok)}<b>Regra: ${esc(L.t)}.</b> ${esc(e)}</p><button class="btn primary" id="gn" style="margin-top:10px">Continuar →</button>`;
+      $("#gn",el).onclick = ()=>{ i++; q(); };
+    }));
   }
 }
 
@@ -3122,6 +3183,7 @@ function renderPractice(){
   if(sub==="pron") return blockPron(shell("Pronúncia"));
   if(sub==="phr") return blockPhrases(shell("Frases prontas"));
   if(sub==="quick") return blockQuick(shell("Pergunta rápida"));
+  if(sub==="mix") return blockGrammarMix(shell("Prática mista"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -3153,6 +3215,7 @@ function renderPractice(){
     <section class="pgroup" aria-label="Revisar e medir"><div class="row between" style="align-items:baseline"><h2>Revisar e medir</h2><span class="small muted">Seus erros e seu nível</span></div>
     <div class="tiles">
       <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>Questões de gramática, falas de diálogo e correções da IA no seu diário voltam aqui até você acertar 2 vezes seguidas.</p></button>
+      <button class="card tile" data-s="mix"><span class="ti">${ICON.pen}</span><h3>Prática mista de gramática</h3><p>8 questões de aulas diferentes, misturadas e sem título: treina escolher qual regra usar.</p></button>
       <button class="card tile" data-s="test"><span class="ti">${ICON.book}</span><h3>Teste de nível</h3><p>15 questões em 5 minutos. Mede seu nível e sugere ajustes; refaça todo mês.</p></button>
     </div></section>
     <section class="pgroup" aria-label="Recursos"><div class="row between" style="align-items:baseline"><h2>Recursos</h2><span class="small muted">Fora do app e ajuda</span></div>
@@ -3664,6 +3727,7 @@ function renderProgress(){
       <div class="legend"><span><i style="background:var(--surface2)"></i>nenhuma sessão</span><span><i style="background:color-mix(in srgb,var(--acc) 45%,var(--surface2))"></i>1 sessão</span><span><i style="background:var(--acc)"></i>manhã e noite</span></div>
     </div>
     ${(()=>{ const w = weaknesses(); return `<div class="card pad stack"><h3>Onde focar agora</h3>${w.length?`<div class="stack" style="gap:10px">${w.map((x,k)=>`<div class="wk"><span class="ti">${ICON[x.icon]}</span><span style="flex:1"><b>${esc(x.t)}</b><span class="small muted" style="display:block">${esc(x.d)}</span></span><button class="btn sm" data-wk="${k}">${esc(x.btn)}</button></div>`).join("")}</div>`:`<p class="small muted">Ainda não há dados suficientes, ou está tudo equilibrado. Continue com as sessões — a análise aparece aqui conforme você pratica.</p>`}</div>`; })()}
+    ${calibrationCard()}
     <div class="grid2">
       <div class="card pad stack"><h3>Trilha ${isBasic()?"A1 → B1":"B1 → B2"}</h3>
         <div class="row" style="align-items:baseline"><span class="bignum">${path}%</span><span class="muted small">do conteúdo do app dominado</span></div>
@@ -3802,6 +3866,19 @@ function weaknesses(){
   const last14 = Array.from({length:14},(_,k)=>S.days[addDays(todayKey(),-k)]).filter(Boolean);
   if(last14.length>=5 && !S.journal.some(j=>diffDays(j.d,todayKey())<=7)) out.push({icon:"pen",t:"Escrita parada",d:"Você não salvou nada no diário nesta semana. Escrever é onde a gramática vira hábito.",go:["practice","write"],btn:"Escrever agora"});
   return out.slice(0,4);
+}
+function calibrationCard(){
+  const c = Array.isArray(S.calib) ? S.calib : null, total = c ? c.reduce((a,x)=>a+x.n,0) : 0;
+  if(total<6) return `<div class="card pad stack"><h3>Sua calibração</h3><p class="small muted">Nos exercícios de gramática, o app pergunta sua confiança antes de mostrar a resposta. Depois de algumas questões, aparece aqui o quanto você acerta quando “tem certeza” — saber o que você sabe de verdade orienta onde revisar.</p></div>`;
+  const rows = c.map((x,k)=>({l:CONF_LABELS[k], n:x.n, p:x.n?Math.round(x.ok/x.n*100):null}));
+  const sure = rows[2], guess = rows[0];
+  let msg = "Sua confiança acompanha bem seus acertos. Continue assim.";
+  if(sure.n>=3 && sure.p<80) msg = "Quando tem certeza, você ainda erra bastante: são justamente esses erros que o deck Meus erros prioriza. Leia as explicações com calma antes de responder.";
+  else if(guess.n>=3 && guess.p>=60) msg = "Você sabe mais do que imagina: seus chutes acertam muito. Confie mais na intuição ao falar.";
+  const pre = S.pretest && S.pretest.n ? `<p class="small muted">Palpites nas palavras novas: ${Math.round(S.pretest.ok/S.pretest.n*100)}% certos pelo contexto (${S.pretest.n} palpites).</p>` : "";
+  return `<div class="card pad stack"><h3>Sua calibração</h3>
+    <div class="kv">${rows.map(r=>`<span>${r.l} <span class="small muted">(${r.n})</span></span><span class="mono small">${r.p==null?"—":r.p+"% de acerto"}</span><div class="bar"><span style="width:${r.p||0}%"></span></div>`).join("")}</div>
+    <p class="small">${msg}</p>${pre}</div>`;
 }
 function xpChart(){
   const N = 30, t = todayKey(), days = Array.from({length:N},(_,k)=>addDays(t,k-(N-1)));
