@@ -320,6 +320,7 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .faq p{margin-top:8px;color:var(--muted)}
 .ring{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--acc) calc(var(--p)*1%),var(--surface2) 0)}
 .ring>span{width:92px;height:92px;border-radius:50%;background:var(--surface);display:grid;place-items:center}
+svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1173,7 +1174,40 @@ const GRAMMAR = [
     ["She is ___ doctor.",["(nada)","a","an"],1,"Profissão leva artigo: a doctor."],
     ["I have two ___.",["child","childs","children"],2,"Plural irregular: children."],
     ["There are many ___ here.",["person","people","peoples"],1,"Plural de person → people."],
-    ["Wait ___ hour, please.",["a","an","the"],1,"Hour tem h mudo → an hour."]]}
+    ["Wait ___ hour, please.",["a","an","the"],1,"Hour tem h mudo → an hour."]]},
+// ---- pacote 3 (B1+ e B2) ----
+{id:"rh",lvl:"B1+",t:"Would rather e had better",
+ intro:"<b>would rather</b> ('d rather) + verbo sem to = preferir: <i>I'd rather stay home.</i> Para outra pessoa, use passado: <i>I'd rather you <b>didn't</b> tell anyone.</i> <b>had better</b> ('d better) + verbo sem to = é melhor (conselho forte, com consequência): <i>You'd better hurry, or you'll miss the bus.</i> Negativo: <i>You'd better not…</i>",
+ ex:["I'd rather work from home today.","I'd rather you called me first.","You'd better not be late again."],
+ q:[["I'd rather ___ at home tonight.",["stay","to stay","staying"],0,"Would rather + verbo sem to."],
+    ["You'd better ___ your password.",["to change","change","changing"],1,"Had better + verbo sem to."],
+    ["I'd rather you ___ smoke in here.",["don't","didn't","won't"],1,"Would rather + outra pessoa → passado."],
+    ["You'd ___ be late for the interview.",["better not","not better","better don't"],0,"Negativo: 'd better not + verbo."],
+    ["Which sounds like a warning?",["I'd rather leave.","You'd better leave now.","I'd like to leave."],1,"Had better expressa conselho com consequência."]]},
+{id:"pvs",lvl:"B1+",t:"Phrasal verbs: separáveis ou não",
+ intro:"Muitos phrasal verbs com objeto podem se separar: <i>turn off the light</i> = <i>turn the light off</i>. Mas com <b>pronome</b> (it, them, him…), ele <b>precisa</b> ficar no meio: <i>turn <b>it</b> off</i> — nunca “turn off it”. Alguns não se separam nunca: <i>look after the kids → look after them</i>, <i>get over it</i>, <i>run into someone</i>.",
+ ex:["Can you turn it off?","I'll pick you up at eight.","She looks after her little brother."],
+ q:[["The TV is too loud. Can you turn ___?",["off it","it off","it"],1,"Pronome vai no meio: turn it off."],
+    ["I'll pick ___ at the airport.",["up you","you up","you"],1,"Pronome no meio: pick you up."],
+    ["Who looks ___ when you travel?",["the dog after","after the dog","after dog the"],1,"Look after não se separa."],
+    ["Please fill ___.",["in this form","this in form","this form"],0,"Com substantivo, pode ser fill in this form ou fill this form in."],
+    ["I ran ___ at the mall yesterday.",["an old friend into","into an old friend","into friend old an"],1,"Run into não se separa."]]},
+{id:"inv",lvl:"B2",t:"Inversão para ênfase",
+ intro:"Em inglês formal ou enfático, algumas expressões negativas no início da frase exigem <b>inversão</b> (auxiliar antes do sujeito), como numa pergunta: <i><b>Never have I</b> seen such a mess. <b>Not only did she</b> finish, but… <b>Rarely do</b> we see… <b>Hardly had I</b> arrived when…</i> Também em condicionais: <i><b>Had I known</b></i> = If I had known.",
+ ex:["Never have I seen such a beautiful place.","Not only did he apologize, but he also paid for the damage.","Had I known, I would have called you."],
+ q:[["Never ___ such a long meeting.",["I have sat through","have I sat through","I sat through"],1,"Never no início → inversão: have I."],
+    ["Not only ___ late, but she also forgot the files.",["she arrived","did she arrive","she did arrive"],1,"Not only… → did she arrive."],
+    ["Rarely ___ a team so motivated.",["you see","do you see","you do see"],1,"Rarely → do you see."],
+    ["___ the traffic, I would have taken the train.",["If I knew","Had I known about","I had known"],1,"Condicional invertida: Had I known = If I had known."],
+    ["Hardly ___ down when the phone rang.",["I had sat","had I sat","I sat"],1,"Hardly… when → had I sat."]]},
+{id:"ffc",lvl:"B2",t:"Futuro contínuo e futuro perfeito",
+ intro:"<b>Futuro contínuo</b> (will be + -ing): ação em andamento num momento do futuro — <i>This time tomorrow, I'll be flying to Lisbon.</i> <b>Futuro perfeito</b> (will have + particípio): ação concluída até um momento do futuro — <i>By Friday, I'll have finished the report.</i> Sinais típicos: <i>this time next week, by the end of, by then</i>.",
+ ex:["At 9 p.m. I'll be watching the game.","By 2030, I'll have lived here for ten years.","Don't call at eight — we'll be having dinner."],
+ q:[["This time tomorrow, I ___ on the beach.",["will lie","will be lying","will have lain"],1,"Em andamento num momento futuro → will be + -ing."],
+    ["By the end of the month, we ___ the project.",["will finish","will be finishing","will have finished"],2,"Concluído até um ponto futuro → will have + particípio."],
+    ["Don't call at 8 — we ___ dinner.",["will have","will be having","will have had"],1,"Ação em andamento às 8 → will be having."],
+    ["By next year, she ___ here for a decade.",["will work","will have worked","will be work"],1,"Duração até um ponto futuro → will have worked."],
+    ["Which sentence is correct?",["By Monday I'll be finishing it.","By Monday I'll have finished it.","By Monday I finish it."],1,"By + prazo → futuro perfeito."]]}
 ];
 
 const PAIRS = [
@@ -3289,6 +3323,7 @@ function renderProgress(){
       <div class="card stat"><span class="v">${acc}%</span><span class="l">acerto nas revisões</span></div>
       <div class="card stat"><span class="v">${S.journal.length}</span><span class="l">textos no diário</span></div>
     </div>
+    <div class="card pad stack"><h3>XP por dia — últimos 30 dias</h3><div style="overflow-x:auto">${xpChart()}</div></div>
     <div class="card pad stack"><div class="row between"><h3>Constância — últimas 12 semanas</h3></div>
       <div class="heat-wrap"><div class="heat">${cells}</div></div>
       <div class="legend"><span><i style="background:var(--surface2)"></i>nenhuma sessão</span><span><i style="background:color-mix(in srgb,var(--acc) 45%,var(--surface2))"></i>1 sessão</span><span><i style="background:var(--acc)"></i>manhã e noite</span></div>
@@ -3428,6 +3463,22 @@ function weaknesses(){
   const last14 = Array.from({length:14},(_,k)=>S.days[addDays(todayKey(),-k)]).filter(Boolean);
   if(last14.length>=5 && !S.journal.some(j=>diffDays(j.d,todayKey())<=7)) out.push({icon:"pen",t:"Escrita parada",d:"Você não salvou nada no diário nesta semana. Escrever é onde a gramática vira hábito.",go:["practice","write"],btn:"Escrever agora"});
   return out.slice(0,4);
+}
+function xpChart(){
+  const N = 30, t = todayKey(), days = Array.from({length:N},(_,k)=>addDays(t,k-(N-1)));
+  const vals = days.map(d=>Math.max(0,(S.days[d]&&S.days[d].xp)||0));
+  const active = vals.filter(v=>v>0), avg = active.length ? active.reduce((a,b)=>a+b,0)/active.length : 0;
+  const mx = Math.max(50, ...vals), W = 600, H = 150, L = 34, B = 22, T = 8, bw = (W-L-4)/N;
+  const y = v=>T + (H-T-B)*(1 - v/mx);
+  const ticks = [0, Math.round(mx/2), mx];
+  const bars = vals.map((v,k)=>{ const x = L + k*bw + 1.5, h = (H-T-B)*v/mx; return `<rect x="${x.toFixed(1)}" y="${(H-B-h).toFixed(1)}" width="${(bw-3).toFixed(1)}" height="${Math.max(h, v?2:0).toFixed(1)}" rx="2" fill="${k===N-1?"var(--acc)":"color-mix(in srgb,var(--acc) 55%,var(--surface2))"}"><title>${fmtDate(days[k])}: ${v} XP</title></rect>`; }).join("");
+  const labels = [0,10,20,29].map(k=>`<text x="${(L+k*bw+bw/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="10" fill="var(--muted)">${k===29?"hoje":fmtDate(days[k])}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="xpc" role="img" aria-label="XP por dia nos últimos 30 dias; média de ${Math.round(avg)} XP nos dias estudados">
+    ${ticks.map(v=>`<line x1="${L}" x2="${W-4}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end" font-size="10" fill="var(--muted)">${v}</text>`).join("")}
+    ${bars}
+    ${avg?`<line x1="${L}" x2="${W-4}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--ink)" stroke-dasharray="4 4" stroke-width="1.2" opacity=".6"/>`:""}
+    ${labels}</svg>
+    <div class="row between small muted"><span>${active.length} de 30 dias com estudo</span><span>linha tracejada = média de ${Math.round(avg)} XP nos dias estudados</span></div>`;
 }
 function confirmBox(msg,label,fn){
   const c = $("#cfm"); c.innerHTML = `<div class="confirm"><span>${esc(msg)}</span><button class="btn sm" id="cy" style="color:var(--bad)">${esc(label)}</button><button class="btn sm ghost" id="cn">Cancelar</button></div>`;
