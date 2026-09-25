@@ -331,6 +331,8 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .confbox{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;background:var(--acc-soft)}
 .confbox .row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .opt.conf{text-align:center;font-size:.92rem;padding:10px 6px}
+.ctx{border-top:1px dashed var(--line);padding-top:8px;max-width:52ch}
+.mnem{background:var(--sun-soft);border-radius:10px;padding:10px 12px;width:100%;text-align:left;display:flex;flex-direction:column;gap:6px}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2022,6 +2024,34 @@ function forecast(days){
   return out;
 }
 function markKnown(id){ S.cards[id] = {due:addDays(todayKey(),30),ivl:30,s:30,d:3,last:todayKey(),reps:3,lapses:0,added:todayKey(),known:true}; save(); }
+/* ---------- variabilidade de contexto: a mesma palavra em outras frases do app ---------- */
+let CORPUS = null;
+function corpus(){
+  if(CORPUS) return CORPUS;
+  const out = new Set();
+  LISTEN.forEach(x=>out.add(x[1]));
+  READINGS.forEach(r=>r.text.split(/(?<=[.!?]["”]?)\s+/).forEach(x=>out.add(x.replace(/^["“]|["”]$/g,""))));
+  DIALOGS.forEach(d=>d.lines.forEach(l=>{ if(l[0]==="a") out.add(l[1]); else l[2].forEach(o=>{ if(o[1]) out.add(o[0]); }); }));
+  PHRASES.forEach(c=>c.p.forEach(p=>out.add(p[0])));
+  VOCAB.forEach(c=>out.add(plain(c.ex)));
+  CORPUS = [...out].filter(x=>x.length>12 && x.length<200);
+  return CORPUS;
+}
+function otherContexts(c){
+  const w = c.w.toLowerCase().replace(/[?…]/g,"").trim(); if(w.length<3) return [];
+  const re = new RegExp("\\b"+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i");
+  const own = plain(c.ex).toLowerCase();
+  return corpus().filter(x=>x.toLowerCase()!==own && re.test(x));
+}
+function contextLine(c,st){
+  const ctx = otherContexts(c).concat(Array.isArray(st.ctx) ? st.ctx : []);
+  if(!ctx.length) return AI ? `<p class="small ctx"><button class="btn sm ghost" id="ctxAI">Ver em outro contexto (IA)</button></p>` : "";
+  const sent = ctx[(st.reps||0) % ctx.length];
+  const w = c.w.replace(/[?…]/g,"").trim();
+  const i = sent.toLowerCase().indexOf(w.toLowerCase());
+  const html = i>=0 ? esc(sent.slice(0,i))+"<b>"+esc(sent.slice(i,i+w.length))+"</b>"+esc(sent.slice(i+w.length)) : esc(sent);
+  return `<p class="small ctx" lang="en"><span class="eyebrow">Em outro contexto</span><br>${html} ${spk(sent,"Ouvir frase")}</p>`;
+}
 function hardIds(){ return Object.keys(S.cards).filter(id=>cardById(id) && (S.cards[id].lapses||0)>=3).sort((a,b)=>S.cards[b].lapses-S.cards[a].lapses); }
 function stageOf(id){ const c=S.cards[id]; if(!c) return "new"; if(c.ivl>=21) return "mat"; if(c.ivl>=7) return "young"; return "lrn"; }
 const STAGE_LABEL = {new:"Nova",lrn:"Aprendendo",young:"Jovem",mat:"Madura"};
@@ -2521,7 +2551,7 @@ function blockReview(el,opt={}){
     const face = prod
       ? `<span class="eyebrow">Como se diz em inglês?</span><div class="prompt-pt">${esc(c.pt)}</div><p class="ex" lang="en">${blanked(c.ex)}</p>${showing?"":`<input type="text" id="guess" placeholder="Pense ou digite (opcional)" autocomplete="off" style="max-width:340px">`}`
       : `<div class="word" lang="en">${esc(c.w)} ${spk(c.w)}</div><p class="ex" lang="en">${bolded(c.ex)}</p><span class="muted small">O que significa? Pense antes de virar.</span>`;
-    const back = showing ? `<div class="back">${prod?`<div class="word" lang="en">${esc(c.w)} ${spk(c.w)}</div>`:`<div class="pt">${esc(c.pt)}</div>`}<p class="ex" lang="en">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>${typed?`<p class="typed ${typed.v}">Você escreveu: <b>${esc(guessTxt)}</b> — ${typed.label}</p>`:""}${st.own?`<p class="small"><span class="eyebrow">Sua frase</span><br>${esc(st.own)}</p>`:""}${(st.lapses||0)>=3?`<span class="chip" style="background:var(--bad-soft);color:var(--bad)">palavra difícil · crie uma imagem mental ou frase absurda para ela</span>`:""}</div>` : "";
+    const back = showing ? `<div class="back">${prod?`<div class="word" lang="en">${esc(c.w)} ${spk(c.w)}</div>`:`<div class="pt">${esc(c.pt)}</div>`}<p class="ex" lang="en">${bolded(c.ex)} ${spk(c.ex,"Ouvir exemplo")}</p>${typed?`<p class="typed ${typed.v}">Você escreveu: <b>${esc(guessTxt)}</b> — ${typed.label}</p>`:""}${st.own?`<p class="small"><span class="eyebrow">Sua frase</span><br>${esc(st.own)}</p>`:""}${contextLine(c,st)}${(st.lapses||0)>=2?`<div class="mnem"><span class="eyebrow">Âncora de memória${st.mn?"":" · esta palavra está difícil"}</span>${st.mn?`<p>${esc(st.mn)}</p><button class="btn sm ghost" id="mnEdit">Editar âncora</button>`:`<p class="small muted">Pense numa palavra em português com som parecido e crie uma imagem absurda ligando as duas. Ex.: <i>drawer</i> (gaveta) → “dro-ar”: uma gaveta soltando ar quando você abre.</p>`}<div class="row" style="flex-wrap:nowrap" ${st.mn?"hidden":""} id="mnRow"><input type="text" id="mnIn" value="${esc(st.mn||"")}" placeholder="Sua âncora para “${esc(c.w)}”" aria-label="Âncora de memória"><button class="btn sm" id="mnSave">Salvar</button></div></div>`:""}</div>` : "";
     const grades = showing
       ? `<div class="grades">${["De novo","Difícil","Bom","Fácil"].map((l,q)=>`<button class="g${q} ${typed&&typed.grade===q?"sug":""}" data-q="${q}" ${typed&&typed.grade===q?'title="Sugestão com base no que você digitou"':""}>${l}<small>${extra?"—":ivlLabel(schedule(st,q).ivl)}</small><span class="kbd">${q+1}</span></button>`).join("")}</div>`
       : `<button class="btn primary" id="rev" style="width:100%">Mostrar resposta <span class="kbd">espaço</span></button>`;
@@ -2530,6 +2560,11 @@ function blockReview(el,opt={}){
       <div class="progressbar"><span style="width:${pct}%"></span></div>
       <div class="card flash">${face}${back}</div>${grades}</div>`;
     const ub = $("#undo",el); if(ub) ub.onclick = undo;
+    const cai = $("#ctxAI",el); if(cai) cai.onclick = async ()=>{ cai.disabled = true; cai.textContent = "Gerando…";
+      try{ const c0 = cardById(cur), m = await aiExamples([c0.w]); const ex = m[c0.w.toLowerCase()]; if(ex){ const st0 = S.cards[cur]; st0.ctx = (st0.ctx||[]).concat(plain(ex)).slice(-3); save(); draw(); } else { cai.textContent = "Tente de novo"; cai.disabled = false; } }
+      catch(e){ toast(aiErr(e)); cai.disabled = false; cai.textContent = "Ver em outro contexto (IA)"; } };
+    const mns = $("#mnSave",el); if(mns) mns.onclick = ()=>{ const v = $("#mnIn",el).value.trim(); if(!v) return; S.cards[cur].mn = v.slice(0,200); save(); toast("Âncora salva — ela aparece aqui nas próximas revisões"); draw(); };
+    const mne = $("#mnEdit",el); if(mne) mne.onclick = ()=>{ $("#mnRow",el).hidden = false; $("#mnIn",el).focus(); };
     if(!showing){
       $("#rev",el).onclick = reveal;
       const g = $("#guess",el); if(g) g.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); reveal(); } });
