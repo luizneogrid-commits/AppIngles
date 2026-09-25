@@ -1404,6 +1404,15 @@ const LEVELS = [
   {id:"b1p",t:"Intermediário alto (B1+)",d:"Converso sobre vários assuntos com erros; entendo séries com legenda em inglês.",listen:2,newPer:5,rate:0.95,en:"upper-intermediate (B1+), aiming for B2"},
   {id:"b2",t:"Avançado (B2)",d:"Participo de reuniões em inglês, mas quero mais precisão e naturalidade.",listen:2,newPer:8,rate:1,en:"upper-intermediate (B2), aiming for C1"}];
 const LISTEN_NAMES = ["Iniciante","Nível 1","Nível 2","Nível 3"];
+// Pronúncia para brasileiros: [palavra, opções, índice correto, observação]
+const PRON = [
+ {id:"ed",t:"O -ed do passado",intro:"O -ed quase nunca vira uma sílaba extra. Depois de sons surdos (p, k, f, s, sh, ch) soa <b>/t/</b>: <i>worked = “workt”</i>. Depois de sons sonoros e vogais soa <b>/d/</b>: <i>played = “playd”</i>. Só depois de <b>t</b> ou <b>d</b> vira sílaba <b>/ɪd/</b>: <i>wanted, needed</i>. Dizer “work-ed” é um dos sotaques mais marcantes de brasileiros.",
+  q:[["worked",["/t/","/d/","/ɪd/"],0,"k é surdo → /t/: “workt”."],["played",["/t/","/d/","/ɪd/"],1,"Vogal antes → /d/: “playd”."],["wanted",["/t/","/d/","/ɪd/"],2,"Termina em t → /ɪd/: “wan-tid”."],["stopped",["/t/","/d/","/ɪd/"],0,"p é surdo → /t/: “stopt”."],["lived",["/t/","/d/","/ɪd/"],1,"v é sonoro → /d/: “livd”."],["needed",["/t/","/d/","/ɪd/"],2,"Termina em d → /ɪd/."],["watched",["/t/","/d/","/ɪd/"],0,"ch é surdo → /t/: “watcht”."],["called",["/t/","/d/","/ɪd/"],1,"l é sonoro → /d/: “calld”."],["decided",["/t/","/d/","/ɪd/"],2,"Termina em d → /ɪd/."],["laughed",["/t/","/d/","/ɪd/"],0,"O som final é f (surdo) → /t/: “laft”."]]},
+ {id:"stress",t:"Sílaba tônica",intro:"Em inglês, errar a sílaba forte atrapalha mais do que errar um som. Muitas palavras parecidas com o português têm a força em outro lugar: <i>HOtel</i> vira <b>hoTEL</b>, <i>chocolate</i> vira <b>CHOC</b>olate, <i>comfortable</i> vira <b>COMF</b>-ter-ble. Toque em ouvir e escolha a sílaba mais forte.",
+  q:[["comfortable",["com","for","ta","ble"],0,"COM-for-ta-ble (na fala, quase “COMF-ter-ble”)."],["vegetable",["veg","e","ta","ble"],0,"VEG-ta-ble (3 sílabas na fala)."],["hotel",["ho","tel"],1,"ho-TEL."],["photograph",["pho","to","graph"],0,"PHO-to-graph."],["photographer",["pho","tog","ra","pher"],1,"pho-TOG-ra-pher: a tônica muda com o sufixo."],["develop",["de","vel","op"],1,"de-VEL-op."],["event",["e","vent"],1,"e-VENT."],["chocolate",["choc","o","late"],0,"CHOC-late (2 sílabas na fala)."],["interesting",["in","ter","est","ing"],0,"IN-ter-est-ing (quase “IN-tres-ting”)."],["determine",["de","ter","mine"],1,"de-TER-mine (e o final soa “min”)."]]},
+ {id:"silent",t:"Letras mudas",intro:"Várias palavras comuns têm letras que não se pronunciam. Brasileiros tendem a ler tudo como se escreve: <i>“k-nife”, “is-land”, “lis-ten”</i>. Ouça e escolha a letra muda.",
+  q:[["knife",["k","n","f"],0,"O k inicial antes de n é mudo: “naif”."],["island",["i","s","l"],1,"O s é mudo: “ai-land”."],["listen",["l","s","t"],2,"O t é mudo: “lis-en”."],["doubt",["d","b","t"],1,"O b é mudo: “daut”."],["honest",["h","n","t"],0,"O h é mudo: “on-est”."],["salmon",["s","l","m"],1,"O l é mudo: “sa-mon”."],["receipt",["c","p","t"],1,"O p é mudo: “ri-sit”."],["walk",["w","l","k"],1,"O l é mudo: “wók”."],["comb",["c","m","b"],2,"O b final depois de m é mudo: “coum”."],["Wednesday",["W","d","s"],1,"O primeiro d é mudo: “WENZ-day”."]]}
+];
 // Recursos externos gratuitos por faixa: a = A1–A2, b = B1–B1+, c = B2
 const RESOURCES = [
  {band:"a",t:"News in Levels",u:"https://www.newsinlevels.com",k:"Notícias",d:"A mesma notícia em 3 níveis, com áudio. Comece pelo nível 1 e leia ouvindo."},
@@ -1468,7 +1477,7 @@ function defaultState(){ return {
   v:1, created:todayKey(), updatedAt:0, xp:0,
   streak:{count:0,best:0,last:null}, freezes:0,
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
-  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{}, tests:[],
+  dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{}, tests:[], pron:{},
   stats:{reviews:0,correct:0},
   settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,sessMin:15,tm:"07:30",tn:"21:30"}
 };}
@@ -2726,6 +2735,7 @@ function renderPractice(){
   if(sub==="world") return blockResources(shell("Inglês no mundo real"));
   if(sub==="build") return blockBuild(shell("Monte a frase"));
   if(sub==="guide") return blockGuide(shell("Como usar o app"));
+  if(sub==="pron") return blockPron(shell("Pronúncia"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -2738,6 +2748,7 @@ function renderPractice(){
       <button class="card tile" data-s="mistakes"><span class="ti">${ICON.pen}</span><h3>Meus erros <span class="chip">${(S.mistakes||[]).length}</span></h3><p>Questões de gramática, falas de diálogo e correções da IA no seu diário voltam aqui até você acertar 2 vezes seguidas.</p></button>
       <button class="card tile" data-s="build"><span class="ti">${ICON.pen}</span><h3>Monte a frase</h3><p>Ouça e toque nas palavras na ordem certa. Treina a estrutura da frase em inglês, sem digitar.</p></button>
       <button class="card tile" data-s="ear"><span class="ti">${ICON.ear}</span><h3>Ouça e entenda</h3><p>Só áudio: reconheça as palavras do seu baralho de ouvido, sozinhas ou dentro da frase.</p></button>
+      <button class="card tile" data-s="pron"><span class="ti">${ICON.mic}</span><h3>Pronúncia para brasileiros</h3><p>O -ed do passado, a sílaba tônica e as letras mudas — os erros que mais denunciam o sotaque.</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
       <button class="card tile" data-s="speak"><span class="ti">${ICON.mic}</span><h3>Fala livre</h3><p>Um tema aleatório, frases úteis e cronômetro 90/60 s.</p></button>
@@ -3118,6 +3129,38 @@ function wordOfDay(){
   const pool = VOCAB.filter(c=>isBasic() ? isBasicItem(c) : !isBasicItem(c));
   let h = 7; for(const ch of todayKey()) h = (h*33 + ch.charCodeAt(0)) >>> 0;
   return pool[h % pool.length];
+}
+function blockPron(el){
+  function list(){
+    el.innerHTML = `<div class="stack"><p class="muted">Os três erros de pronúncia que mais denunciam o sotaque brasileiro. Cada lição tem explicação curta, áudio em todas as palavras e 10 perguntas. Dica extra: não acrescente “i” no fim das palavras (“Facebook-i”, “stop-i”) — termine na consoante.</p>
+      <div class="tiles">${PRON.map((p,i)=>{ const b = S.pron && S.pron[p.id]; return `<button class="card tile" data-p="${i}"><h3>${esc(p.t)}</h3><span class="small mono ${b==null?"muted":""}">${b==null?"não feita":"melhor: "+b+"/"+p.q.length}</span></button>`; }).join("")}</div></div>`;
+    $$("[data-p]",el).forEach(b=>b.onclick=()=>lesson(PRON[+b.dataset.p]));
+  }
+  function lesson(p){
+    el.innerHTML = `<div class="card pad stack"><div class="row between"><button class="btn sm ghost" id="pbk">‹ Pronúncia</button></div><h2>${esc(p.t)}</h2><p class="lesson-intro">${p.intro}</p><button class="btn primary" id="pgo">Praticar (10 palavras)</button></div>`;
+    $("#pbk",el).onclick = list; $("#pgo",el).onclick = ()=>quiz(p);
+  }
+  function quiz(p){
+    const qs = shuffle(p.q); let i = 0, right = 0;
+    function q(){
+      if(i>=qs.length){ if(!S.pron) S.pron = {}; S.pron[p.id] = Math.max(S.pron[p.id]??0, right); addXP(right*2,"pronúncia");
+        el.innerHTML = `<div class="card empty"><h3>${right}/${qs.length} em “${esc(p.t)}”</h3><p>Agora diga cada palavra em voz alta, exagerando o que você aprendeu. Repetir em voz alta é o que muda o hábito da boca.</p><div class="row"><button class="btn" id="pag">Refazer</button><button class="btn primary" id="pls">Outras lições</button></div></div>`;
+        $("#pag",el).onclick = ()=>quiz(p); $("#pls",el).onclick = list; return; }
+      const [w,o,a,note] = qs[i];
+      el.innerHTML = `<div class="card pad stack" style="align-items:center;text-align:center">
+        <div class="row between" style="width:100%"><span class="eyebrow">${esc(p.t)}</span><span class="mono small muted">${i+1}/${qs.length}</span></div>
+        <div class="word" lang="en">${esc(w)} <button class="icon-btn" id="pl" aria-label="Ouvir">${ICON.speaker}</button></div>
+        <p class="small muted">${p.id==="ed"?"Como soa o -ed?":p.id==="stress"?"Qual é a sílaba mais forte?":"Qual letra é muda?"}</p>
+        <div class="opts" style="width:100%;grid-template-columns:repeat(${o.length},1fr)">${o.map((x,j)=>`<button class="opt" style="text-align:center" data-j="${j}">${esc(x)}</button>`).join("")}</div>
+        <div id="pf" role="status" aria-live="polite" style="width:100%"></div></div>`;
+      const play = ()=>speak(w,0.8); $("#pl",el).onclick = play; setTimeout(play,200);
+      $$(".opt",el).forEach(b=>b.onclick=()=>{ const ok = +b.dataset.j===a; if(ok) right++;
+        $$(".opt",el).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); }); if(!ok) b.classList.add("wrong");
+        play(); $("#pf",el).innerHTML = `<p class="note small">${esc(note)}</p><button class="btn primary" id="pn" style="margin-top:8px">Próxima →</button>`; $("#pn",el).onclick = ()=>{ i++; q(); }; });
+    }
+    q();
+  }
+  list();
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
