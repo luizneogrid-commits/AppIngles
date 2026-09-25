@@ -2379,6 +2379,7 @@ function renderToday(){
         <li><b>Produção com feedback (Busuu, Duolingo Max, Speak):</b> no intermediário você precisa produzir. Falar, escrever e receber correção é o que te tira do “entendo, mas não falo”.</li>
         <li><b>Gramática em contexto (Babbel):</b> aulas curtas focadas nos erros típicos de brasileiros, com prática logo em seguida.</li>
       </ul>
+      <p style="padding:0 18px 16px"><button class="btn sm" id="toSci">Ver as ${SCIENCE.length} técnicas científicas, com referências</button></p>
     </details>
   </div>`;
   $$("[data-start]",view).forEach(b=>b.addEventListener("click",()=>startSession(b.dataset.start)));
@@ -2387,6 +2388,7 @@ function renderToday(){
   const wa = $("#wodAdd"); if(wa) wa.onclick = ()=>{ introduce(wordOfDay().id); save(); toast("Adicionada — volta amanhã na revisão"); renderToday(); };
   const wk2 = $("#wodKnow"); if(wk2) wk2.onclick = ()=>{ markKnown(wordOfDay().id); renderToday(); };
   $("#toGuide").onclick = ()=>go("practice","guide");
+  $("#toSci").onclick = ()=>go("practice","science");
   const tp = $("#toPlan"); if(tp) tp.onclick = ()=>{ go("progress"); setTimeout(()=>{ const p = $("#plm"); if(p){ p.scrollIntoView({block:"center"}); p.focus(); } },50); };
   const qb = $("#qbk"); if(qb) qb.onclick = async ()=>{ if(await quickBackup()) renderToday(); };
   const vh = $("#vhide"); if(vh) vh.onclick = ()=>{ voiceNoteHidden = true; renderToday(); };
@@ -3248,6 +3250,7 @@ function renderPractice(){
   if(sub==="world") return blockResources(shell("Inglês no mundo real"));
   if(sub==="build") return blockBuild(shell("Monte a frase"));
   if(sub==="guide") return blockGuide(shell("Como usar o app"));
+  if(sub==="science") return blockScience(shell("A ciência por trás"));
   if(sub==="pron") return blockPron(shell("Pronúncia"));
   if(sub==="phr") return blockPhrases(shell("Frases prontas"));
   if(sub==="quick") return blockQuick(shell("Pergunta rápida"));
@@ -3289,6 +3292,7 @@ function renderPractice(){
     <section class="pgroup" aria-label="Recursos"><div class="row between" style="align-items:baseline"><h2>Recursos</h2><span class="small muted">Fora do app e ajuda</span></div>
     <div class="tiles">
       <button class="card tile" data-s="world"><span class="ti">${ICON.wave}</span><h3>Inglês no mundo real</h3><p>Podcasts, séries, notícias e sites gratuitos escolhidos para o seu nível, com dica de como usar cada um.</p></button>
+      <button class="card tile" data-s="science"><span class="ti">${ICON.book}</span><h3>A ciência por trás</h3><p>As ${SCIENCE.length} técnicas de aprendizagem que o app usa, com a força da evidência e as referências.</p></button>
       <button class="card tile" data-s="guide"><span class="ti">${ICON.book}</span><h3>Como usar o app</h3><p>Rotina ideal, o que fazer se faltar um dia, onde fica o progresso, microfone e áudio.</p></button>
     </div></section>
     <div class="card pad stack"><h3>Gramática — todas as aulas</h3>
@@ -3657,6 +3661,31 @@ const GUIDE = [
  ["Como instalo no celular?","Abra o link do GitHub. Android (Chrome): menu ⋮ → Instalar app. iPhone (Safari): Compartilhar → Adicionar à Tela de Início. Depois ele abre como um app e funciona offline."],
  ["O que eu já sei atrapalha?","Não precisa estudar o que você já sabe: toque em “Já conheço” nas palavras novas. Ela volta só para uma checagem em 30 dias."]
 ];
+// Técnicas usadas no app: [nome, o que é, o que o app faz, força da evidência, referências]
+const SCIENCE = [
+ ["Prática de recuperação (efeito de teste)","Tentar lembrar fixa mais do que reler. Cada tentativa de recuperação fortalece a memória.","Revisão com cartões, quizzes, ditado, perguntas de leitura e o deck Meus erros: você sempre tenta responder antes de ver.","forte","Roediger & Karpicke (2006), Psychological Science; Dunlosky et al. (2013), Psychological Science in the Public Interest — “alta utilidade”."],
+ ["Repetição espaçada","Revisar em intervalos crescentes, pouco antes de esquecer, é muito mais eficiente que revisar tudo de uma vez.","Agendador FSRS-4.5 (o mesmo adotado pelo Anki em 2023), com retenção desejada ajustável; gramática também é espaçada (2, 7, 21, 60 dias).","forte","Cepeda et al. (2006), Psychological Bulletin (meta-análise); Ye, Su & Cao (2022), KDD — base do FSRS."],
+ ["Sessões curtas e distribuídas","Pouco tempo todo dia rende mais que blocos longos e raros.","Duas sessões de 10–20 min por dia, sequência, sessão expressa e lembretes.","forte","Cepeda et al. (2006); Dunlosky et al. (2013)."],
+ ["Sono e consolidação","Dormir depois de aprender ajuda a fixar vocabulário novo.","Palavras novas à noite, revisão na manhã seguinte.","moderada a forte","Gais, Lucas & Born (2006), Learning & Memory — vocabulário aprendido antes de dormir foi mais lembrado."],
+ ["Pré-teste (errar antes de aprender)","Tentar responder antes de ver a resposta melhora a memória, mesmo quando o palpite está errado — desde que venha a resposta certa logo depois.","Palpite pelo contexto antes de cada palavra nova.","moderada a forte","Kornell, Hays & Bjork (2009), JEP: Learning, Memory, and Cognition; Richland, Kornell & Kao (2009), JEP: Applied."],
+ ["Efeito de geração","Produzir a informação (escrever sua própria frase) fixa mais do que apenas ler.","Frase pessoal ao aprender cada palavra, diário, Monte a frase e respostas digitadas nos cartões.","forte","Slamecka & Graf (1978), JEP: Human Learning and Memory."],
+ ["Intercalação","Misturar tipos de problema obriga a escolher a estratégia certa, e isso transfere melhor que praticar um tipo de cada vez.","Prática mista de gramática a cada 3 dias e bônus de erros misturado à revisão.","moderada","Rohrer & Taylor (2007), Instructional Science; Kornell & Bjork (2008), Psychological Science. A evidência mais forte vem de matemática e categorias; aplicar à gramática é uma extrapolação razoável."],
+ ["Confiança e hipercorreção","Erros cometidos com alta confiança são corrigidos com mais facilidade quando o feedback vem logo. Avaliar a própria confiança também melhora a noção do que você sabe.","Você indica a confiança antes da correção na gramática; erros “com certeza” ganham destaque e prioridade no deck.","moderada","Butterfield & Metcalfe (2001), JEP: Learning, Memory, and Cognition; Metcalfe (2017), Annual Review of Psychology."],
+ ["Variabilidade de contexto","Encontrar a mesma palavra em contextos diferentes deixa a lembrança menos presa a uma única frase.","O verso do cartão mostra a palavra em outra frase do app, variando a cada revisão.","moderada","Bolger, Balass, Landen & Perfetti (2008), Discourse Processes — aprender palavras em contextos variados melhorou a compreensão do significado. Princípio geral: Smith, Glenberg & Bjork (1978), Memory & Cognition (variação do contexto de estudo)."],
+ ["Método da palavra-chave","Associar a palavra nova a uma palavra de som parecido na sua língua, com uma imagem, ajuda a lembrar significados difíceis.","Âncora de memória sugerida só para palavras esquecidas 2 ou mais vezes.","limitada","Atkinson & Raugh (1975), JEP: Human Learning and Memory. Dunlosky et al. (2013) classificam como “baixa utilidade” em geral — por isso o app usa só como reforço para palavras-problema."],
+ ["Feedback corretivo na produção","Falar e escrever com correção acelera a precisão — é o que tira do “entendo, mas não falo”.","Correção do diário e da fala por IA, diálogos com explicação de cada erro, conversa com correções.","forte","Li (2010), Language Learning (meta-análise); Lyster & Saito (2010), Studies in Second Language Acquisition."],
+ ["Repetição para fluência (4/3/2)","Repetir a mesma fala com menos tempo aumenta velocidade e reduz pausas.","Fala guiada em duas rodadas (90 s e 60 s) e Pergunta rápida.","moderada","Nation (1989), System; De Jong & Perfetti (2011), Language Learning."],
+ ["Shadowing e ditado","Repetir junto com o áudio e transcrever o que ouve treina a percepção da fala conectada.","Ditado com diferença palavra a palavra, shadowing, gravação e checagem de pronúncia.","moderada","Hamada (2016), Language Teaching Research. Estudos menores; bons resultados para compreensão oral."],
+ ["Intenções de implementação","Planos no formato “depois de X, eu faço Y” aumentam a chance de cumprir uma intenção.","Seu gatilho de estudo nas boas-vindas, nos Ajustes, nos cartões das sessões e nos lembretes.","forte","Gollwitzer (1999), American Psychologist; Gollwitzer & Sheeran (2006), Advances in Experimental Social Psychology (meta-análise)."]
+];
+function blockScience(el){
+  const badge = f=>f.startsWith("forte")?"ok":f.startsWith("moderada")?"young":"lrn";
+  el.innerHTML = `<div class="stack">
+    <p class="muted">Cada parte do app aplica uma técnica estudada pela ciência da aprendizagem. Aqui está o que cada uma faz, onde ela aparece no app e o quanto a evidência é forte — inclusive quando ela é limitada.</p>
+    ${SCIENCE.map(([t,what,app,f,ref],i)=>`<details class="card pad faq" ${i===0?"open":""}><summary>${esc(t)} <span class="st ${badge(f)}" style="margin-left:6px">evidência ${esc(f)}</span></summary>
+      <div class="stack" style="gap:6px;margin-top:8px"><p>${esc(what)}</p><p><b>No app:</b> ${esc(app)}</p><p class="small muted"><b>Referências:</b> ${esc(ref)}</p></div></details>`).join("")}
+    <p class="small muted">A classificação de evidência é um resumo simplificado da literatura, não uma revisão sistemática.</p></div>`;
+}
 function blockGuide(el){
   el.innerHTML = `<div class="stack"><p class="muted">Dúvidas comuns sobre o app. No computador, pressione <span class="kbd">?</span> para ver os atalhos.</p>
     ${GUIDE.map((g,i)=>`<details class="card pad faq" ${i===0?"open":""}><summary>${esc(g[0])}</summary><p>${esc(g[1])}</p></details>`).join("")}</div>`;
