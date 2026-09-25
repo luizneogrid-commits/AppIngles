@@ -1479,7 +1479,25 @@ let AI = null;
 function loadLocal(){
   try{ const raw = localStorage.getItem(LS_KEY); if(raw) S = merge(JSON.parse(raw)); }catch(e){}
 }
-function merge(o){ const d = defaultState(); const r = Object.assign(d, o||{}); r.settings = Object.assign(defaultState().settings, (o||{}).settings||{}); r.stats = Object.assign(defaultState().stats, (o||{}).stats||{}); return r; }
+function merge(o){
+  const d = defaultState(); o = (o && typeof o==="object") ? o : {};
+  const r = Object.assign(d, o);
+  r.settings = Object.assign(defaultState().settings, o.settings && typeof o.settings==="object" ? o.settings : {});
+  r.stats = Object.assign(defaultState().stats, o.stats && typeof o.stats==="object" ? o.stats : {});
+  // tipos esperados: listas e mapas corrompidos voltam ao padrão em vez de quebrar a tela
+  ["journal","dict","custom","mistakes","tests","recentListen","pairs"].forEach(k=>{ if(!Array.isArray(r[k])) r[k] = []; });
+  ["cards","days","grammar","dialogs","ach","reading"].forEach(k=>{ if(!r[k] || typeof r[k]!=="object" || Array.isArray(r[k])) r[k] = {}; });
+  const D = defaultState();
+  ["xp","freezes","spent","listenLevel"].forEach(k=>{ if(r[k]==null) return; r[k] = Number.isFinite(+r[k]) ? +r[k] : (D[k]||0); });
+  if(!r.streak || typeof r.streak!=="object") r.streak = {count:0,best:0,last:null};
+  Object.keys(r.days).forEach(k=>{ const x = r.days[k]; if(!x || typeof x!=="object" || !/^\d{4}-\d{2}-\d{2}$/.test(k)){ delete r.days[k]; return; }
+    ["m","n"].forEach(s=>{ if(!Array.isArray(x[s])) x[s] = [0,0,0]; }); if(!Array.isArray(x.newIds)) x.newIds = []; if(!Number.isFinite(x.xp)) x.xp = 0; });
+  Object.keys(r.cards).forEach(k=>{ const c = r.cards[k]; if(!c || typeof c!=="object" || typeof c.due!=="string") delete r.cards[k]; });
+  r.custom = r.custom.filter(c=>c && typeof c.w==="string" && typeof c.id==="string").map(c=>Object.assign({pt:"",ex:c.w,tag:"minha palavra"},c));
+  if(!(r.listenLevel>=0 && r.listenLevel<=3)) r.listenLevel = 1;
+  r.v = 2;
+  return r;
+}
 function save(){
   checkQuests();
   checkAch();
@@ -1872,10 +1890,26 @@ function render(){
   document.body.classList.remove("m-mode","n-mode");
   if(currentTab==="session" && session) document.body.classList.add(session.kind+"-mode");
   else document.body.classList.add(new Date().getHours()<14?"m-mode":"n-mode");
-  ({today:renderToday,review:renderReviewTab,practice:renderPractice,progress:renderProgress,session:renderSession}[currentTab]||renderToday)();
-  updateHeader();
+  try{
+    ({today:renderToday,review:renderReviewTab,practice:renderPractice,progress:renderProgress,session:renderSession}[currentTab]||renderToday)();
+    updateHeader();
+  }catch(err){ renderCrash(err); }
 }
 $$("#tabs button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.tab)));
+function renderCrash(err){
+  keyH = null;
+  try{ console.error(err); }catch(e){}
+  view.innerHTML = `<div class="card pad stack" style="margin-top:20px" role="alert">
+    <h2>Algo deu errado nesta tela</h2>
+    <p class="muted">Seu progresso continua salvo. Volte para o início; se o problema se repetir, salve um backup e envie a mensagem abaixo para quem mantém o app.</p>
+    <pre class="mono small" style="white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;max-height:140px;overflow:auto">${esc(String(err && (err.stack||err.message) || err).slice(0,600))}</pre>
+    <div class="row"><button class="btn primary" id="crHome">Voltar para Hoje</button><button class="btn" id="crBk">Salvar backup</button></div></div>`;
+  $("#crHome").onclick = ()=>{ session = null; sub = null; currentTab = "today"; go("today"); };
+  $("#crBk").onclick = ()=>saveFile("fluencia-backup-"+todayKey()+".json", JSON.stringify(S), "application/json");
+}
+let lastErrToast = 0;
+window.addEventListener("error", ()=>{ if(Date.now()-lastErrToast>5000){ lastErrToast = Date.now(); try{ toast("Algo falhou nesta ação. Seu progresso está salvo."); }catch(e){} } });
+window.addEventListener("unhandledrejection", ()=>{ if(Date.now()-lastErrToast>5000){ lastErrToast = Date.now(); try{ toast("Algo falhou nesta ação. Seu progresso está salvo."); }catch(e){} } });
 function updateHeader(){
   $("#flameIco").innerHTML = ICON.flame;
   $("#hStreak").textContent = effectiveStreak();
