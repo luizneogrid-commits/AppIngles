@@ -36,9 +36,10 @@ Extras:
 - Importação de listas de palavras, **exemplos e leituras gerados por IA** no seu nível (no Claude), bônus intercalado com seus erros na revisão da manhã, explicação da regra dentro do exercício e guia **Como usar o app**
 - **Pronúncia para brasileiros** (-ed, sílaba tônica, letras mudas), **frases prontas** por situação, **Pergunta rápida** (fluência) e **modo sem áudio** com ditado visual
 - Gráfico de XP de 30 dias, confirmação ao sair da sessão, sinal no fim do bloco, **exportação para o Anki**, sincronização ao vivo entre aparelhos (no Claude) e proteção contra dados corrompidos
+- Aba Praticar organizada por seções, tela Hoje com avisos por prioridade, **busca global** (tecla /) e cores com contraste WCAG AA
 - Diagnóstico de voz em inglês, acessibilidade para leitores de tela e **imagem de progresso** para compartilhar
 
-**Conteúdo:** 312 palavras e expressões (95 básicas + phrasal verbs, collocations, falsos cognatos, idioms, conectores), 34 aulas de gramática (9 para iniciantes), 101 frases de ditado em 4 níveis (as de iniciante com tradução), 62 temas de fala, 72 temas de escrita, 16 diálogos com roteiro e 12 leituras graduadas.
+**Conteúdo:** 376 palavras e expressões (159 básicas), 38 aulas de gramática (17 para iniciantes), 126 frases de ditado em 4 níveis (45 de iniciante com tradução), 62 temas de fala (os de iniciante com exemplo de resposta), 72 temas de escrita, 20 diálogos com roteiro, 15 leituras graduadas, 50 frases prontas e 3 lições de pronúncia.
 
 ## Versões
 
