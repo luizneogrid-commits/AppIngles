@@ -1309,6 +1309,46 @@ const ROLES = [
 
 // Diálogos roteirizados (sem IA). ["a", fala] = personagem; ["me", dica em PT, [[opção, correta?, explicação], ...]]
 const DIALOGS = [
+{id:"order",t:"Pedindo comida",lvl:"A1",d:"Fazer um pedido simples num restaurante.",lines:[
+ ["a","Hi! Are you ready to order?"],
+ ["me","Diga que sim e peça uma pizza",[["Yes. I'd like a pizza, please.",1,"“I'd like…, please” é o jeito educado de pedir."],["Yes. I want pizza.",0,"Compreensível, mas “I want” soa brusco. Use “I'd like a pizza, please”."],["Yes. Give pizza.",0,"Falta sujeito e artigo; e soa rude."]]],
+ ["a","Sure. Anything to drink?"],
+ ["me","Peça um suco de laranja",[["An orange juice, please.",1,"Curto e natural."],["A juice of orange, please.",0,"Em inglês o tipo vem antes: “orange juice”."],["One orange juice, for favor.",0,"“Por favor” = “please”."]]],
+ ["a","OK. Is that for here or to go?"],
+ ["me","Diga que é para comer aqui",[["For here, please.",1,"“For here” = comer no local."],["To here.",0,"A expressão é “for here”."],["I eat here.",0,"Compreensível, mas o natural é “For here, please”."]]],
+ ["a","Great. That's fifteen dollars."],
+ ["me","Agradeça e diga “aqui está”",[["Here you go. Thank you!",1,"“Here you go” ao entregar o pagamento."],["Here is. Thanks!",0,"Falta o sujeito: “Here it is” ou “Here you go”."],["Take. Thank you!",0,"Use “Here you go”."]]],
+ ["a","Thank you! Your pizza will be ready in ten minutes."]]},
+{id:"market",t:"No supermercado",lvl:"A1",d:"Perguntar onde fica um produto e pagar.",lines:[
+ ["a","Hello! Can I help you find something?"],
+ ["me","Pergunte onde fica o leite",[["Yes, please. Where is the milk?",1,"Pergunta simples com “where is”."],["Yes. Where stay the milk?",0,"“Stay” não é “ficar” (localização). Use “Where is…?”"],["Yes. The milk is where?",0,"Pergunta começa com “Where is…?”"]]],
+ ["a","It's in aisle five, next to the eggs."],
+ ["me","Agradeça",[["Thank you very much!",1,"Natural."],["Very thank you!",0,"Não existe; diga “Thank you very much”."],["Thanks you!",0,"É “Thanks” ou “Thank you”, nunca “thanks you”."]]],
+ ["a","You're welcome. Do you have a bag?"],
+ ["me","Diga que não e peça uma sacola",[["No, I don't. Can I have a bag, please?",1,"Resposta curta + pedido educado."],["No, I don't have. One bag, please.",0,"“Have” pede objeto: “I don't have one” ou só “No, I don't”."],["No. I need of a bag.",0,"“Need” não leva “of”."]]],
+ ["a","Sure. It's ten cents. Cash or card?"],
+ ["me","Diga que vai pagar em dinheiro",[["Cash, please.",1,"Curto e natural."],["In money.",0,"Dinheiro vivo é “cash”."],["With cash money.",0,"Diga só “Cash, please”."]]],
+ ["a","Perfect. Have a nice day!"]]},
+{id:"checkin",t:"Check-in no hotel",lvl:"A2",d:"Dizer seu nome, confirmar noites e perguntar do café.",lines:[
+ ["a","Good evening! Welcome. Do you have a reservation?"],
+ ["me","Diga que sim, no nome de Lima",[["Yes, I do. It's under the name Lima.",1,"“Under the name…” = no nome de…"],["Yes. Is in the name of Lima.",0,"Falta sujeito (“It's”) e a expressão é “under the name”."],["Yes, I have. My name Lima.",0,"“I have” pede objeto; e falta “is”: “My name is Lima”."]]],
+ ["a","Let me see… Yes, two nights, right?"],
+ ["me","Confirme: sim, duas noites",[["That's right, two nights.",1,"“That's right” = isso mesmo."],["Is right, two nights.",0,"Falta sujeito: “That's right”."],["Yes, two nights, correct?",0,"Você está confirmando, não perguntando."]]],
+ ["a","Great. Here's your key. Your room is on the third floor."],
+ ["me","Pergunte a que horas é o café da manhã",[["What time is breakfast?",1,"Pergunta simples e natural."],["What hour is the breakfast?",0,"Horário = “what time”."],["When the breakfast is?",0,"Ordem: “When is breakfast?”"]]],
+ ["a","From seven to ten, in the restaurant on the first floor."],
+ ["me","Pergunte se tem Wi-Fi no quarto",[["Is there Wi-Fi in the room?",1,"“Is there…?” para perguntar se existe."],["Have Wi-Fi in the room?",0,"Tradução de “tem…?”. Use “Is there Wi-Fi…?”"],["The room has the Wi-Fi?",0,"Pergunta precisa de inversão: “Is there Wi-Fi in the room?”"]]],
+ ["a","Yes, the password is on your key card. Enjoy your stay!"]]},
+{id:"plans",t:"Combinando um programa",lvl:"A2",d:"Convidar um amigo para o cinema e marcar horário.",lines:[
+ ["a","Hey! What are you doing on Saturday?"],
+ ["me","Diga que não tem planos e pergunte por quê",[["Nothing special. Why?",1,"Resposta curta e natural."],["I don't have nothing. Why?",0,"Dupla negação não existe: “I don't have anything” ou “Nothing”."],["I am free. For what?",0,"“Por quê?” = “Why?”, não “For what?”."]]],
+ ["a","Do you want to see a movie with me?"],
+ ["me","Aceite com entusiasmo",[["Sure, I'd love to!",1,"“I'd love to” aceita um convite com entusiasmo."],["Yes, I would love!",0,"Falta o “to”: “I'd love to”."],["Yes, I want see.",0,"“Want” + to: “I want to see it”."]]],
+ ["a","Great! The movie starts at seven."],
+ ["me","Sugira se encontrar às seis e meia na frente do cinema",[["Let's meet at six thirty in front of the cinema.",1,"“Let's…” para sugerir; “in front of” = na frente de."],["We meet six thirty in the front of cinema.",0,"Use “Let's meet at…” e “in front of the cinema”."],["Let's to meet at six thirty.",0,"Depois de “let's”, verbo sem “to”."]]],
+ ["a","Perfect. See you on Saturday!"],
+ ["me","Despeça-se",[["See you!",1,"Despedida natural."],["See you in Saturday!",0,"Dias levam “on”: “See you on Saturday”."],["Until Saturday!",0,"Tradução de “até sábado”; o natural é “See you on Saturday!”"]]],
+ ["a","Bye!"]]},
 {id:"meet",t:"Conhecendo alguém",lvl:"A1",d:"Apresentar-se numa festa: nome, cidade e trabalho.",lines:[
  ["a","Hi! I'm Emma. What's your name?"],
  ["me","Diga seu nome (Rafael)",[["Hi, Emma! I'm Rafael. Nice to meet you.",1,"“I'm…” + “Nice to meet you” é a apresentação padrão."],["Hi, Emma! My name Rafael.",0,"Falta o verbo to be: “My name is Rafael”."],["Hi, Emma! I call Rafael.",0,"Tradução de “me chamo”. Em inglês: “I'm Rafael” ou “My name is Rafael”."]]],
