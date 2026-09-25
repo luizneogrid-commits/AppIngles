@@ -307,6 +307,7 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .ring{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--acc) calc(var(--p)*1%),var(--surface2) 0)}
 .ring>span{width:92px;height:92px;border-radius:50%;background:var(--surface);display:grid;place-items:center}
 svg.xpc{width:100%;min-width:420px;height:auto;display:block}
+.flashsent{min-height:70px;display:grid;place-items:center;text-align:center;font-size:1.25rem;font-weight:700;background:var(--bg);border-radius:12px;padding:12px}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1820,7 +1821,13 @@ function voiceStatus(){
   const v = pickVoice(); return {ok:true,msg:"Voz em uso: "+(v?v.name+" ("+v.lang+")":"padrão do sistema")};
 }
 setTimeout(()=>{ voicesChecked = true; loadVoices(); if(currentTab==="today" && !voiceStatus().ok) render(); }, 1800);
-function speak(text,rate){
+function isSilent(){ return S.silentDay===todayKey(); }
+let silentToastAt = 0;
+function speak(text,rate,force){
+  if(isSilent() && !force){ if(Date.now()-silentToastAt>8000){ silentToastAt = Date.now(); toast("Modo sem áudio ligado (desligue na tela Hoje)"); } return; }
+  return speakNow(text,rate);
+}
+function speakNow(text,rate){
   if(!("speechSynthesis" in window)){ toast("Este navegador não tem voz sintetizada"); return; }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(plain(text));
@@ -1830,7 +1837,7 @@ function speak(text,rate){
   return u;
 }
 function spk(text,label){ return `<button class="icon-btn" data-say="${esc(plain(text))}" aria-label="${esc(label||"Ouvir")}" title="Ouvir">${ICON.speaker}</button>`; }
-document.addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b){ e.preventDefault(); speak(b.dataset.say); } });
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b){ e.preventDefault(); speak(b.dataset.say, undefined, true); } });
 
 /* ---------- tempo de estudo (uso ativo: interação no último minuto e aba visível) ---------- */
 let lastAct = Date.now(), unsavedSec = 0;
@@ -2017,6 +2024,7 @@ function renderToday(){
   ${atRisk?`<div class="note warn" style="margin-top:16px"><b>Sua sequência de ${streak} ${streak===1?"dia":"dias"} está em risco.</b> Faça ao menos uma sessão hoje${S.freezes?" (você tem "+S.freezes+" proteção, mas melhor não gastar)":""}.</div>`:""}
   <section class="hello">
     <span class="eyebrow">${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</span>
+    <div class="row"><button class="chip" id="silentT" aria-pressed="${isSilent()}" style="${isSilent()?"background:var(--acc);color:var(--on-acc)":""}">${isSilent()?"Modo sem áudio: ligado":"Sem fone agora? Ligar modo sem áudio"}</button></div>
     <h1>${greet}! ${doneM&&doneN?"Dia completo.":doneM||doneN?"Falta uma sessão hoje.":"Duas sessões de 15 minutos te esperam."}</h1>
     <p class="muted">${doneM&&doneN?"Excelente — você fechou manhã e noite. Consistência é o que mais faz o inglês subir de nível.":"De manhã você treina ouvido e fala; à noite aprende palavras novas, gramática e escreve. A revisão da manhã fixa o que você aprendeu na noite anterior."}</p>
   </section>
@@ -2062,6 +2070,7 @@ function renderToday(){
   </div>`;
   $$("[data-start]",view).forEach(b=>b.addEventListener("click",()=>startSession(b.dataset.start)));
   const gt = $("#gotest"); if(gt) gt.onclick = ()=>go("practice","test");
+  $("#silentT").onclick = ()=>{ S.silentDay = isSilent() ? null : todayKey(); save(); toast(isSilent()?"Modo sem áudio até o fim do dia: ditado visual e fala escrita":"Áudio de volta"); renderToday(); };
   const wa = $("#wodAdd"); if(wa) wa.onclick = ()=>{ introduce(wordOfDay().id); save(); toast("Adicionada — volta amanhã na revisão"); renderToday(); };
   const wk2 = $("#wodKnow"); if(wk2) wk2.onclick = ()=>{ markKnown(wordOfDay().id); renderToday(); };
   $("#toGuide").onclick = ()=>go("practice","guide");
@@ -2310,6 +2319,7 @@ function blockListen(el,opt={}){
   }
   function draw(){
     shadows = 0; hinted = false;
+    if(isSilent()) return drawVisual();
     el.innerHTML = `<div class="card pad stack">
       <div class="row between"><h3>Ditado</h3><span class="chip">${LISTEN_NAMES[S.listenLevel]||"Nível "+S.listenLevel}</span></div>
       <p class="muted small">Ouça quantas vezes precisar e escreva exatamente o que ouviu. Atenção às palavras “engolidas” na fala rápida (<i>I'd, gonna, of</i>).</p>
@@ -2326,6 +2336,21 @@ function blockListen(el,opt={}){
     $("#hint",el).onclick = ()=>{ hinted = true; const h=$("#hintTxt",el); h.hidden=false; h.textContent = item[1].split(" ").map(w=>w.replace(/^([^A-Za-z]*[A-Za-z'’]?)([A-Za-z'’]*)/,(m,a,b)=>a+b.replace(/[A-Za-z]/g,"_"))).join(" ") + "  (a dica limita a nota a 90%)"; };
     $("#dict",el).addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); check(); } });
     setTimeout(()=>speak(item[1]),250);
+  }
+  function drawVisual(){
+    const words = item[1].split(" ").length, ms = 1500 + words*350;
+    el.innerHTML = `<div class="card pad stack">
+      <div class="row between"><h3>Ditado visual</h3><span class="chip">modo sem áudio</span></div>
+      <p class="muted small">A frase aparece por ${Math.round(ms/1000)} segundos. Leia com atenção, “ouça” mentalmente e depois escreva de memória. Treina a mesma memória de trabalho do ditado.</p>
+      <div class="flashsent" id="fsent" lang="en" aria-live="polite"><button class="btn primary" id="show">Mostrar a frase</button></div>
+      <label for="dict">Escreva de memória</label>
+      <textarea id="dict" rows="2" placeholder="Type the sentence…" autocomplete="off" spellcheck="false" disabled></textarea>
+      <div class="row"><button class="btn" id="chk" disabled>Conferir</button></div>
+      <div id="res" role="status" aria-live="polite"></div></div>`;
+    $("#show",el).onclick = ()=>{ const f = $("#fsent",el); f.textContent = item[1];
+      setTimeout(()=>{ if(!document.body.contains(f)) return; f.innerHTML = '<span class="muted small">Agora escreva o que leu.</span>'; const d = $("#dict",el); d.disabled = false; $("#chk",el).disabled = false; d.focus(); }, ms); };
+    $("#chk",el).onclick = check;
+    $("#dict",el).addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); check(); } });
   }
   function check(){
     const val = $("#dict",el).value; if(!val.trim()){ toast("Escreva o que ouviu primeiro"); return; }
@@ -2444,6 +2469,7 @@ function blockSpeak(el,opt={},forceIdx){
         <li><b>Repita (60 s):</b> responda de novo, mais rápido e com mais detalhes. É na repetição que a fluência cresce.</li>
       </ol>
       <div class="row"><button class="btn primary" id="go">${ICON.mic} Falar 90 s</button><button class="btn" id="go2">Repetir 60 s</button><span class="mono bigtime" id="st">—</span></div>
+      ${isSilent()?`<p class="note small">Modo sem áudio: responda por escrito no campo abaixo como se estivesse falando — rápido, sem apagar. Depois, se puder, leia em voz baixa.</p>`:""}
       <div id="micnote"></div>
       ${recorderHTML("recS","Gravar minha resposta")}
       <div class="transcript" id="tr" hidden></div>
@@ -3416,7 +3442,7 @@ function renderProgress(){
   $("#s-new").onchange = e=>{ S.settings.newPerDay=+e.target.value; save(); };
   $("#s-theme").onchange = e=>{ S.settings.theme=e.target.value; save(); applyPrefs(); };
   $("#s-big").onchange = e=>{ S.settings.big=e.target.value==="1"; save(); applyPrefs(); };
-  $("#tv").onclick = ()=>speak("Consistency beats intensity. Fifteen minutes in the morning and fifteen at night.");
+  $("#tv").onclick = ()=>speak("Consistency beats intensity. Fifteen minutes in the morning and fifteen at night.",undefined,true);
   $("#ex").onclick = ()=>{ const ta=$("#bk"); ta.value = JSON.stringify(S); ta.select(); S.lastBackup = todayKey(); save();
     if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>toast("Backup copiado"),()=>toast("Selecionado — copie com Ctrl+C")); else toast("Selecionado — copie com Ctrl+C"); };
   $("#s-tm").onchange = e=>{ if(e.target.value){ S.settings.tm=e.target.value; save(); } };
