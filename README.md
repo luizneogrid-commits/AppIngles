@@ -41,6 +41,17 @@ Extras:
 
 **Conteúdo:** 376 palavras e expressões (159 básicas), 38 aulas de gramática (17 para iniciantes), 126 frases de ditado em 4 níveis (45 de iniciante com tradução), 62 temas de fala (os de iniciante com exemplo de resposta), 72 temas de escrita, 20 diálogos com roteiro, 15 leituras graduadas, 50 frases prontas e 3 lições de pronúncia.
 
+## Base científica
+
+O app aplica técnicas da ciência da aprendizagem, cada uma documentada no app em **Praticar → A ciência por trás**, com a força da evidência e as referências:
+
+- **Prática de recuperação** e **repetição espaçada** com o agendador **FSRS-4.5** (o mesmo do Anki desde 2023), retenção desejada ajustável
+- **Pré-teste** (palpite pelo contexto antes de ver o significado) e **efeito de geração** (sua própria frase)
+- **Intercalação**: prática mista de gramática a cada 3 dias
+- **Confiança antes do feedback** e **hipercorreção**, com cartão de calibração
+- **Variabilidade de contexto** (a palavra em outras frases) e **âncoras de memória** para palavras-problema
+- **Sono e consolidação**, **feedback corretivo**, **4/3/2** para fluência, **shadowing** e **intenções de implementação** (“depois de X, eu estudo”)
+
 ## Versões
 
 - `index.html` — PWA (celular/navegador). Instalável, funciona offline, microfone com transcrição no Chrome/Edge. Progresso salvo no navegador (use *Progresso → Backup* para mover entre aparelhos).
