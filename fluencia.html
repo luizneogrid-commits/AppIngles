@@ -2788,10 +2788,33 @@ function blockNew(el,opt={}){
     const m = $("#more",el); if(m) m.onclick = ()=>{ batch = nextNewIds(3); i=0; learn(); };
     return;
   }
+  const guessed = {};
+  function pretest(c){
+    const pool = allCards().filter(x=>x.id!==c.id && x.pt!==c.pt);
+    const same = shuffle(pool.filter(x=>x.tag===c.tag)), any = shuffle(pool);
+    const others = same.concat(any).filter((x,k,a)=>a.findIndex(y=>y.pt===x.pt)===k).slice(0,2);
+    const opts = shuffle([c,...others]);
+    el.innerHTML = `<div class="stack">
+      <div class="row between small muted"><span>Palavra ${i+1} de ${batch.length} · primeiro, um palpite</span><span class="tag">${esc(c.tag||"")}</span></div>
+      <div class="progressbar"><span style="width:${Math.round(i/batch.length*100)}%"></span></div>
+      <div class="card flash">
+        <div class="word" lang="en">${esc(c.w)} ${spk(c.w)}</div>
+        <p class="ex" lang="en">${bolded(c.ex)}</p>
+        <span class="small muted">Pelo contexto, o que você acha que significa? Chute à vontade — tentar antes de ver a resposta ajuda a lembrar, mesmo errando.</span>
+        <div class="opts" style="width:100%">${opts.map(o=>`<button class="opt" data-g="${o.id}">${esc(o.pt)}</button>`).join("")}<button class="opt" data-g="none" style="font-weight:400">Não faço ideia</button></div>
+      </div>
+      <div class="row"><button class="btn" id="knw" title="Pula esta palavra e agenda uma checagem daqui a 30 dias">Já conheço</button></div></div>`;
+    speak(c.ex);
+    $$("[data-g]",el).forEach(b=>b.onclick=()=>{ guessed[c.id] = b.dataset.g===c.id ? "ok" : b.dataset.g==="none" ? "none" : "wrong"; S.pretest = S.pretest||{n:0,ok:0}; S.pretest.n++; if(guessed[c.id]==="ok") S.pretest.ok++; learn(); });
+    $("#knw",el).onclick = ()=>{ markKnown(c.id); const nx = nextNewIds(batch.length+1).find(id=>!batch.includes(id)); if(nx) batch[i] = nx; else batch.splice(i,1); toast("Marcada como conhecida — volta para checagem em 30 dias"); learn(); };
+  }
   function learn(){
     if(i>=batch.length) return quiz();
     const c = cardById(batch[i]);
+    if(!guessed[c.id]) return pretest(c);
+    const gmsg = guessed[c.id]==="ok" ? "Você deduziu pelo contexto — ótimo sinal." : guessed[c.id]==="wrong" ? "Não era essa, e tudo bem: o erro seguido da resposta certa fixa mais do que só ler." : "Sem problema — agora que você tentou, a resposta marca mais.";
     el.innerHTML = `<div class="stack">
+      <p class="note small">${gmsg}</p>
       ${capped&&i===0?`<p class="note warn small">Você tem ${backlog} revisões acumuladas. Hoje são só ${batch.length} palavras novas, para a revisão não virar uma bola de neve. Faça a revisão da manhã e o ritmo normal volta.</p>`:""}
       <div class="row between small muted"><span>Palavra ${i+1} de ${batch.length}</span><span class="tag">${esc(c.tag||"")}</span></div>
       <div class="progressbar"><span style="width:${Math.round(i/batch.length*100)}%"></span></div>
