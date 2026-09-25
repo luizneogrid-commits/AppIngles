@@ -919,18 +919,18 @@ const SPEAK = [
 {q:"What do you think makes a good friendship last?",p:["In my experience,…","It's crucial to…","A friend of mine and I…"]},
 {q:"Summarize the plot of your favorite movie without saying its name.",p:["It's about a… who…","Things get complicated when…","In the end,…"]},
 // ---- iniciante (lvl "A", com tradução) ----
-{lvl:"A",q:"Introduce yourself.",pt:"Apresente-se.",p:["My name is…","I'm from…","I live in…"]},
-{lvl:"A",q:"Talk about your family.",pt:"Fale sobre sua família.",p:["I have…","My mother is…","We live in…"]},
-{lvl:"A",q:"Describe your typical day.",pt:"Descreva um dia típico seu.",p:["I wake up at…","Then I…","At night, I…"]},
-{lvl:"A",q:"What do you do? Talk about your job or studies.",pt:"O que você faz? Fale do seu trabalho ou estudo.",p:["I'm a…","I work at…","I like my job because…"]},
-{lvl:"A",q:"What food do you like? What don't you like?",pt:"Que comida você gosta? E qual não gosta?",p:["I love…","I don't like…","My favorite food is…"]},
-{lvl:"A",q:"Describe your house or apartment.",pt:"Descreva sua casa ou apartamento.",p:["There is…","There are…","My favorite room is…"]},
-{lvl:"A",q:"What do you do on the weekend?",pt:"O que você faz no fim de semana?",p:["On Saturday, I usually…","Sometimes I…","On Sunday,…"]},
-{lvl:"A",q:"Describe your best friend.",pt:"Descreva seu melhor amigo ou amiga.",p:["My best friend is…","He/She is very…","We like to…"]},
-{lvl:"A",q:"What did you do yesterday?",pt:"O que você fez ontem?",p:["Yesterday I…","After that, I…","I went to…"]},
-{lvl:"A",q:"Talk about your city.",pt:"Fale sobre sua cidade.",p:["My city is…","There is/are…","I like it because…"]},
-{lvl:"A",q:"What can you do well? What can't you do?",pt:"O que você sabe fazer bem? E o que não sabe?",p:["I can…","I can't…","I want to learn to…"]},
-{lvl:"A",q:"Why do you want to learn English?",pt:"Por que você quer aprender inglês?",p:["I want to…","English is important because…","In the future, I…"]}
+{lvl:"A",ex:"Hi! My name is Carla. I'm thirty years old and I'm from Brazil. I live in Belo Horizonte with my husband. I work in a bank. I like music and movies, and I'm learning English because I want to travel.",q:"Introduce yourself.",pt:"Apresente-se.",p:["My name is…","I'm from…","I live in…"]},
+{lvl:"A",ex:"I have a small family. My mother is a teacher and my father is retired. I have one brother. He lives in São Paulo. We aren't together every day, but we talk on the phone every weekend.",q:"Talk about your family.",pt:"Fale sobre sua família.",p:["I have…","My mother is…","We live in…"]},
+{lvl:"A",ex:"I wake up at six thirty. I take a shower and have breakfast. Then I take the bus to work. I work from eight to five. At night, I cook dinner, watch TV and go to bed at eleven.",q:"Describe your typical day.",pt:"Descreva um dia típico seu.",p:["I wake up at…","Then I…","At night, I…"]},
+{lvl:"A",ex:"I'm a nurse. I work at a big hospital in my city. I work with children. My job is difficult, but I love it because I help people every day. My coworkers are very nice.",q:"What do you do? Talk about your job or studies.",pt:"O que você faz? Fale do seu trabalho ou estudo.",p:["I'm a…","I work at…","I like my job because…"]},
+{lvl:"A",ex:"I love Brazilian food. My favorite food is rice and beans with chicken. I also like pizza on the weekend. I don't like fish, and I never eat very spicy food.",q:"What food do you like? What don't you like?",pt:"Que comida você gosta? E qual não gosta?",p:["I love…","I don't like…","My favorite food is…"]},
+{lvl:"A",ex:"I live in an apartment. There are two bedrooms, a small kitchen and a living room. There is a big window in the living room. My favorite room is my bedroom because it's quiet.",q:"Describe your house or apartment.",pt:"Descreva sua casa ou apartamento.",p:["There is…","There are…","My favorite room is…"]},
+{lvl:"A",ex:"On Saturday, I usually sleep late. Then I go to the supermarket and clean the house. Sometimes I meet my friends at night. On Sunday, I have lunch with my parents.",q:"What do you do on the weekend?",pt:"O que você faz no fim de semana?",p:["On Saturday, I usually…","Sometimes I…","On Sunday,…"]},
+{lvl:"A",ex:"My best friend is Ana. She is funny and very kind. We met at school twenty years ago. We like to go to the cinema and eat pizza together. She always helps me.",q:"Describe your best friend.",pt:"Descreva seu melhor amigo ou amiga.",p:["My best friend is…","He/She is very…","We like to…"]},
+{lvl:"A",ex:"Yesterday I woke up early and went to work. I had lunch with a coworker. After work, I went to the gym. Then I cooked dinner and watched a series. I went to bed at eleven.",q:"What did you do yesterday?",pt:"O que você fez ontem?",p:["Yesterday I…","After that, I…","I went to…"]},
+{lvl:"A",ex:"I live in Recife. It's a big city near the sea. There are beautiful beaches and good restaurants. The traffic is bad, but the people are friendly. I like it because it's always sunny.",q:"Talk about your city.",pt:"Fale sobre sua cidade.",p:["My city is…","There is/are…","I like it because…"]},
+{lvl:"A",ex:"I can cook very well, and I can drive. I can speak a little English. I can't swim, and I can't play any instruments. I want to learn to play the guitar one day.",q:"What can you do well? What can't you do?",pt:"O que você sabe fazer bem? E o que não sabe?",p:["I can…","I can't…","I want to learn to…"]},
+{lvl:"A",ex:"I want to learn English because it's important for my job. I also want to travel to other countries and talk to people. In the future, I want to watch movies without subtitles.",q:"Why do you want to learn English?",pt:"Por que você quer aprender inglês?",p:["I want to…","English is important because…","In the future, I…"]}
 ];
 
 const WRITE = [
@@ -2658,6 +2658,7 @@ function blockSpeak(el,opt={},forceIdx){
         <label><input type="checkbox"> Usei 2 ou mais frases úteis</label>
         <label><input type="checkbox"> Na segunda tentativa falei com mais detalhe</label>
       </div>
+      ${p.ex?`<details class="rule"><summary>Ver exemplo de resposta</summary><div class="stack" style="margin-top:8px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start">${spk(p.ex,"Ouvir exemplo")}<p lang="en" class="corr" style="flex:1">${esc(p.ex)}</p></div><p class="small muted">Ouça, repita junto uma vez e depois responda com as suas informações. Copiar a estrutura é um ótimo começo.</p></div></details>`:""}
       <div class="row">${AI?`<button class="btn" id="fb">Corrigir minha resposta (IA)</button><button class="btn ghost" id="model">Ver resposta modelo (IA)</button>`:`<span class="muted small">O feedback com IA aparece quando o app está aberto no Claude.</span>`}</div>
       <div id="aiout" role="status" aria-live="polite"></div>
     </div>`;
