@@ -304,6 +304,8 @@ body.big .word{font-size:clamp(2rem,6vw,2.8rem)}
 .rule summary{cursor:pointer;font-weight:700;font-size:.9rem;color:var(--acc)}
 .faq summary{cursor:pointer;font-weight:700}
 .faq p{margin-top:8px;color:var(--muted)}
+.ring{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--acc) calc(var(--p)*1%),var(--surface2) 0)}
+.ring>span{width:92px;height:92px;border-radius:50%;background:var(--surface);display:grid;place-items:center}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1414,6 +1416,9 @@ const PHRASES = [
  {t:"Restaurante e compras",p:[["Could we get the check, please?","Pode trazer a conta, por favor?"],["I'll have the…","Eu vou querer o…"],["What do you recommend?","O que você recomenda?"],["Could I get this to go?","Pode embalar para viagem?"],["I'm just looking, thanks.","Só estou olhando, obrigado."],["Do you have this in a different size?","Tem esse em outro tamanho?"],["Can I pay by card?","Posso pagar com cartão?"]]},
  {t:"Conversa informal",p:[["How's it going?","E aí, tudo certo?"],["What have you been up to?","O que você tem feito?"],["Long time no see!","Quanto tempo!"],["That sounds great!","Que ótimo!"],["No worries.","Sem problemas."],["I'm down for that.","Tô dentro."],["Catch you later!","Até mais!"]]}
 ];
+// Perguntas rápidas para treino de fluência
+const QUICK_A = ["What's your name?","Where are you from?","What do you do?","What time do you wake up?","What's your favorite food?","Do you have any brothers or sisters?","What did you eat yesterday?","Where do you live?","What do you do on weekends?","Do you like coffee or tea?","What's the weather like today?","How do you go to work or school?","What's your favorite color?","What can you see from your window?"];
+const QUICK_B = ["What's the best thing that happened to you this week?","If you could live anywhere, where would it be?","What's a skill you'd like to learn?","What was the last movie you watched?","Describe your perfect weekend.","What do you usually do to relax?","What's something you're proud of?","What's the most useful app on your phone?","What would you change about your job or studies?","Who is the funniest person you know?","What's a place you'd love to visit?","What did you have for dinner last night?","What's harder: learning English or learning to drive?","What's your favorite season, and why?","What's a habit you'd like to break?","What do you think you'll be doing in five years?"];
 // Pronúncia para brasileiros: [palavra, opções, índice correto, observação]
 const PRON = [
  {id:"ed",t:"O -ed do passado",intro:"O -ed quase nunca vira uma sílaba extra. Depois de sons surdos (p, k, f, s, sh, ch) soa <b>/t/</b>: <i>worked = “workt”</i>. Depois de sons sonoros e vogais soa <b>/d/</b>: <i>played = “playd”</i>. Só depois de <b>t</b> ou <b>d</b> vira sílaba <b>/ɪd/</b>: <i>wanted, needed</i>. Dizer “work-ed” é um dos sotaques mais marcantes de brasileiros.",
@@ -2747,6 +2752,7 @@ function renderPractice(){
   if(sub==="guide") return blockGuide(shell("Como usar o app"));
   if(sub==="pron") return blockPron(shell("Pronúncia"));
   if(sub==="phr") return blockPhrases(shell("Frases prontas"));
+  if(sub==="quick") return blockQuick(shell("Pergunta rápida"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -2763,6 +2769,7 @@ function renderPractice(){
       <button class="card tile" data-s="pron"><span class="ti">${ICON.mic}</span><h3>Pronúncia para brasileiros</h3><p>O -ed do passado, a sílaba tônica e as letras mudas — os erros que mais denunciam o sotaque.</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
+      <button class="card tile" data-s="quick"><span class="ti">${ICON.mic}</span><h3>Pergunta rápida</h3><p>6 perguntas em áudio, 20 segundos cada. Treina responder sem traduzir na cabeça.</p></button>
       <button class="card tile" data-s="speak"><span class="ti">${ICON.mic}</span><h3>Fala livre</h3><p>Um tema aleatório, frases úteis e cronômetro 90/60 s.</p></button>
       <button class="card tile" data-s="write"><span class="ti">${ICON.pen}</span><h3>Escrita livre</h3><p>Mais um texto no diário, com correção.</p></button>
       <button class="card tile" data-s="guide"><span class="ti">${ICON.book}</span><h3>Como usar o app</h3><p>Rotina ideal, o que fazer se faltar um dia, onde fica o progresso, microfone e áudio.</p></button>
@@ -3188,6 +3195,26 @@ function blockPhrases(el){
       S.custom.push({id:"c"+Date.now().toString(36),w:en,pt,ex:"*"+en+"*",tag:"frase pronta"}); save(); toast("Adicionada — entra nas próximas palavras novas"); draw(); });
   }
   draw();
+}
+function blockQuick(el){
+  const pool = shuffle(isBasic() ? QUICK_A : QUICK_B).slice(0,6), SEC = isBasic() ? 25 : 20;
+  let i = -1, t = null;
+  el.innerHTML = `<div class="card pad stack"><h2>Pergunta rápida</h2><p class="muted">6 perguntas em áudio, ${SEC} segundos para cada uma. Responda em voz alta com 2 ou 3 frases. Não pare para traduzir: se faltar uma palavra, contorne (“it's like a…”, “the thing you use to…”).</p><button class="btn primary" id="qs">Começar</button></div>`;
+  $("#qs",el).onclick = next;
+  function next(){
+    clearInterval(t); i++;
+    if(i>=pool.length){ addXP(10,"fluência"); el.innerHTML = `<div class="card empty"><h3>6 respostas sem travar</h3><p>Repita amanhã — a mesma pergunta respondida de novo sai mais rápida e mais rica. É assim que a fala vira automática.</p><button class="btn primary" id="qa">Mais 6 perguntas</button></div>`; $("#qa",el).onclick=()=>blockQuick(el); return; }
+    let left = SEC; const q = pool[i];
+    el.innerHTML = `<div class="card pad stack" style="align-items:center;text-align:center">
+      <span class="eyebrow">Pergunta ${i+1}/${pool.length}</span>
+      <p class="prompt" lang="en" style="font-family:var(--display);font-weight:700">${esc(q)}</p>
+      <div class="ring" style="--p:100"><span class="mono bigtime" id="qt">${left}</span></div>
+      <div class="row"><button class="btn" id="qr">${ICON.speaker} Repetir</button><button class="btn primary" id="qnx">Próxima →</button></div></div>`;
+    speak(q);
+    $("#qr",el).onclick = ()=>speak(q);
+    $("#qnx",el).onclick = next;
+    t = setInterval(()=>{ const el2 = $("#qt",el); if(!el2){ clearInterval(t); return; } left--; el2.textContent = Math.max(0,left); el2.parentElement.style.setProperty("--p", Math.max(0,left/SEC*100)); if(left<=0){ clearInterval(t); setTimeout(next,600); } },1000);
+  }
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
