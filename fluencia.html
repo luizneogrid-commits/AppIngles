@@ -3570,7 +3570,25 @@ Return ONLY JSON: {"title":"...","text":"...","gloss":{"expression exactly as in
         ga.outerHTML = `<span class="small muted">adicionada</span>`; toast("Entra nas próximas palavras novas");
       };
     });
-    if($("#rq",el)) $("#rq",el).onclick = ()=>{
+    // recordação livre: escrever o que lembra com o texto escondido, antes das perguntas
+    const freeRecall = then=>{
+      const txt = $(".reading",el), box = $("#rqbox",el), gl = $("#glbox",el);
+      $("#rq",el).hidden = true; txt.hidden = true; if(gl) gl.innerHTML = "";
+      box.innerHTML = `<div class="stack"><span class="eyebrow">Antes das perguntas: o que você lembra?</span>
+        <p class="small muted">O texto está escondido. Escreva em 1 a 3 frases o que você lembra — em inglês se conseguir, ou em português. Tentar lembrar sozinho fixa mais do que reler.</p>
+        <textarea id="frIn" rows="3" aria-label="O que você lembra do texto"></textarea>
+        <div class="row"><button class="btn primary" id="frGo">Comparar com o texto</button><button class="btn ghost sm" id="frSkip">Pular</button></div></div>`;
+      $("#frIn",el).focus();
+      $("#frGo",el).onclick = ()=>{
+        const v = $("#frIn",el).value.trim(), n = v ? v.split(/\s+/).length : 0;
+        const hit = Object.keys(r.gloss).filter(k=>v.toLowerCase().includes(k.toLowerCase()));
+        txt.hidden = false; if(n>=8) addXP(3,"recordação");
+        box.innerHTML = `<div class="note small">Texto de volta. Compare com o que você escreveu: o que ficou de fora?${hit.length?` Você usou ${hit.length} ${hit.length===1?"expressão":"expressões"} do texto: ${hit.map(esc).join(", ")}.`:""}</div><button class="btn primary" id="frQ" style="margin-top:8px">Ir para as perguntas</button>`;
+        $("#frQ",el).onclick = ()=>{ box.innerHTML = ""; then(); };
+      };
+      $("#frSkip",el).onclick = ()=>{ txt.hidden = false; box.innerHTML = ""; then(); };
+    };
+    const startQ = ()=>{
       $("#rq",el).hidden = true;
       let i = 0, right = 0;
       const box = $("#rqbox",el);
@@ -3585,6 +3603,7 @@ Return ONLY JSON: {"title":"...","text":"...","gloss":{"expression exactly as in
       }
       q();
     };
+    if($("#rq",el)) $("#rq",el).onclick = ()=>freeRecall(startQ);
   }
   const sr = startId && READINGS.find(r=>r.id===startId);
   if(sr) read(sr); else list();
