@@ -319,6 +319,7 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .opt.conf{text-align:center;font-size:.92rem;padding:10px 6px}
 .ctx{border-top:1px dashed var(--line);padding-top:8px;max-width:52ch}
 .mnem{background:var(--sun-soft);border-radius:10px;padding:10px 12px;width:100%;text-align:left;display:flex;flex-direction:column;gap:6px}
+.plan{display:block;color:var(--acc);font-weight:700;margin-top:2px}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1686,6 +1687,17 @@ const SESSIONS = {
 function blockSec(k,b){ return k==="x" ? b.min*60 : Math.round(b.min*60*(S.settings.sessMin||15)/15); }
 function blockMin(k,b){ return Math.round(blockSec(k,b)/60); }
 function sessMinOf(k){ return k==="x" ? 5 : (S.settings.sessMin||15); }
+const PLAN_SUGG = {m:["tomar café","escovar os dentes","chegar ao trabalho","pegar o ônibus"], n:["jantar","tomar banho","lavar a louça","colocar o pijama"]};
+function planHTML(k){
+  const idp = "pl"+k, v = k==="m" ? S.settings.planM : S.settings.planN;
+  return `<div class="stack" style="gap:6px"><label for="${idp}">${k==="m"?"Manhã":"Noite"}: depois de…</label>
+    <input type="text" id="${idp}" value="${esc(v||"")}" placeholder="${esc(PLAN_SUGG[k][0])}" maxlength="60" autocomplete="off">
+    <div class="row">${PLAN_SUGG[k].map(x=>`<button type="button" class="chip" data-plan="${k}" data-v="${esc(x)}">${esc(x)}</button>`).join("")}</div></div>`;
+}
+function wirePlans(root){
+  $$("[data-plan]",root).forEach(b=>b.onclick=()=>{ const inp = $("#pl"+b.dataset.plan,root); inp.value = b.dataset.v; inp.dispatchEvent(new Event("change")); });
+  ["m","n"].forEach(k=>{ const inp = $("#pl"+k,root); if(inp) inp.addEventListener("change",()=>{ S.settings[k==="m"?"planM":"planN"] = inp.value.trim().slice(0,60); save(); }); });
+}
 function blocksOf(rec,k){ if(!rec[k]) rec[k] = new Array(SESSIONS[k].blocks.length).fill(0); return rec[k]; }
 function daySessions(r){ if(!r) return 0; const n = (r.m.every(Boolean)?1:0)+(r.n.every(Boolean)?1:0); return n || (r.x && r.x.every(Boolean) ? 1 : 0); }
 
@@ -1713,7 +1725,7 @@ function defaultState(){ return {
   days:{}, cards:{}, custom:[], grammar:{}, journal:[], draft:"",
   dict:[], listenLevel:1, recentListen:[], pairs:[], dialogs:{}, mistakes:[], ach:{}, reading:{}, tests:[], pron:{},
   stats:{reviews:0,correct:0},
-  settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,sessMin:15,chime:true,retention:0.9,tm:"07:30",tn:"21:30"}
+  settings:{level:"b1",accent:"en-US",voice:"",rate:0.95,newPerDay:5,dlgSpeak:false,theme:"auto",big:false,sessMin:15,chime:true,retention:0.9,planM:"",planN:"",tm:"07:30",tn:"21:30"}
 };}
 let S = defaultState();
 let userDoc = null, remoteTimer = null, remoteBusy = false, remoteAgain = false, syncState = "local";
@@ -2217,8 +2229,8 @@ function icsReminders(){
     "SUMMARY:"+title,"DESCRIPTION:"+desc,
     "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+title,"TRIGGER:PT0M","END:VALARM","END:VEVENT"].join(CRLF);
   return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Fluencia 15+15//PT","CALSCALE:GREGORIAN",
-    ev("m",S.settings.tm,"Inglês 15 min - Manhã (ouvir e falar)","Revisão espaçada, ditado e fala guiada."),
-    ev("n",S.settings.tn,"Inglês 15 min - Noite (aprender e escrever)","Palavras novas, gramática e diário."),
+    ev("m",S.settings.tm,"Inglês - Manhã (ouvir e falar)",(S.settings.planM?"Depois de "+S.settings.planM+", eu estudo. ":"")+"Revisão espaçada, ditado e fala guiada."),
+    ev("n",S.settings.tn,"Inglês - Noite (aprender e escrever)",(S.settings.planN?"Depois de "+S.settings.planN+", eu estudo. ":"")+"Palavras novas, gramática e diário."),
     "END:VCALENDAR"].join(CRLF);
 }
 
@@ -2282,7 +2294,7 @@ function renderToday(){
     const d = SESSIONS[k], r = rec[k], all = r.every(Boolean), started = r.some(Boolean);
     return `<article class="card sess-card ${k}-mode ${k===recKind&&!all?"rec":""}">
       <div class="sess-head"><div class="sess-ico">${ICON[d.icon]}</div>
-        <div><div class="eyebrow">${k===recKind&&!all?"Sugerida agora · ":""}${sessMinOf(k)} min</div><h2>${d.name} · ${d.sub}</h2></div></div>
+        <div><div class="eyebrow">${k===recKind&&!all?"Sugerida agora · ":""}${sessMinOf(k)} min</div><h2>${d.name} · ${d.sub}</h2>${k!=="x"&&(k==="m"?S.settings.planM:S.settings.planN)?`<span class="small plan">Seu plano: depois de ${esc(k==="m"?S.settings.planM:S.settings.planN)}, eu estudo.</span>`:""}</div></div>
       <ul class="blist">${d.blocks.map((b,i)=>`<li><span class="bcheck ${r[i]?"on":""}">${r[i]?ICON.check:""}</span><span><span class="t">${b.t} <span class="muted small mono">${blockMin(k,b)} min</span></span><span class="d">${b.d}</span></span></li>`).join("")}</ul>
       <button class="btn ${all?"":"primary"}" data-start="${k}">${all?"Refazer sessão":started?"Continuar":"Começar sessão"}</button>
     </article>`;
@@ -2339,6 +2351,7 @@ function renderToday(){
       <p class="ex" lang="en" style="max-width:none">${bolded(w.ex)} ${spk(w.ex,"Ouvir exemplo")}</p>
       ${st?`<span class="small muted">Já está no seu baralho · ${STAGE_LABEL[stageOf(w.id)]}</span>`:`<div class="row"><button class="btn sm" id="wodAdd">Adicionar ao baralho</button><button class="btn sm ghost" id="wodKnow">Já conheço</button></div>`}
     </div>`; })()}
+    ${!S.settings.planM && !S.settings.planN ? `<div class="note row between"><span><b>Crie seu gatilho:</b> planos do tipo “depois de tomar café, eu estudo” aumentam bastante a chance de o hábito acontecer.</span><button class="btn sm" id="toPlan">Criar plano</button></div>` : ""}
     <p class="small muted" style="text-align:center">Dúvidas? <button class="btn sm ghost" id="toGuide" style="display:inline-flex">Como usar o app</button></p>
     <details class="card method">
       <summary>Por que este método funciona</summary>
@@ -2357,6 +2370,7 @@ function renderToday(){
   const wa = $("#wodAdd"); if(wa) wa.onclick = ()=>{ introduce(wordOfDay().id); save(); toast("Adicionada — volta amanhã na revisão"); renderToday(); };
   const wk2 = $("#wodKnow"); if(wk2) wk2.onclick = ()=>{ markKnown(wordOfDay().id); renderToday(); };
   $("#toGuide").onclick = ()=>go("practice","guide");
+  const tp = $("#toPlan"); if(tp) tp.onclick = ()=>{ go("progress"); setTimeout(()=>{ const p = $("#plm"); if(p){ p.scrollIntoView({block:"center"}); p.focus(); } },50); };
   const qb = $("#qbk"); if(qb) qb.onclick = async ()=>{ if(await quickBackup()) renderToday(); };
   const vh = $("#vhide"); if(vh) vh.onclick = ()=>{ voiceNoteHidden = true; renderToday(); };
   $("#wkd").addEventListener("toggle", e=>{ try{ localStorage.setItem("fluencia:wkOpen", e.target.open?"1":"0"); }catch(err){} });
@@ -2373,7 +2387,8 @@ function renderOnboarding(){
       <div class="row"><select id="ob-acc" style="width:auto"><option value="en-US">Americano</option><option value="en-GB">Britânico</option></select><button class="btn sm" id="ob-t">${ICON.speaker} Ouvir exemplo</button></div></div>
     <div class="card pad stack"><h3>3. Quanto tempo e quando?</h3>
       <div class="row"><label for="ob-min">Cada sessão</label><select id="ob-min" style="width:auto">${[10,15,20].map(n=>`<option value="${n}" ${n===15?"selected":""}>${n} min${n===15?" (recomendado)":""}</option>`).join("")}</select></div>
-      <p class="small muted">Horário fixo é o que mais sustenta o hábito. Você pode adicionar lembretes ao calendário.</p>
+      <p class="small muted">Horário fixo e um <b>gatilho</b> (algo que você já faz todo dia) são o que mais sustenta o hábito. Complete: “depois de ___, eu estudo”.</p>
+      <div class="grid2">${planHTML("m")}${planHTML("n")}</div>
       <div class="row"><label style="display:flex;gap:8px;align-items:center">Manhã <input type="time" id="ob-tm" value="${S.settings.tm}" style="width:auto"></label><label style="display:flex;gap:8px;align-items:center">Noite <input type="time" id="ob-tn" value="${S.settings.tn}" style="width:auto"></label></div>
       <div class="row"><button class="btn sm" id="ob-ics">Adicionar lembretes ao calendário</button></div></div>
     <button class="btn primary" id="ob-go">Começar meu plano</button>
@@ -2382,6 +2397,7 @@ function renderOnboarding(){
   </div>`;
   $$("[data-l]").forEach(b=>b.onclick=()=>{ lvl=b.dataset.l; $$("[data-l]").forEach(x=>x.classList.toggle("right",x===b)); });
   const readTimes = ()=>{ S.settings.sessMin = +$("#ob-min").value || 15; S.settings.tm = $("#ob-tm").value||S.settings.tm; S.settings.tn = $("#ob-tn").value||S.settings.tn; };
+  wirePlans(view);
   $("#ob-acc").value = S.settings.accent;
   $("#ob-acc").onchange = e=>{ S.settings.accent = e.target.value; S.settings.voice = ""; };
   $("#ob-t").onclick = ()=>speak("Hi! Fifteen minutes in the morning, fifteen at night. Let's do this.");
@@ -3808,6 +3824,9 @@ function renderProgress(){
       <p class="small muted">No computador, pressione <span class="kbd">?</span> para ver os atalhos de teclado.</p>
       <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><span class="small muted"><span class="dot ${syncState==="cloud"?"ok":""}"></span> ${syncState==="cloud"?"Progresso salvo na sua conta — abre igual em outros dispositivos.":"Progresso salvo neste navegador."}</span></div>
       <hr class="sep">
+      <h3>Seu plano de estudo</h3>
+      <p class="small muted">Ancore o estudo em algo que você já faz todo dia. Planos “depois de X, eu faço Y” (intenções de implementação) aumentam muito a chance de cumprir.</p>
+      <div class="grid2">${planHTML("m")}${planHTML("n")}</div>
       <h3>Lembretes</h3>
       <p class="small muted">Escolha os horários e adicione dois lembretes diários ao seu calendário (Google, iPhone, Outlook). Abra o arquivo baixado e confirme. Ter um horário fixo é o que mais sustenta o hábito.</p>
       <div class="row"><label for="s-tm" style="display:flex;gap:8px;align-items:center">Manhã <input type="time" id="s-tm" value="${S.settings.tm}" style="width:auto"></label><label for="s-tn" style="display:flex;gap:8px;align-items:center">Noite <input type="time" id="s-tn" value="${S.settings.tn}" style="width:auto"></label></div>
@@ -3838,6 +3857,7 @@ function renderProgress(){
   $("#tv").onclick = ()=>speak("Consistency beats intensity. Fifteen minutes in the morning and fifteen at night.",undefined,true);
   $("#ex").onclick = ()=>{ const ta=$("#bk"); ta.value = JSON.stringify(S); ta.select(); S.lastBackup = todayKey(); save();
     if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>toast("Backup copiado"),()=>toast("Selecionado — copie com Ctrl+C")); else toast("Selecionado — copie com Ctrl+C"); };
+  wirePlans(view);
   $("#s-tm").onchange = e=>{ if(e.target.value){ S.settings.tm=e.target.value; save(); } };
   $("#s-tn").onchange = e=>{ if(e.target.value){ S.settings.tn=e.target.value; save(); } };
   $("#ics").onclick = async ()=>{ if(await saveFile("lembretes-ingles-15-15.ics", icsReminders(), "text/calendar")) toast("Abra o arquivo para adicionar ao calendário"); };
