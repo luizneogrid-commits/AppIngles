@@ -334,6 +334,7 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
       <div class="pills">
         <span class="pill fire" title="Sequência de dias"><span id="flameIco"></span><span class="mono" id="hStreak">0</span></span>
         <span class="pill" title="Experiência total"><span class="mono" id="hXP">0</span>&nbsp;XP</span>
+        <button class="icon-btn" id="searchBtn" aria-label="Buscar no app" title="Buscar (tecla /)" style="width:32px;height:32px"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></button>
       </div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Seções">
@@ -2034,11 +2035,47 @@ function weekStats(offset){
 
 /* ---------- keyboard ---------- */
 let keyH = null;
+document.addEventListener("click",e=>{ if(e.target.closest("#searchBtn")) showSearch(); });
 const REPLAY_IDS = ["#pl","#p1","#tp","#ob-t"], CONTINUE_IDS = ["#gn","#qn","#rn","#en","#pn","#mn","#cn","#nx","#qnx"], BACK_IDS = ["#helpClose","#bk","#dl","#rl","#sx"];
 function clickFirst(ids){ for(const id of ids){ const b = document.querySelector(id); if(b && !b.disabled && b.offsetParent!==null){ b.click(); return true; } } return false; }
+function norm2(x){ return String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
+function searchAll(q){
+  const n = norm2(q).trim(); if(n.length<2) return [];
+  const hit = (...xs)=>xs.some(x=>norm2(x).includes(n));
+  const out = [];
+  allCards().forEach(c=>{ if(hit(c.w,c.pt)) out.push({k:"w",c,score:norm2(c.w).startsWith(n)?0:1}); });
+  PHRASES.forEach(cat=>cat.p.forEach(([en,pt])=>{ if(hit(en,pt)) out.push({k:"p",en,pt,cat:cat.t,score:2}); }));
+  GRAMMAR.forEach(l=>{ if(hit(l.t,l.intro.replace(/<[^>]+>/g," "))) out.push({k:"g",l,score:norm2(l.t).includes(n)?1:3}); });
+  DIALOGS.forEach(d=>{ if(hit(d.t,d.d)) out.push({k:"d",d,score:2}); });
+  READINGS.forEach(r=>{ if(hit(r.t,r.text)) out.push({k:"r",r,score:norm2(r.t).includes(n)?2:4}); });
+  return out.sort((a,b)=>a.score-b.score).slice(0,30);
+}
+function showSearch(){
+  if($("#srch")) return;
+  document.body.insertAdjacentHTML("beforeend", `<div id="srch" class="overlay" role="dialog" aria-modal="true" aria-label="Buscar no app" style="align-items:start;padding-top:calc(60px + env(safe-area-inset-top,0px))"><div class="card pad stack" style="max-width:560px;width:100%;max-height:78vh;overflow:auto">
+    <div class="row" style="flex-wrap:nowrap"><input type="text" id="sq" placeholder="Buscar palavra, frase, aula, diálogo ou leitura…" aria-label="Buscar" autocomplete="off"><button class="btn sm ghost" id="helpClose">Fechar</button></div>
+    <div id="sres" class="stack" style="gap:6px" role="status" aria-live="polite"><p class="small muted">Digite pelo menos 2 letras. Busca em inglês e em português.</p></div></div></div>`);
+  const close = ()=>{ const o = $("#srch"); if(o) o.remove(); };
+  $("#helpClose").onclick = close; $("#srch").onclick = e=>{ if(e.target.id==="srch") close(); };
+  const kind = {w:"palavra",p:"frase pronta",g:"aula",d:"diálogo",r:"leitura"};
+  const draw = ()=>{
+    const res = searchAll($("#sq").value), box = $("#sres");
+    if($("#sq").value.trim().length<2){ box.innerHTML = '<p class="small muted">Digite pelo menos 2 letras. Busca em inglês e em português.</p>'; return; }
+    if(!res.length){ box.innerHTML = '<p class="small muted">Nada encontrado. Você pode adicionar a palavra em Revisar.</p>'; return; }
+    box.innerHTML = res.map((r,i)=>{
+      if(r.k==="w"){ const st = S.cards[r.c.id]; return `<div class="res"><div class="row between" style="flex-wrap:nowrap"><span class="row" style="flex-wrap:nowrap">${spk(r.c.w)}<b lang="en">${esc(r.c.w)}</b></span><span class="tag">${st?STAGE_LABEL[stageOf(r.c.id)]:"palavra"}</span></div><span class="small muted">${esc(r.c.pt)}</span><span class="small" lang="en">${bolded(r.c.ex)}</span>${st?"":`<button class="btn sm" data-sadd="${r.c.id}" style="align-self:flex-start">Adicionar ao baralho</button>`}</div>`; }
+      if(r.k==="p") return `<div class="res"><div class="row between" style="flex-wrap:nowrap"><span class="row" style="flex-wrap:nowrap">${spk(r.en)}<b lang="en">${esc(r.en)}</b></span><span class="tag">${esc(r.cat)}</span></div><span class="small muted">${esc(r.pt)}</span></div>`;
+      const title = r.k==="g"?r.l.t:r.k==="d"?r.d.t:r.r.t;
+      return `<button class="res sgo" data-i="${i}" style="border:0;background:none;text-align:left;cursor:pointer"><span class="row between"><b>${esc(title)}</b><span class="tag">${kind[r.k]}</span></span><span class="small muted">Abrir →</span></button>`;
+    }).join("");
+    $$("[data-sadd]",box).forEach(b=>b.onclick=()=>{ introduce(b.dataset.sadd); save(); toast("Adicionada — volta amanhã na revisão"); draw(); });
+    $$(".sgo",box).forEach(b=>b.onclick=()=>{ const r = res[+b.dataset.i]; close(); if(r.k==="g") go("practice","g:"+r.l.id); else if(r.k==="d") go("practice","d:"+r.d.id); else go("practice","r:"+r.r.id); });
+  };
+  $("#sq").addEventListener("input", draw); $("#sq").focus();
+}
 function showHelp(){
-  if($("#help")) return;
-  const rows = [["?","Abrir esta ajuda"],["Esc","Voltar / sair / fechar"],["1 – 4","Escolher opção (questões, diálogos, jogos) ou dar nota na revisão"],["Enter","Continuar para a próxima"],["Espaço","Mostrar resposta do cartão"],["Z","Desfazer a última nota da revisão"],["R","Repetir o áudio"],["Ctrl + Espaço","Repetir o áudio enquanto digita no ditado"],["Ctrl + Enter","Conferir o ditado"]];
+  if($("#help") || $("#srch")) return;
+  const rows = [["?","Abrir esta ajuda"],["/","Buscar no app"],["Esc","Voltar / sair / fechar"],["1 – 4","Escolher opção (questões, diálogos, jogos) ou dar nota na revisão"],["Enter","Continuar para a próxima"],["Espaço","Mostrar resposta do cartão"],["Z","Desfazer a última nota da revisão"],["R","Repetir o áudio"],["Ctrl + Espaço","Repetir o áudio enquanto digita no ditado"],["Ctrl + Enter","Conferir o ditado"]];
   document.body.insertAdjacentHTML("beforeend", `<div id="help" class="overlay" role="dialog" aria-modal="true" aria-labelledby="helpT"><div class="card pad stack" style="max-width:460px;width:100%">
     <div class="row between"><h2 id="helpT">Atalhos de teclado</h2><button class="btn sm ghost" id="helpClose">Fechar</button></div>
     <div class="kv">${rows.map(r=>`<span class="kbd" style="font-size:.85rem;justify-self:start">${r[0]}</span><span class="small">${r[1]}</span>`).join("")}</div></div></div>`);
@@ -2048,9 +2085,10 @@ function showHelp(){
 }
 document.addEventListener("keydown",e=>{
   const tag = e.target.tagName, typing = ["INPUT","TEXTAREA","SELECT"].includes(tag);
-  if(typing){ if(e.ctrlKey && e.code==="Space"){ e.preventDefault(); clickFirst(REPLAY_IDS); } return; }
+  if(typing){ if(e.key==="Escape" && $("#srch")){ $("#srch").remove(); return; } if(e.ctrlKey && e.code==="Space"){ e.preventDefault(); clickFirst(REPLAY_IDS); } return; }
   if(e.ctrlKey || e.metaKey || e.altKey) return;
   if(e.key==="?"){ e.preventDefault(); showHelp(); return; }
+  if(e.key==="/"){ e.preventDefault(); showSearch(); return; }
   if(e.key==="Escape"){ if(clickFirst(BACK_IDS)) e.preventDefault(); return; }
   if($("#help")) return;
   if(keyH){ keyH(e); if(e.defaultPrevented) return; if(/^[1-4]$/.test(e.key) || e.key==="Enter" || e.code==="Space") return; }
@@ -3025,6 +3063,8 @@ function renderPractice(){
   if(sub==="pairs") return blockPairs(shell("Pares mínimos"));
   if(sub==="chat") return blockChat(shell("Conversa com IA"));
   if(sub==="dialogs") return blockDialogs(shell("Diálogos"));
+  if(sub && sub.startsWith("d:")) return blockDialogs(shell("Diálogos"), sub.slice(2));
+  if(sub && sub.startsWith("r:")) return blockReading(shell("Leitura"), sub.slice(2));
   if(sub==="mistakes") return blockMistakes(shell("Meus erros"));
   if(sub==="reading") return blockReading(shell("Leitura"));
   if(sub==="ear") return blockEarGame(shell("Ouça e entenda"));
@@ -3235,7 +3275,7 @@ function blockDialogs(el,startId){
   const s = startId && DIALOGS.find(d=>d.id===startId);
   if(s) play(s); else list();
 }
-function blockReading(el){
+function blockReading(el,startId){
   function list(){
     el.innerHTML = `<div class="stack"><p class="muted">Textos curtos em inglês real. Leia uma vez sem parar, depois toque nas palavras sublinhadas para ver a tradução e responda às perguntas. Ler é o que mais amplia vocabulário em contexto.</p>
       ${AI?`<div class="card pad stack"><h3>Gerar um texto novo com IA</h3><p class="small muted">No seu nível (${esc(curLevel().t)}), sobre o tema que você quiser, com glossário e perguntas.</p>
@@ -3304,7 +3344,8 @@ Return ONLY JSON: {"title":"...","text":"...","gloss":{"expression exactly as in
       q();
     };
   }
-  list();
+  const sr = startId && READINGS.find(r=>r.id===startId);
+  if(sr) read(sr); else list();
 }
 function blockEarGame(el){
   const known = Object.keys(S.cards).filter(cardById);
