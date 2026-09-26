@@ -38,9 +38,10 @@ Extras:
 - Gráfico de XP de 30 dias, confirmação ao sair da sessão, sinal no fim do bloco, **exportação para o Anki**, sincronização ao vivo entre aparelhos (no Claude) e proteção contra dados corrompidos
 - Aba Praticar organizada por seções, tela Hoje com avisos por prioridade, **busca global** (tecla /) e cores com contraste WCAG AA
 - **Modo férias** (sequência protegida e revisões distribuídas na volta), **retenção real** medida, frases do ditado com erro voltam depois, filtros na lista de palavras e tela de **Novidades** após atualizações
+- **Verificador offline** de 26 erros típicos de brasileiros, **Números e letras** (preços, horas, datas, telefones, soletrar), **72 verbos irregulares** com caixas de Leitner, ouvir o **diálogo inteiro**, treinar só as palavras filtradas, gráfico do **teste de nível** e botão **Instalar app**
 - Diagnóstico de voz em inglês, acessibilidade para leitores de tela e **imagem de progresso** para compartilhar
 
-**Conteúdo:** 376 palavras e expressões (159 básicas), 38 aulas de gramática (17 para iniciantes), 156 frases de ditado em 4 níveis, 62 temas de fala, 72 temas de escrita, 23 diálogos com roteiro, 18 leituras graduadas, 74 frases prontas em 10 situações e 3 lições de pronúncia.
+**Conteúdo:** 376 palavras e expressões (159 básicas), 38 aulas de gramática (17 para iniciantes), 156 frases de ditado em 4 níveis, 72 temas de fala, 72 temas de escrita, 23 diálogos com roteiro, 18 leituras graduadas, 74 frases prontas em 10 situações e 3 lições de pronúncia.
 
 ## Base científica
 
