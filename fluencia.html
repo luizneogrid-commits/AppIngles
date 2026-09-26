@@ -2650,16 +2650,16 @@ function renderToday(){
 }
 
 /* ---------- novidades: mostradas uma vez após cada atualização ---------- */
-const APP_VERSION = "2026.09.26";
+const APP_VERSION = "2026.09.26.2";
 const CHANGELOG = [
- ["Gramática na revisão","Cada questão das aulas que você já fez volta na revisão da manhã, misturada às palavras."],
- ["Lembre e digite","O mini-teste das palavras novas agora pede para digitar, com a primeira letra de dica."],
- ["Antes de dormir","No fim da sessão da noite, 1 minuto para relembrar as palavras do dia."],
- ["Meta da semana","Escolha quantos dias quer estudar; toda segunda o app pergunta o que atrapalhou."],
- ["Repetição de tarefa","Temas de fala voltam depois de 2 e 7 dias para você falar com mais fluência."],
- ["Modo férias","Vai viajar? Pause a sequência e as revisões sem perder nada (Progresso → Ajustes)."],
- ["Retenção real","Veja em Progresso quanto você realmente lembra nas revisões, comparado à meta."],
- ["A ciência por trás","As técnicas de aprendizagem do app, com referências, em Praticar → Recursos."]
+ ["Verificador de erros","No diário e na fala, “Verificar erros comuns” aponta 26 erros típicos de brasileiros — sem precisar de IA."],
+ ["Números e letras","Preços, horas, datas, telefones, 13 × 30 e soletrar e-mails, com exercícios que nunca se repetem."],
+ ["Verbos irregulares","72 verbos: digite passado e particípio de memória; os que você já sabe voltam cada vez mais tarde."],
+ ["Diálogo inteiro","Ao terminar um diálogo, ouça a conversa toda com uma voz para cada personagem."],
+ ["Treinar a seleção","Na lista de palavras, filtre (ex.: phrasal verbs) e treine só essas."],
+ ["Evolução no teste de nível","O Progresso mostra um gráfico dos seus testes com as faixas A1 a B2."],
+ ["Temas de argumentação","10 temas de fala novos para treinar opinião, hipótese e ideias abstratas."],
+ ["Instalar o app","No celular e no computador, um botão instala o app; um aviso mostra quando você está offline."]
 ];
 function maybeShowNews(){
   if(!S.onboarded || S.seenVersion===APP_VERSION) return;
