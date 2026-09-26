@@ -37,9 +37,10 @@ Extras:
 - **Pronúncia para brasileiros** (-ed, sílaba tônica, letras mudas), **frases prontas** por situação, **Pergunta rápida** (fluência) e **modo sem áudio** com ditado visual
 - Gráfico de XP de 30 dias, confirmação ao sair da sessão, sinal no fim do bloco, **exportação para o Anki**, sincronização ao vivo entre aparelhos (no Claude) e proteção contra dados corrompidos
 - Aba Praticar organizada por seções, tela Hoje com avisos por prioridade, **busca global** (tecla /) e cores com contraste WCAG AA
+- **Modo férias** (sequência protegida e revisões distribuídas na volta), **retenção real** medida, frases do ditado com erro voltam depois, filtros na lista de palavras e tela de **Novidades** após atualizações
 - Diagnóstico de voz em inglês, acessibilidade para leitores de tela e **imagem de progresso** para compartilhar
 
-**Conteúdo:** 376 palavras e expressões (159 básicas), 38 aulas de gramática (17 para iniciantes), 126 frases de ditado em 4 níveis (45 de iniciante com tradução), 62 temas de fala (os de iniciante com exemplo de resposta), 72 temas de escrita, 20 diálogos com roteiro, 15 leituras graduadas, 50 frases prontas e 3 lições de pronúncia.
+**Conteúdo:** 376 palavras e expressões (159 básicas), 38 aulas de gramática (17 para iniciantes), 156 frases de ditado em 4 níveis, 62 temas de fala, 72 temas de escrita, 23 diálogos com roteiro, 18 leituras graduadas, 74 frases prontas em 10 situações e 3 lições de pronúncia.
 
 ## Base científica
 
