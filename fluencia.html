@@ -3581,6 +3581,7 @@ function renderPractice(){
   if(sub==="quick") return blockQuick(shell("Pergunta rápida"));
   if(sub==="mix") return blockGrammarMix(shell("Prática mista"));
   if(sub==="nums") return blockNumbers(shell("Números e letras"));
+  if(sub==="irreg") return blockIrregular(shell("Verbos irregulares"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -3606,6 +3607,7 @@ function renderPractice(){
     <section class="pgroup" aria-label="Ler e escrever"><div class="row between" style="align-items:baseline"><h2>Ler e escrever</h2><span class="small muted">Vocabulário em contexto</span></div>
     <div class="tiles">
       <button class="card tile" data-s="reading"><span class="ti">${ICON.book}</span><h3>Leitura</h3><p>${READINGS.length} textos curtos com tradução ao toque, áudio e perguntas. Mande palavras novas para o seu baralho.</p></button>
+      <button class="card tile" data-s="irreg"><span class="ti">${ICON.pen}</span><h3>Verbos irregulares</h3><p>${IRREG.length} verbos: digite passado e particípio de memória. Caixas de Leitner espaçam os que você já sabe.</p></button>
       <button class="card tile" data-s="build"><span class="ti">${ICON.pen}</span><h3>Monte a frase</h3><p>Ouça e toque nas palavras na ordem certa. Treina a estrutura da frase em inglês, sem digitar.</p></button>
       <button class="card tile" data-s="write"><span class="ti">${ICON.pen}</span><h3>Escrita livre</h3><p>Mais um texto no diário, com correção.</p></button>
       <button class="card tile" data-s="journal"><span class="ti">${ICON.book}</span><h3>Seu diário</h3><p>${S.journal.length} ${S.journal.length===1?"texto salvo":"textos salvos"}. Releia e veja sua evolução.</p></button>
@@ -4177,6 +4179,64 @@ function blockNumbers(el){
     q();
   }
   menu();
+}
+/* ---------- verbos irregulares: lembrar e digitar, com caixas de Leitner ---------- */
+// [base, passado, particípio, tradução, 1 = dos 30 mais comuns]
+const IRREG = [
+ ["be","was/were","been","ser, estar",1],["have","had","had","ter",1],["do","did","done","fazer",1],["go","went","gone","ir",1],["get","got","gotten/got","conseguir, pegar",1],
+ ["make","made","made","fazer, produzir",1],["say","said","said","dizer",1],["see","saw","seen","ver",1],["come","came","come","vir",1],["take","took","taken","pegar, levar",1],
+ ["know","knew","known","saber, conhecer",1],["think","thought","thought","pensar",1],["give","gave","given","dar",1],["find","found","found","encontrar",1],["tell","told","told","contar, dizer",1],
+ ["feel","felt","felt","sentir",1],["leave","left","left","sair, deixar",1],["put","put","put","colocar",1],["buy","bought","bought","comprar",1],["bring","brought","brought","trazer",1],
+ ["eat","ate","eaten","comer",1],["drink","drank","drunk","beber",1],["write","wrote","written","escrever",1],["read","read","read","ler",1],["speak","spoke","spoken","falar",1],
+ ["meet","met","met","encontrar, conhecer",1],["pay","paid","paid","pagar",1],["sleep","slept","slept","dormir",1],["sit","sat","sat","sentar",1],["run","ran","run","correr",1],
+ ["become","became","become","tornar-se",0],["begin","began","begun","começar",0],["break","broke","broken","quebrar",0],["build","built","built","construir",0],["catch","caught","caught","pegar, apanhar",0],
+ ["choose","chose","chosen","escolher",0],["cost","cost","cost","custar",0],["cut","cut","cut","cortar",0],["draw","drew","drawn","desenhar",0],["drive","drove","driven","dirigir",0],
+ ["fall","fell","fallen","cair",0],["fight","fought","fought","lutar, brigar",0],["fly","flew","flown","voar",0],["forget","forgot","forgotten","esquecer",0],["forgive","forgave","forgiven","perdoar",0],
+ ["grow","grew","grown","crescer",0],["hear","heard","heard","ouvir",0],["hide","hid","hidden","esconder",0],["hold","held","held","segurar",0],["keep","kept","kept","manter",0],
+ ["lead","led","led","liderar",0],["lend","lent","lent","emprestar",0],["let","let","let","deixar, permitir",0],["lose","lost","lost","perder",0],["mean","meant","meant","significar",0],
+ ["ride","rode","ridden","andar (de bicicleta, cavalo)",0],["ring","rang","rung","tocar (campainha)",0],["rise","rose","risen","subir",0],["sell","sold","sold","vender",0],["send","sent","sent","enviar",0],
+ ["shake","shook","shaken","sacudir",0],["sing","sang","sung","cantar",0],["spend","spent","spent","gastar, passar (tempo)",0],["stand","stood","stood","ficar de pé",0],["steal","stole","stolen","roubar",0],
+ ["swim","swam","swum","nadar",0],["teach","taught","taught","ensinar",0],["throw","threw","thrown","jogar, arremessar",0],["understand","understood","understood","entender",0],["wake","woke","woken","acordar",0],
+ ["wear","wore","worn","vestir, usar",0],["win","won","won","vencer, ganhar",0]
+];
+const LEITNER = [1,3,7,14,30];
+function irregOk(given, target){ const g = String(given).trim().toLowerCase().replace(/\s+/g,""); return target.split("/").some(t=>t===g) || g===target; }
+function blockIrregular(el){
+  if(!S.irreg || typeof S.irreg!=="object") S.irreg = {};
+  const t = todayKey(), pool = IRREG.filter(v=>!isBasic() || v[4]);
+  const due = pool.filter(v=>S.irreg[v[0]] && S.irreg[v[0]].due<=t), fresh = pool.filter(v=>!S.irreg[v[0]]);
+  const round = shuffle(due).concat(fresh).slice(0,10);
+  const known = pool.filter(v=>S.irreg[v[0]] && S.irreg[v[0]].box>=4).length;
+  if(!round.length){ el.innerHTML = `<div class="card empty"><h3>Nenhum verbo para hoje</h3><p>Você está em dia: ${known} de ${pool.length} verbos já estão nas caixas mais altas. Volte amanhã.</p></div>`; return; }
+  let i = 0, right = 0;
+  el.innerHTML = `<div class="card pad stack"><h2>Verbos irregulares</h2>
+    <p class="muted">Você vê o verbo e digita o passado e o particípio de memória. Acertou os dois: o verbo sobe de caixa e volta mais tarde (1, 3, 7, 14 e 30 dias). Errou: volta para a primeira caixa.</p>
+    <p class="small muted">${known} de ${pool.length} verbos dominados · hoje: ${due.length} para revisar e ${Math.min(fresh.length, 10-Math.min(due.length,10))} novos.</p>
+    <button class="btn primary" id="ivGo">Começar (${round.length})</button></div>`;
+  $("#ivGo",el).onclick = q;
+  function q(){
+    if(i>=round.length){ addXP(right*2,"verbos"); el.innerHTML = `<div class="card empty"><h3>${right}/${round.length} completos</h3><p>Diga em voz alta os que você errou, em sequência: “go, went, gone”. O ritmo ajuda a memória.</p><button class="btn primary" id="ivAg">Mais uma rodada</button></div>`; $("#ivAg",el).onclick = ()=>blockIrregular(el); return; }
+    const [b,p,pp,pt] = round[i], box = S.irreg[b] ? S.irreg[b].box : 0;
+    el.innerHTML = `<div class="card pad stack">
+      <div class="row between"><span class="eyebrow">Verbos · ${i+1}/${round.length}</span><span class="small muted">${box?"caixa "+box:"novo"}</span></div>
+      <div class="word" lang="en" style="justify-content:flex-start">${esc(b)} ${spk(b)}</div><span class="muted">${esc(pt)}</span>
+      <div class="grid2"><div class="stack" style="gap:4px"><label for="ivP">Passado</label><input type="text" id="ivP" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+        <div class="stack" style="gap:4px"><label for="ivPP">Particípio</label><input type="text" id="ivPP" autocomplete="off" autocapitalize="off" spellcheck="false"></div></div>
+      <div class="row"><button class="btn primary" id="ivOk">Conferir</button><button class="btn ghost sm" id="ivSkip">Não sei</button></div>
+      <div id="ivFb" role="status" aria-live="polite"></div></div>`;
+    $("#ivP",el).focus();
+    const check = give=>{
+      const okP = !give && irregOk($("#ivP",el).value, p), okPP = !give && irregOk($("#ivPP",el).value, pp), ok = okP && okPP;
+      const cur = S.irreg[b] || {box:0};
+      cur.box = ok ? Math.min(5, cur.box+1) : 1; cur.due = addDays(todayKey(), LEITNER[cur.box-1]); S.irreg[b] = cur; if(ok) right++; save();
+      ["#ivP","#ivPP","#ivOk","#ivSkip"].forEach(id=>$(id,el).disabled = true);
+      speak(b+", "+p.split("/")[0]+", "+pp.split("/")[0], 0.85);
+      $("#ivFb",el).innerHTML = `<p class="typed ${ok?"exact":"wrong"}" lang="en"><b>${esc(b)} → ${esc(p)} → ${esc(pp)}</b></p><p class="small muted">${ok?"Subiu para a caixa "+cur.box+" · volta em "+LEITNER[cur.box-1]+" "+(LEITNER[cur.box-1]===1?"dia":"dias"):"Volta amanhã. "+(!give&&okP?"Passado certo; ":"")+(!give&&okPP?"particípio certo.":"")}</p><button class="btn primary" id="qnx">Próximo →</button>`;
+      $("#qnx",el).onclick = ()=>{ i++; q(); }; $("#qnx",el).focus();
+    };
+    $("#ivOk",el).onclick = ()=>check(false); $("#ivSkip",el).onclick = ()=>check(true);
+    [$("#ivP",el),$("#ivPP",el)].forEach((x,k)=>x.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); if(k===0) $("#ivPP",el).focus(); else check(false); } }));
+  }
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
