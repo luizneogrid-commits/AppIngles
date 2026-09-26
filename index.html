@@ -3500,11 +3500,17 @@ function wireWordDetail(box, redraw){
   const dl = $("#wdel",box); if(dl) dl.onclick = ()=>{ $("#wcfm",box).innerHTML = `<div class="confirm"><span>Excluir esta palavra e o histórico dela?</span><button class="btn sm" id="wy" style="color:var(--bad)">Excluir</button><button class="btn sm ghost" id="wn">Cancelar</button></div>`;
     $("#wy",box).onclick = ()=>{ S.custom = S.custom.filter(c=>c.id!==id); delete S.cards[id]; save(); toast("Palavra excluída"); redraw(); }; $("#wn",box).onclick = ()=>$("#wcfm",box).innerHTML=""; };
 }
+let selIds = [];
 function renderReviewTab(){
   if(sub==="run"){
     view.innerHTML = `<div class="sess"><div class="row"><button class="btn ghost" id="bk">‹ Voltar</button></div><div id="block"></div></div>`;
     $("#bk").onclick = ()=>go("review");
     return blockReview($("#block"));
+  }
+  if(sub==="sel"){
+    view.innerHTML = `<div class="sess"><div class="row"><button class="btn ghost" id="bk">‹ Voltar</button><span class="eyebrow">Treino da seleção · não altera os intervalos</span></div><div id="block"></div></div>`;
+    $("#bk").onclick = ()=>go("review");
+    return blockReview($("#block"),{ids:selIds.slice(0,30)});
   }
   if(sub==="hard"){
     view.innerHTML = `<div class="sess"><div class="row"><button class="btn ghost" id="bk">‹ Voltar</button><span class="eyebrow">Palavras difíceis</span></div><div id="block"></div></div>`;
@@ -3546,7 +3552,7 @@ function renderReviewTab(){
       <div class="row between"><h3>Suas palavras</h3><span class="small muted">${counts.lrn+counts.young+counts.mat} em estudo · ${counts.mat} maduras</span></div>
       <input type="text" id="flt" placeholder="Filtrar por palavra ou significado…" aria-label="Filtrar palavras">
       <div class="row" role="group" aria-label="Filtrar por estágio">${[["all","Todas"],["study","Em estudo"],["lrn","Aprendendo"],["young","Jovens"],["mat","Maduras"],["new","Não vistas"],["hard","Difíceis"]].map(([k,l])=>`<button class="chip" data-stf="${k}" aria-pressed="false">${l}</button>`).join("")}</div>
-      <div class="row"><label for="tagF" class="small">Categoria</label><select id="tagF" style="width:auto"><option value="">Todas as categorias</option>${[...new Set(allCards().map(c=>c.tag||"outras"))].sort().map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select><span class="small muted" id="wlCount"></span></div>
+      <div class="row"><label for="tagF" class="small">Categoria</label><select id="tagF" style="width:auto"><option value="">Todas as categorias</option>${[...new Set(allCards().map(c=>c.tag||"outras"))].sort().map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select><span class="small muted" id="wlCount"></span><button class="btn sm" id="selGo" hidden>Treinar estas</button></div>
       <div class="wlist" id="wl"></div>
     </div>
   </div>`;
@@ -3587,6 +3593,9 @@ function renderReviewTab(){
       .filter(c=>{ const st = stageOf(c.id); return stF==="all" || (stF==="study" ? st!=="new" : stF==="hard" ? hard.has(c.id) : st===stF); })
       .sort((a,b)=>{ const o={lrn:0,young:1,mat:2,new:3}; return o[stageOf(a.id)]-o[stageOf(b.id)]; });
     $("#wlCount").textContent = list.length+" "+(list.length===1?"palavra":"palavras");
+    const studied = list.filter(c=>S.cards[c.id]).map(c=>c.id), sg = $("#selGo");
+    sg.hidden = !(studied.length && (f || tg || stF!=="all")); sg.textContent = "Treinar "+Math.min(30,studied.length)+(studied.length===1?" palavra":" palavras");
+    sg.onclick = ()=>{ selIds = shuffle(studied); go("review","sel"); };
     $("#wl").innerHTML = list.map(c=>{ const s=stageOf(c.id), st=S.cards[c.id];
       return `<button class="wrow" data-w="${c.id}" aria-expanded="${openW===c.id}"><div><span class="w">${esc(c.w)}</span> <span class="p">— ${esc(c.pt)}</span></div><span class="st ${s}">${STAGE_LABEL[s]}${st?` · ${st.due<=todayKey()?"hoje":fmtDate(st.due)}`:""}</span></button>${openW===c.id?wordDetail(c):""}`; }).join("") || `<p class="muted small">Nada encontrado.</p>`;
     $$("[data-w]").forEach(b=>b.onclick=()=>{ openW = openW===b.dataset.w ? null : b.dataset.w; drawList(); });
