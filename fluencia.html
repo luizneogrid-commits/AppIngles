@@ -3366,7 +3366,9 @@ function renderReviewTab(){
     </div>
     <div class="card pad stack">
       <div class="row between"><h3>Suas palavras</h3><span class="small muted">${counts.lrn+counts.young+counts.mat} em estudo · ${counts.mat} maduras</span></div>
-      <input type="text" id="flt" placeholder="Filtrar…" aria-label="Filtrar palavras">
+      <input type="text" id="flt" placeholder="Filtrar por palavra ou significado…" aria-label="Filtrar palavras">
+      <div class="row" role="group" aria-label="Filtrar por estágio">${[["all","Todas"],["study","Em estudo"],["lrn","Aprendendo"],["young","Jovens"],["mat","Maduras"],["new","Não vistas"],["hard","Difíceis"]].map(([k,l])=>`<button class="chip" data-stf="${k}" aria-pressed="false">${l}</button>`).join("")}</div>
+      <div class="row"><label for="tagF" class="small">Categoria</label><select id="tagF" style="width:auto"><option value="">Todas as categorias</option>${[...new Set(allCards().map(c=>c.tag||"outras"))].sort().map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select><span class="small muted" id="wlCount"></span></div>
       <div class="wlist" id="wl"></div>
     </div>
   </div>`;
@@ -3397,17 +3399,24 @@ function renderReviewTab(){
     S.custom.push({id:"c"+Date.now().toString(36),w,pt:p,ex:e,tag:"minha palavra"}); save();
     toast("Adicionada — entra nas próximas palavras novas"); renderReviewTab();
   };
-  let openW = null;
+  let openW = null, stF = "all";
   const drawList = ()=>{
-    const f = $("#flt").value.toLowerCase();
+    const f = $("#flt").value.toLowerCase(), tg = $("#tagF").value;
+    $$("[data-stf]").forEach(b=>{ const on = b.dataset.stf===stF; b.setAttribute("aria-pressed", on); b.style.background = on ? "var(--acc)" : ""; b.style.color = on ? "var(--on-acc)" : ""; });
+    const hard = new Set(hardIds());
     const list = ids.filter(c=>!f || c.w.toLowerCase().includes(f) || c.pt.toLowerCase().includes(f))
+      .filter(c=>!tg || (c.tag||"outras")===tg)
+      .filter(c=>{ const st = stageOf(c.id); return stF==="all" || (stF==="study" ? st!=="new" : stF==="hard" ? hard.has(c.id) : st===stF); })
       .sort((a,b)=>{ const o={lrn:0,young:1,mat:2,new:3}; return o[stageOf(a.id)]-o[stageOf(b.id)]; });
+    $("#wlCount").textContent = list.length+" "+(list.length===1?"palavra":"palavras");
     $("#wl").innerHTML = list.map(c=>{ const s=stageOf(c.id), st=S.cards[c.id];
       return `<button class="wrow" data-w="${c.id}" aria-expanded="${openW===c.id}"><div><span class="w">${esc(c.w)}</span> <span class="p">— ${esc(c.pt)}</span></div><span class="st ${s}">${STAGE_LABEL[s]}${st?` · ${st.due<=todayKey()?"hoje":fmtDate(st.due)}`:""}</span></button>${openW===c.id?wordDetail(c):""}`; }).join("") || `<p class="muted small">Nada encontrado.</p>`;
     $$("[data-w]").forEach(b=>b.onclick=()=>{ openW = openW===b.dataset.w ? null : b.dataset.w; drawList(); });
     const wd = $("#wdet"); if(wd) wireWordDetail(wd, drawList);
   };
-  $("#flt").addEventListener("input",drawList); drawList();
+  $("#flt").addEventListener("input",drawList);
+  $("#tagF").addEventListener("change",drawList);
+  $$("[data-stf]").forEach(b=>b.onclick=()=>{ stF = b.dataset.stf; drawList(); }); drawList();
 }
 
 /* ============================================================
