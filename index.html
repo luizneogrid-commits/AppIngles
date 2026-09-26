@@ -341,6 +341,9 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .reflect{border:2px solid var(--acc)}
 .news{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .news li{display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--acc);padding-left:10px}
+.retbar{position:relative;height:12px;border-radius:99px;background:var(--surface2)}
+.retbar span{display:block;height:100%;border-radius:99px;background:var(--acc)}
+.retbar i{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:var(--ink)}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2740,7 +2743,7 @@ function blockReview(el,opt={}){
   function gradeG(ok){
     last = null;
     const st = S.gcards[cur], n = schedule(st, ok?2:0); Object.assign(st, n, {due:addDays(todayKey(), n.ivl)});
-    const r0 = dayRec(); r0.rev = (r0.rev||0)+1;
+    const r0 = dayRec(); r0.rev = (r0.rev||0)+1; if((st.reps>0 || st.s!=null) && st.last!==todayKey()){ r0.rg = r0.rg||{n:0,ok:0}; r0.rg.n++; if(ok) r0.rg.ok++; }
     if(!ok){ queue.push(cur); const p = cur.split(":"); addMistake({k:"g",l:p[1],q:+p[2]}); } else done++;
     S.xp += ok?2:1; dayRec().xp += ok?2:1; save(); next();
   }
@@ -2755,7 +2758,7 @@ function blockReview(el,opt={}){
   }
   function grade(q){
     last = {id:cur, st:JSON.parse(JSON.stringify(S.cards[cur])), queue:queue.slice(), done, xp:q===0?1:2, stats:Object.assign({},S.stats), typed, guessTxt, prod};
-    if(!extra){ const r0 = dayRec(); r0.rev = (r0.rev||0)+1; const st=S.cards[cur]; const n=schedule(st,q); Object.assign(st,n,{due:addDays(todayKey(),n.ivl)}); S.stats.reviews++; if(q>0) S.stats.correct++; }
+    if(!extra){ const r0 = dayRec(); r0.rev = (r0.rev||0)+1; const st=S.cards[cur]; if((st.s!=null || (st.reps||0)>0) && st.last!==todayKey()){ r0.rv = r0.rv||{n:0,ok:0}; r0.rv.n++; if(q>0) r0.rv.ok++; } const n=schedule(st,q); Object.assign(st,n,{due:addDays(todayKey(),n.ivl)}); S.stats.reviews++; if(q>0) S.stats.correct++; }
     if(q===0) queue.push(cur); else done++;
     S.xp += q===0?1:2; dayRec().xp += q===0?1:2; save();
     next();
@@ -4035,6 +4038,7 @@ function renderProgress(){
       <div class="legend"><span><i style="background:var(--surface2)"></i>nenhuma sessão</span><span><i style="background:color-mix(in srgb,var(--acc) 45%,var(--surface2))"></i>1 sessão</span><span><i style="background:var(--acc)"></i>manhã e noite</span></div>
     </div>
     ${(()=>{ const w = weaknesses(); return `<div class="card pad stack"><h3>Onde focar agora</h3>${w.length?`<div class="stack" style="gap:10px">${w.map((x,k)=>`<div class="wk"><span class="ti">${ICON[x.icon]}</span><span style="flex:1"><b>${esc(x.t)}</b><span class="small muted" style="display:block">${esc(x.d)}</span></span><button class="btn sm" data-wk="${k}">${esc(x.btn)}</button></div>`).join("")}</div>`:`<p class="small muted">Ainda não há dados suficientes, ou está tudo equilibrado. Continue com as sessões — a análise aparece aqui conforme você pratica.</p>`}</div>`; })()}
+    ${retentionCard()}
     ${calibrationCard()}
     <div class="grid2">
       <div class="card pad stack"><h3>Trilha ${isBasic()?"A1 → B1":"B1 → B2"}</h3>
@@ -4186,6 +4190,21 @@ function weaknesses(){
   const last14 = Array.from({length:14},(_,k)=>S.days[addDays(todayKey(),-k)]).filter(Boolean);
   if(last14.length>=5 && !S.journal.some(j=>diffDays(j.d,todayKey())<=7)) out.push({icon:"pen",t:"Escrita parada",d:"Você não salvou nada no diário nesta semana. Escrever é onde a gramática vira hábito.",go:["practice","write"],btn:"Escrever agora"});
   return out.slice(0,4);
+}
+function retentionCard(){
+  let n = 0, ok = 0, gn = 0, gok = 0; const t = todayKey();
+  for(let k=0;k<30;k++){ const r = S.days[addDays(t,-k)]; if(!r) continue; if(r.rv){ n += r.rv.n; ok += r.rv.ok; } if(r.rg){ gn += r.rg.n; gok += r.rg.ok; } }
+  const target = Math.round(S0ret()*100);
+  if(n<20) return `<div class="card pad stack"><h3>Retenção real</h3><p class="small muted">Depois de umas 20 revisões de palavras já estudadas, aparece aqui quanto você realmente lembra, comparado à sua meta de ${target}%.</p></div>`;
+  const real = Math.round(ok/n*100);
+  const msg = real < target-7 ? "Você está lembrando bem menos do que a meta. Causas comuns: revisões atrasadas ou palavras novas demais. Reduza as palavras novas por noite ou coloque a revisão em dia."
+    : real > target+6 ? "Você lembra mais do que a meta. Se quiser revisar menos, baixe a retenção desejada em Ajustes — o FSRS vai espaçar mais."
+    : "Na meta: o agendador está bem calibrado para você.";
+  return `<div class="card pad stack"><div class="row between"><h3>Retenção real</h3><span class="small muted">últimos 30 dias</span></div>
+    <div class="row" style="align-items:baseline"><span class="bignum">${real}%</span><span class="muted small">lembradas em ${n} revisões · meta ${target}%</span></div>
+    <div class="retbar" role="img" aria-label="Retenção real ${real}% e meta ${target}%"><span style="width:${real}%"></span><i style="left:${target}%"></i></div>
+    ${gn>=10?`<p class="small muted">Gramática: ${Math.round(gok/gn*100)}% de acerto em ${gn} itens revisados.</p>`:""}
+    <p class="small">${msg}</p></div>`;
 }
 function calibrationCard(){
   const c = Array.isArray(S.calib) ? S.calib : null, total = c ? c.reduce((a,x)=>a+x.n,0) : 0;
