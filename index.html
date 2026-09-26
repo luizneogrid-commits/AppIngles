@@ -339,6 +339,8 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .wdot.on{background:var(--acc);color:var(--on-acc)}
 .wdot.today{outline:2px solid var(--ink);outline-offset:1px}
 .reflect{border:2px solid var(--acc)}
+.news{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.news li{display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--acc);padding-left:10px}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -1914,18 +1916,43 @@ function xpBalance(){ return S.xp - (S.spent||0); }
 function buyFreeze(){ if(S.freezes>=FREEZE_MAX){ toast("Você já tem o máximo de "+FREEZE_MAX+" proteções"); return false; } if(xpBalance()<FREEZE_COST){ toast("Saldo insuficiente: faltam "+(FREEZE_COST-xpBalance())+" XP"); return false; } S.spent = (S.spent||0)+FREEZE_COST; S.freezes++; save(); toast("Proteção de sequência comprada!"); return true; }
 
 /* ---------- streak ---------- */
+/* ---------- modo férias: dias pausados não quebram a sequência ---------- */
+function vacations(){ return Array.isArray(S.vacations) ? S.vacations.filter(v=>v && v.from && v.to) : []; }
+function onVacation(k=todayKey()){ return vacations().some(v=>v.from<=k && k<=v.to); }
+function vacDaysBetween(a,b){ let n = 0; for(let d = addDays(a,1); d<b; d = addDays(d,1)) if(onVacation(d)) n++; return n; }
+function missedDays(last,t){ return Math.max(0, diffDays(last,t) - 1 - vacDaysBetween(last,t)); }
 function effectiveStreak(){
   const {count,last} = S.streak; if(!last) return 0;
-  const gap = diffDays(last, todayKey());
-  if(gap<=1) return count;
-  return (gap-1)<=S.freezes ? count : 0;
+  const miss = missedDays(last, todayKey());
+  return miss<=S.freezes ? count : 0;
+}
+function startVacation(days){
+  const from = todayKey(), to = addDays(from, days-1);
+  S.vacations = vacations().filter(v=>v.to<from).concat({from,to,spread:false}).slice(-10);
+  save(); toast("Modo férias até "+fmtDate(to)+". Sua sequência está protegida.");
+}
+function endVacation(){
+  const t = todayKey();
+  S.vacations = vacations().map(v=> v.from<=t && t<=v.to ? Object.assign({},v,{to:addDays(t,-1)}) : v).filter(v=>v.from<=v.to);
+  spreadAfterVacation(true); save(); toast("Bem-vindo de volta! As revisões atrasadas foram distribuídas nos próximos dias.");
+}
+// na volta, espalha as revisões acumuladas em 5 dias em vez de despejar tudo de uma vez
+function spreadAfterVacation(force){
+  const t = todayKey(), v = vacations().find(x=>!x.spread && x.to<t);
+  if(!v && !force) return false;
+  const late = [];
+  Object.entries(S.cards).forEach(([id,c])=>{ if(c.due<t) late.push(c); });
+  Object.values(S.gcards||{}).forEach(c=>{ if(c.due<t) late.push(c); });
+  late.sort((a,b)=>a.due<b.due?-1:1).forEach((c,i)=>{ c.due = addDays(t, i%5); });
+  if(v) v.spread = true;
+  return true;
 }
 function bumpStreak(){
   const t = todayKey(), st = S.streak;
   if(st.last===t) return;
-  const gap = st.last ? diffDays(st.last,t) : null;
-  if(gap===1) st.count++;
-  else if(gap>1 && gap-1<=S.freezes){ S.freezes -= gap-1; st.count++; toast("Proteção de sequência usada"); }
+  const miss = st.last ? missedDays(st.last,t) : null;
+  if(miss===0) st.count++;
+  else if(miss>0 && miss<=S.freezes){ S.freezes -= miss; st.count++; toast("Proteção de sequência usada"); }
   else st.count = 1;
   st.last = t; st.best = Math.max(st.best, st.count);
   if(st.count%7===0 && S.freezes<2){ S.freezes++; setTimeout(()=>toast("7 dias seguidos! Você ganhou 1 proteção de sequência"),2400); }
@@ -2378,7 +2405,7 @@ function renderToday(){
   const streak = effectiveStreak();
   const wk = weekStats(0), pw = weekStats(7);
   const trend = (a,b)=> b===0 ? "" : `<span class="small ${a>=b?"up":"down"}">${a>=b?"▲":"▼"} ${Math.abs(Math.round((a-b)/b*100))}%</span>`;
-  const atRisk = streak>0 && h>=18 && !doneM && !doneN && !rec.m.some(Boolean) && !rec.n.some(Boolean);
+  const atRisk = !onVacation() && streak>0 && h>=18 && !doneM && !doneN && !rec.m.some(Boolean) && !rec.n.some(Boolean);
   const vs = voiceStatus();
   // avisos por prioridade: no máximo 2 de cada vez, para não empurrar as sessões para baixo
   const tests = S.tests||[], lastT = tests.length ? tests[tests.length-1].d : null;
@@ -2398,6 +2425,7 @@ function renderToday(){
     <p class="muted">${doneM&&doneN?"Excelente — você fechou manhã e noite. Consistência é o que mais faz o inglês subir de nível.":"De manhã você treina ouvido e fala; à noite aprende palavras novas, gramática e escreve. A revisão da manhã fixa o que você aprendeu na noite anterior."}</p>
   </section>
   <div class="stack">
+    ${onVacation() ? `<div class="note row between"><span><b>Modo férias até ${fmtDate(vacations().find(v=>v.from<=todayKey()&&todayKey()<=v.to).to)}.</b> Sua sequência está protegida e as revisões esperam por você. Estudar nesses dias é bônus.</span><button class="btn sm" id="vacEnd">Voltar das férias</button></div>` : ""}
     ${banners.join("")}
     <div class="grid2">${card("m")}${card("n")}</div>
     ${!doneM && !doneN && !(rec.x && rec.x.every(Boolean)) ? `<div class="row between card pad x-mode" style="padding-block:12px"><span><b>Dia corrido?</b> <span class="muted">Sessão expressa de 5 min: revisão + um ditado. Mantém a sequência.</span></span><button class="btn" data-start="x">Fazer 5 min</button></div>` : ""}
@@ -2458,12 +2486,36 @@ function renderToday(){
     $("#reflectOut").innerHTML = `<p class="note small">${esc(ob[2])}</p><div class="row"><label for="wgoal" class="small">Meta para esta semana</label><select id="wgoal" style="width:auto">${[3,4,5,6,7].map(n=>`<option ${n===g?"selected":""}>${n}</option>`).join("")}</select><button class="btn sm primary" id="reflectOk">Pronto</button></div>`;
     $("#reflectOk").onclick = ()=>{ S.settings.weekGoal = +$("#wgoal").value; S.lastReflect = ws; save(); toast("Meta da semana: "+S.settings.weekGoal+" dias"); renderToday(); };
   });
+  const ve = $("#vacEnd"); if(ve) ve.onclick = ()=>{ endVacation(); renderToday(); };
   const tp = $("#toPlan"); if(tp) tp.onclick = ()=>{ go("progress"); setTimeout(()=>{ const p = $("#plm"); if(p){ p.scrollIntoView({block:"center"}); p.focus(); } },50); };
   const qb = $("#qbk"); if(qb) qb.onclick = async ()=>{ if(await quickBackup()) renderToday(); };
   const vh = $("#vhide"); if(vh) vh.onclick = ()=>{ voiceNoteHidden = true; renderToday(); };
   $("#wkd").addEventListener("toggle", e=>{ try{ localStorage.setItem("fluencia:wkOpen", e.target.open?"1":"0"); }catch(err){} });
 }
 
+/* ---------- novidades: mostradas uma vez após cada atualização ---------- */
+const APP_VERSION = "2026.09.26";
+const CHANGELOG = [
+ ["Gramática na revisão","Cada questão das aulas que você já fez volta na revisão da manhã, misturada às palavras."],
+ ["Lembre e digite","O mini-teste das palavras novas agora pede para digitar, com a primeira letra de dica."],
+ ["Antes de dormir","No fim da sessão da noite, 1 minuto para relembrar as palavras do dia."],
+ ["Meta da semana","Escolha quantos dias quer estudar; toda segunda o app pergunta o que atrapalhou."],
+ ["Repetição de tarefa","Temas de fala voltam depois de 2 e 7 dias para você falar com mais fluência."],
+ ["Modo férias","Vai viajar? Pause a sequência e as revisões sem perder nada (Progresso → Ajustes)."],
+ ["Retenção real","Veja em Progresso quanto você realmente lembra nas revisões, comparado à meta."],
+ ["A ciência por trás","As técnicas de aprendizagem do app, com referências, em Praticar → Recursos."]
+];
+function maybeShowNews(){
+  if(!S.onboarded || S.seenVersion===APP_VERSION) return;
+  if(!(S.xp>0)){ S.seenVersion = APP_VERSION; return; }
+  if($("#news")) return;
+  document.body.insertAdjacentHTML("beforeend", `<div id="news" class="overlay" role="dialog" aria-modal="true" aria-labelledby="newsT"><div class="card pad stack" style="max-width:520px;width:100%;max-height:82vh;overflow:auto">
+    <span class="eyebrow">Atualização</span><h2 id="newsT">Novidades no app</h2>
+    <ul class="news">${CHANGELOG.map(([t,d])=>`<li><b>${esc(t)}</b><span class="small muted">${esc(d)}</span></li>`).join("")}</ul>
+    <button class="btn primary" id="helpClose">Entendi</button></div></div>`);
+  const close = ()=>{ const n = $("#news"); if(n) n.remove(); S.seenVersion = APP_VERSION; save(); };
+  $("#helpClose").onclick = close; $("#news").onclick = e=>{ if(e.target.id==="news") close(); };
+}
 function renderOnboarding(){
   let lvl = "b1";
   view.innerHTML = `<section class="hello"><span class="eyebrow">Bem-vindo</span><h1>15 minutos de manhã, 15 à noite.</h1>
@@ -2491,7 +2543,7 @@ function renderOnboarding(){
   $("#ob-t").onclick = ()=>speak("Hi! Fifteen minutes in the morning, fifteen at night. Let's do this.");
   $("#ob-ics").onclick = async ()=>{ readTimes(); if(await saveFile("lembretes-ingles-15-15.ics", icsReminders(), "text/calendar")) toast("Abra o arquivo para adicionar ao calendário"); };
   $("#ob-test").onclick = ()=>{ readTimes(); S.onboarded = true; S.created = todayKey(); save(); go("practice","test"); };
-  $("#ob-go").onclick = ()=>{ const L = LEVELS.find(l=>l.id===lvl); readTimes(); S.listenLevel = L.listen; S.settings.newPerDay = L.newPer; S.settings.level = lvl; S.settings.rate = L.rate; S.level0 = lvl; S.onboarded = true; S.created = todayKey(); save(); go("today"); toast("Plano pronto — bons estudos!"); };
+  $("#ob-go").onclick = ()=>{ const L = LEVELS.find(l=>l.id===lvl); readTimes(); S.listenLevel = L.listen; S.settings.newPerDay = L.newPer; S.settings.level = lvl; S.settings.rate = L.rate; S.level0 = lvl; S.seenVersion = APP_VERSION; S.onboarded = true; S.created = todayKey(); save(); go("today"); toast("Plano pronto — bons estudos!"); };
 }
 
 /* ============================================================
@@ -4030,6 +4082,10 @@ function renderProgress(){
       <p class="small muted">No computador, pressione <span class="kbd">?</span> para ver os atalhos de teclado.</p>
       <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><span class="small muted"><span class="dot ${syncState==="cloud"?"ok":""}"></span> ${syncState==="cloud"?"Progresso salvo na sua conta — abre igual em outros dispositivos.":"Progresso salvo neste navegador."}</span></div>
       <hr class="sep">
+      <h3>Modo férias</h3>
+      <p class="small muted">Vai viajar ou ter uma semana impossível? Pause: a sequência fica protegida e, na volta, as revisões acumuladas são distribuídas em 5 dias.</p>
+      <div class="row">${onVacation()?`<span class="small"><b>Ativo</b> até ${fmtDate(vacations().find(v=>v.from<=todayKey()&&todayKey()<=v.to).to)}</span><button class="btn sm" id="vacStop">Voltar das férias</button>`:[3,7,14,21].map(n=>`<button class="btn sm" data-vac="${n}">Pausar ${n} dias</button>`).join("")}</div>
+      <hr class="sep">
       <h3>Seu plano de estudo</h3>
       <p class="small muted">Ancore o estudo em algo que você já faz todo dia. Planos “depois de X, eu faço Y” (intenções de implementação) aumentam muito a chance de cumprir.</p>
       <div class="grid2">${planHTML("m")}${planHTML("n")}</div>
@@ -4065,6 +4121,8 @@ function renderProgress(){
   $("#ex").onclick = ()=>{ const ta=$("#bk"); ta.value = JSON.stringify(S); ta.select(); S.lastBackup = todayKey(); save();
     if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>toast("Backup copiado"),()=>toast("Selecionado — copie com Ctrl+C")); else toast("Selecionado — copie com Ctrl+C"); };
   wirePlans(view);
+  $$("[data-vac]").forEach(b=>b.onclick=()=>{ startVacation(+b.dataset.vac); renderProgress(); });
+  const vs2 = $("#vacStop"); if(vs2) vs2.onclick = ()=>{ endVacation(); renderProgress(); };
   $("#s-tm").onchange = e=>{ if(e.target.value){ S.settings.tm=e.target.value; save(); } };
   $("#s-tn").onchange = e=>{ if(e.target.value){ S.settings.tn=e.target.value; save(); } };
   $("#ics").onclick = async ()=>{ if(await saveFile("lembretes-ingles-15-15.ics", icsReminders(), "text/calendar")) toast("Abra o arquivo para adicionar ao calendário"); };
@@ -4176,8 +4234,10 @@ function applyPrefs(){
    BOOT
    ============================================================ */
 loadLocal();
+if(spreadAfterVacation(false)) save();
 applyPrefs();
 go("today");
+setTimeout(maybeShowNews, 600);
 initPlatform();
 </script>
 
