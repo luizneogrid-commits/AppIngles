@@ -853,6 +853,37 @@ const LISTEN = [
 [3,"She must have been under a lot of pressure to make such a rushed decision."],
 [3,"Whether or not we go ahead depends entirely on the feedback from our clients."],
 [3,"There's a growing body of evidence suggesting that remote work boosts productivity."],
+// ---- pacote 3 (níveis 1 a 3) ----
+[1,"Could you let me know when you're free this week?"],
+[1,"I'm afraid I can't make it to the meeting today."],
+[1,"We're running out of time, so let's be quick."],
+[1,"She's been living abroad for almost two years."],
+[1,"Do you mind if I call you back in ten minutes?"],
+[1,"I didn't sleep well, so I'm a bit tired today."],
+[1,"The flight was cancelled because of the storm."],
+[1,"Can you send me the link after the call?"],
+[1,"I'm looking for a cheaper place to live."],
+[1,"It took me an hour to get home yesterday."],
+[2,"I would have called you, but my phone died."],
+[2,"As soon as I get the numbers, I'll send you an update."],
+[2,"They've been trying to fix the problem since this morning."],
+[2,"If the client agrees, we'll start working on it next week."],
+[2,"I'm not used to speaking English in meetings yet."],
+[2,"She asked me whether I could stay a bit longer."],
+[2,"We ended up ordering pizza because nobody wanted to cook."],
+[2,"It's the first time I've ever been to a conference abroad."],
+[2,"The report needs to be finished by the end of the day."],
+[2,"I wish I had started learning English when I was younger."],
+[3,"Had it not been for the delay, we would have closed the deal."],
+[3,"The more feedback we gather now, the fewer surprises we'll have later."],
+[3,"She is said to be one of the most experienced engineers in the company."],
+[3,"By the time the budget is approved, the project will have lost momentum."],
+[3,"What surprised me most was how quickly the team adapted to the change."],
+[3,"Under no circumstances should customer data be shared without consent."],
+[3,"It remains to be seen whether the new strategy will pay off."],
+[3,"Were we to cut costs any further, quality would inevitably suffer."],
+[3,"Much as I appreciate the offer, I'm going to have to turn it down."],
+[3,"Rather than blaming each other, we should focus on finding a solution."],
 // ---- nível 0 (iniciante): terceiro campo = tradução ----
 [0,"My name is Paulo and I live in Brazil.","Meu nome é Paulo e eu moro no Brasil."],
 [0,"I am a teacher.","Eu sou professor."],
@@ -1594,11 +1625,50 @@ const DIALOGS = [
  ["me","Diga que, com base nisso, acredita que um reajuste de 10% seria justo",[["Based on that, I believe a ten percent raise would be fair.",1,"“Raise” = aumento; “would be fair” soa firme e educado."],["Based on this, I deserve ten percent more of salary.",0,"Soa exigente e a estrutura não é natural; use “a ten percent raise”."],["So I think is fair ten percent more.",0,"Falta sujeito e a ordem está errada."]]],
  ["a","I appreciate you bringing this up. I can't promise ten percent, but let me talk to HR."],
  ["me","Agradeça e pergunte quando terá uma resposta",[["Thank you. When do you think you'll have an answer?",1,"Pergunta indireta e educada sobre prazo."],["Thanks. When you will have an answer?",0,"Pergunta direta precisa de inversão: “When will you have…?”"],["Thanks. Until when you answer me?",0,"Use “When do you think you'll have an answer?”"]]],
- ["a","I should know by the end of next week. Thanks for being so well prepared."]]}
+ ["a","I should know by the end of next week. Thanks for being so well prepared."]]},
+{id:"feedback",t:"Dando feedback a um colega",lvl:"B1+",d:"Apontar um problema no trabalho de alguém com tato.",lines:[
+ ["a","Hey, you wanted to talk about the report?"],
+ ["me","Comece reconhecendo o esforço",[["Yes. First of all, thanks for putting it together so quickly.",1,"“Put together” = montar, preparar. Começar com algo positivo abre a conversa."],["Yes. First, thank you for do the report so fast.",0,"Depois de preposição, -ing: “for doing”; e “so quickly” (advérbio)."],["Yes. The report has problems.",0,"Direto demais: em inglês, feedback costuma começar pelo positivo."]]],
+ ["a","No problem. Was everything OK?"],
+ ["me","Diga, com tato, que alguns números parecem estar errados",[["Mostly, yes. I did notice that a few numbers seem to be off, though.",1,"“Seem to be off” suaviza; “though” no fim marca a ressalva."],["Mostly yes, but you made mistakes in the numbers.",0,"Soa acusatório (“you made mistakes”). Prefira “a few numbers seem to be off”."],["Yes, but the numbers are wrongs.",0,"Adjetivo não tem plural: “wrong”."]]],
+ ["a","Oh no. Which ones?"],
+ ["me","Explique que os de março não batem com a planilha",[["The March figures don't match the spreadsheet.",1,"“Figures” = números/dados; “match” = bater com."],["The numbers of March don't hit with the spreadsheet.",0,"“Bater com” = “match”; e “March figures” soa mais natural."],["March numbers is not combining with the sheet.",0,"“Combinar” aqui é “match”; e “numbers are”."]]],
+ ["a","You're right, I must have used the old version. I'll fix it."],
+ ["me","Ofereça ajuda e combine um prazo",[["No worries. Could you send me the updated version by tomorrow? Let me know if you need a hand.",1,"“Need a hand” = precisar de ajuda; prazo com “by”."],["No problem. Send me until tomorrow. If you need help, talk me.",0,"Prazo usa “by”, não “until”; e “talk to me”."],["OK. You must to send tomorrow.",0,"Modal sem “to”, e soa como ordem."]]],
+ ["a","Sure, I'll have it ready by tomorrow morning. Thanks for catching that."]]},
+{id:"present",t:"Apresentando resultados",lvl:"B2",d:"Abrir, mostrar números e responder a uma pergunta difícil.",lines:[
+ ["a","Whenever you're ready, the floor is yours."],
+ ["me","Abra a apresentação e diga o que vai cobrir",[["Thanks. Today I'd like to walk you through our third-quarter results and our plans for next quarter.",1,"“Walk you through” = explicar passo a passo."],["Thanks. Today I will present to you the results of the third quarter and the plans.",0,"Compreensível, mas rígido; “walk you through” soa natural."],["Thanks. Today I'm going to show about the results.",0,"“Show” não leva “about”."]]],
+ ["a","Great. Let's start with the numbers."],
+ ["me","Diga que as vendas subiram 12% em relação ao trimestre anterior",[["Sales went up by twelve percent compared to the previous quarter.",1,"“Go up by” + porcentagem; “compared to”."],["Sales raised twelve percent than the last quarter.",0,"“Raise” precisa de objeto; aqui é “rose/went up”, e “compared to”."],["The sales grew in twelve percent.",0,"Aumento de X% usa “by”: “grew by twelve percent”."]]],
+ ["a","That's impressive. But why did costs increase as well?"],
+ ["me","Explique que foi um investimento pontual em treinamento",[["That's mainly due to a one-off investment in training, which we don't expect to repeat.",1,"“Due to” = devido a; “one-off” = pontual."],["Is because of one investment unique in training.",0,"Falta sujeito, e “investimento pontual” = “one-off investment”."],["Because we invested in training, but it will not happen more.",0,"“Not… anymore” / “won't happen again”."]]],
+ ["a","Makes sense. What's the outlook for next quarter?"],
+ ["me","Diga que estão cautelosamente otimistas",[["We're cautiously optimistic. We expect steady growth if demand holds up.",1,"“Cautiously optimistic” é uma expressão comum em negócios; “hold up” = se manter."],["We are optimists with caution.",0,"A expressão fixa é “cautiously optimistic”."],["We think will be good if the demand continue.",0,"Faltam sujeito (“it will”) e o -s (“continues”)."]]],
+ ["a","Thank you, that was very clear."]]},
+{id:"angry",t:"Cliente insatisfeito ao telefone",lvl:"B1+",d:"Acalmar o cliente, entender o problema e propor uma solução.",lines:[
+ ["a","This is the third time I've called about this! My order still hasn't arrived."],
+ ["me","Peça desculpas e mostre que entende a frustração",[["I'm really sorry about that. I completely understand how frustrating this must be.",1,"Reconhecer o sentimento acalma: “I understand how frustrating this must be”."],["Calm down, sir. It's not my fault.",0,"Mandar alguém se acalmar costuma piorar a situação."],["Sorry. I understand your frustration of this.",0,"Diga “your frustration” ou “how frustrating this is”; “of this” sobra."]]],
+ ["a","I just want to know where my package is."],
+ ["me","Peça o número do pedido para verificar",[["Of course. Could I have your order number so I can look into it?",1,"“Look into” = investigar; pedido educado com “Could I have…”."],["Give me the number of the order.",0,"Imperativo seco; e “order number” soa melhor."],["Can you pass me your order number to I check?",0,"Finalidade: “so I can check”."]]],
+ ["a","It's 4-5-8-2-1."],
+ ["me","Diga que o pacote está preso no depósito e que você vai reenviar hoje",[["I can see it's been held up at our warehouse. I'll have it reshipped today, free of charge.",1,"“Held up” = atrasado/retido; “free of charge” = sem custo."],["It is stopped in the warehouse. I send again today for free.",0,"Use “has been held up” e “I'll have it reshipped”."],["Your package is stucked in the warehouse.",0,"O particípio é “stuck”, sem -ed."]]],
+ ["a","Fine. When will it get here?"],
+ ["me","Diga que deve chegar em até dois dias úteis e que vai mandar o rastreio",[["It should arrive within two business days, and I'll email you the tracking number.",1,"“Within” = em até; “business days” = dias úteis."],["It must arrive in two useful days.",0,"Dias úteis = “business days” (não “useful”)."],["It will arrive until two days.",0,"Prazo: “within two days” ou “in two days”."]]],
+ ["a","OK. Thank you for sorting it out."]]}
 ];
 
 // Leituras graduadas: texto, glossário (toque para traduzir) e perguntas [pergunta, opções, índice correto]
 const READINGS = [
+{id:"adult",t:"Too Old to Learn?",lvl:"B1",text:"Many adults believe they are too old to learn a new language. It's true that children often end up with a more native-like accent, but adults have real advantages. They already understand how grammar works, they can use study strategies, and they know why they are learning. Research suggests that adults actually learn faster than children in the early stages. What makes the biggest difference is not age, but time and consistency. Someone who practices fifteen minutes every day will usually make more progress than someone who studies for three hours once a week. So the best time to start is not when you were a child. It's today.",
+ gloss:{"believe":"acreditam","end up with":"acabam tendo","native-like":"parecido com o de nativo","advantages":"vantagens","already":"já","strategies":"estratégias","Research suggests":"pesquisas sugerem","early stages":"estágios iniciais","consistency":"constância","usually":"geralmente"},
+ q:[["What advantage do children often have?",["They learn grammar faster","A more native-like accent","They study more"],1],["According to the text, what makes the biggest difference?",["Age","Talent","Time and consistency"],2],["What is the main message?",["It's too late for adults","Adults can learn well, and the best time to start is now","Only children can become fluent"],1]]},
+{id:"notif",t:"The Hidden Cost of Notifications",lvl:"B1+",text:"Every time your phone buzzes, your attention is pulled away from what you were doing. Even if you ignore the notification, researchers have found that it can take several minutes to fully refocus. Over a working day, these small interruptions add up to a significant loss of productivity. Some companies have started to experiment with notification-free hours, during which employees agree not to send messages unless it is urgent. Early results are encouraging: people report feeling less stressed and more in control of their time. The simplest step, however, is personal: turning off non-essential notifications and checking messages at set times instead of constantly.",
+ gloss:{"buzzes":"vibra","pulled away":"desviada","ignore":"ignore","researchers":"pesquisadores","refocus":"se concentrar de novo","add up to":"somam","significant":"significativa","unless":"a menos que","encouraging":"animadores","in control of":"no controle de","non-essential":"não essenciais","at set times":"em horários fixos"},
+ q:[["What happens even if you ignore a notification?",["Nothing changes","It can take minutes to refocus","The phone turns off"],1],["What are some companies trying?",["Notification-free hours","Banning phones completely","Paying for silent phones"],0],["What is the simplest personal step?",["Buying a new phone","Working longer hours","Turning off non-essential notifications"],2]]},
+{id:"accent",t:"Accents Matter Less Than You Think",lvl:"B2",text:"Many learners obsess over sounding like a native speaker, yet research on international communication points in a different direction. What really determines whether you are understood is intelligibility, not the absence of an accent. Some features matter a great deal — word stress, the difference between long and short vowels, and not adding extra syllables — while others, such as the exact quality of the r sound, rarely cause misunderstandings. In fact, most conversations in English today take place between non-native speakers. Rather than trying to erase your accent, it pays to focus on the handful of features that genuinely affect clarity, and to speak with confidence.",
+ gloss:{"obsess over":"ficam obcecados com","yet":"no entanto","points in a different direction":"aponta para outra direção","determines":"determina","intelligibility":"inteligibilidade","absence":"ausência","word stress":"sílaba tônica","rarely":"raramente","misunderstandings":"mal-entendidos","take place":"acontecem","erase":"apagar","it pays to":"vale a pena","handful of":"punhado de","genuinely":"de fato"},
+ q:[["According to the text, what matters most for being understood?",["Having no accent","Intelligibility","Speaking fast"],1],["Which feature does the text say rarely causes misunderstandings?",["Word stress","Adding extra syllables","The exact quality of the r sound"],2],["What is the text's advice?",["Focus on the few features that affect clarity","Try to erase your accent completely","Avoid speaking until you sound native"],0]]},
 {id:"mycity",t:"My City",lvl:"A1",text:"I live in Florianópolis, in the south of Brazil. It is an island, so there are many beautiful beaches. The city is not very big, but it is busy in the summer. There are good restaurants near the sea, and the seafood is fresh and cheap. In the winter, it is cold and windy, and there are not many tourists. I like my city because it is quiet and green. The only problem is the traffic on the bridge in the morning.",
  gloss:{"south":"sul","island":"ilha","beaches":"praias","busy":"movimentada","near":"perto de","seafood":"frutos do mar","fresh":"fresco","windy":"com vento","tourists":"turistas","quiet":"tranquila","bridge":"ponte"},
  q:[["Where is Florianópolis?",["In the north of Brazil","In the south of Brazil","In Portugal"],1],["How is the city in the winter?",["Hot and busy","Cold and windy","Full of tourists"],1],["What is the problem in the morning?",["The traffic on the bridge","The rain","The restaurants are closed"],0]]},
@@ -1661,7 +1731,10 @@ const PHRASES = [
  {t:"Opinião",p:[["In my opinion,…","Na minha opinião,…"],["I see your point, but…","Entendo seu ponto, mas…"],["That's a good point.","Bem lembrado."],["I couldn't agree more.","Concordo totalmente."],["I'm not so sure about that.","Não tenho tanta certeza disso."],["It depends on…","Depende de…"],["To be fair,…","Para ser justo,…"]]},
  {t:"Viagem",p:[["I have a reservation under the name…","Tenho uma reserva no nome de…"],["Could you call me a taxi?","Pode chamar um táxi para mim?"],["How do I get to…?","Como eu chego a…?"],["Is it within walking distance?","Dá para ir a pé?"],["What time is check-out?","Que horas é o check-out?"],["I'd like a window seat, please.","Eu gostaria de um assento na janela, por favor."],["My luggage didn't arrive.","Minha bagagem não chegou."]]},
  {t:"Restaurante e compras",p:[["Could we get the check, please?","Pode trazer a conta, por favor?"],["I'll have the…","Eu vou querer o…"],["What do you recommend?","O que você recomenda?"],["Could I get this to go?","Pode embalar para viagem?"],["I'm just looking, thanks.","Só estou olhando, obrigado."],["Do you have this in a different size?","Tem esse em outro tamanho?"],["Can I pay by card?","Posso pagar com cartão?"]]},
- {t:"Conversa informal",p:[["How's it going?","E aí, tudo certo?"],["What have you been up to?","O que você tem feito?"],["Long time no see!","Quanto tempo!"],["That sounds great!","Que ótimo!"],["No worries.","Sem problemas."],["I'm down for that.","Tô dentro."],["Catch you later!","Até mais!"]]}
+ {t:"Conversa informal",p:[["How's it going?","E aí, tudo certo?"],["What have you been up to?","O que você tem feito?"],["Long time no see!","Quanto tempo!"],["That sounds great!","Que ótimo!"],["No worries.","Sem problemas."],["I'm down for that.","Tô dentro."],["Catch you later!","Até mais!"]]},
+ {t:"Trabalho remoto e chat",p:[["Can you hear me OK?","Está me ouvindo bem?"],["You're on mute.","Você está no mudo."],["Sorry, you broke up for a second.","Desculpe, cortou por um segundo."],["I'll share my screen.","Vou compartilhar minha tela."],["Quick question when you have a sec.","Uma perguntinha quando tiver um segundo."],["Just following up on this.","Só retomando este assunto."],["Heads up: the deadline moved to Friday.","Atenção: o prazo mudou para sexta."],["I'm stepping away for lunch, back in 30.","Vou sair para almoçar, volto em 30."]]},
+ {t:"Apresentações",p:[["Thanks for having me.","Obrigado por me receberem."],["Today I'd like to walk you through…","Hoje eu gostaria de apresentar, passo a passo…"],["Let's move on to the next slide.","Vamos para o próximo slide."],["As you can see here,…","Como vocês podem ver aqui,…"],["To sum up,…","Para resumir,…"],["That's a great question.","Ótima pergunta."],["I don't have that number with me, but I'll get back to you.","Não tenho esse número aqui, mas te dou retorno."],["Are there any questions?","Alguma pergunta?"]]},
+ {t:"Negociação",p:[["What did you have in mind?","O que você tinha em mente?"],["That's a bit higher than we expected.","Está um pouco acima do que esperávamos."],["Is there any flexibility on the price?","Tem alguma flexibilidade no preço?"],["What if we met halfway?","E se a gente se encontrasse no meio do caminho?"],["I'd need to check with my team first.","Eu precisaria confirmar com minha equipe antes."],["That works for us.","Isso funciona para nós."],["Let's put that in writing.","Vamos colocar isso por escrito."],["I think we have a deal.","Acho que fechamos negócio."]]}
 ];
 // Perguntas rápidas para treino de fluência
 const QUICK_A = ["What's your name?","Where are you from?","What do you do?","What time do you wake up?","What's your favorite food?","Do you have any brothers or sisters?","What did you eat yesterday?","Where do you live?","What do you do on weekends?","Do you like coffee or tea?","What's the weather like today?","How do you go to work or school?","What's your favorite color?","What can you see from your window?"];
@@ -1780,12 +1853,28 @@ function merge(o){
   r.v = 2;
   return r;
 }
+/* ---------- orçamento de tamanho: o documento na nuvem aceita no máximo 256 KB ---------- */
+const STATE_BUDGET = 200*1024, JOURNAL_BUDGET = 90*1024, DAYS_KEEP = 400;
+function trimState(){
+  // histórico diário: nada no app olha além de ~13 meses (calendário 12 semanas, gráficos 30 dias, conquistas já registradas)
+  const cutoff = addDays(todayKey(), -DAYS_KEEP);
+  Object.keys(S.days).forEach(k=>{ if(k<cutoff) delete S.days[k]; });
+  // diário: mantém os textos mais recentes dentro do orçamento
+  let js = JSON.stringify(S.journal).length;
+  while(js>JOURNAL_BUDGET && S.journal.length>5){ S.journal.pop(); js = JSON.stringify(S.journal).length; }
+  // pontos de segurança: listas auxiliares com teto
+  if(Array.isArray(S.mistakes) && S.mistakes.length>80) S.mistakes = S.mistakes.slice(-80);
+  if(Array.isArray(S.dictMiss) && S.dictMiss.length>40) S.dictMiss = S.dictMiss.slice(-40);
+  if(Array.isArray(S.tests) && S.tests.length>24) S.tests = S.tests.slice(-24);
+}
+let sizeWarned = false;
 function save(){
   checkQuests();
   checkAch();
   S.updatedAt = Date.now();
   if(S.journal.length>40) S.journal.length = 40;
   if(S.dict.length>40) S.dict = S.dict.slice(-40);
+  trimState();
   try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
   if(userDoc){ clearTimeout(remoteTimer); remoteTimer = setTimeout(pushRemote, 1500); }
   updateHeader();
@@ -1794,8 +1883,14 @@ async function pushRemote(){
   if(!userDoc) return;
   if(remoteBusy){ remoteAgain = true; return; }
   remoteBusy = true;
+  const body = JSON.stringify(S);
+  if(body.length > STATE_BUDGET){
+    // último recurso: corta o diário até caber; o texto completo continua no aparelho e no backup
+    while(JSON.stringify(S).length > STATE_BUDGET && S.journal.length>1) S.journal.pop();
+    if(!sizeWarned){ sizeWarned = true; toast("Seu diário ficou grande: textos mais antigos saíram da nuvem. Exporte o diário para guardar tudo."); }
+  }
   try{ await userDoc.set(JSON.parse(JSON.stringify(S))); syncState = "cloud"; }
-  catch(e){ syncState = "local"; }
+  catch(e){ syncState = "local"; if(e && (e.code==="invalid_argument"||e.code==="quota_exceeded")) toast("Não foi possível salvar na nuvem agora. Seu progresso está salvo neste aparelho."); }
   remoteBusy = false;
   if(remoteAgain){ remoteAgain = false; pushRemote(); }
 }

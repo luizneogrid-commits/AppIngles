@@ -1836,12 +1836,28 @@ function merge(o){
   r.v = 2;
   return r;
 }
+/* ---------- orçamento de tamanho: o documento na nuvem aceita no máximo 256 KB ---------- */
+const STATE_BUDGET = 200*1024, JOURNAL_BUDGET = 90*1024, DAYS_KEEP = 400;
+function trimState(){
+  // histórico diário: nada no app olha além de ~13 meses (calendário 12 semanas, gráficos 30 dias, conquistas já registradas)
+  const cutoff = addDays(todayKey(), -DAYS_KEEP);
+  Object.keys(S.days).forEach(k=>{ if(k<cutoff) delete S.days[k]; });
+  // diário: mantém os textos mais recentes dentro do orçamento
+  let js = JSON.stringify(S.journal).length;
+  while(js>JOURNAL_BUDGET && S.journal.length>5){ S.journal.pop(); js = JSON.stringify(S.journal).length; }
+  // pontos de segurança: listas auxiliares com teto
+  if(Array.isArray(S.mistakes) && S.mistakes.length>80) S.mistakes = S.mistakes.slice(-80);
+  if(Array.isArray(S.dictMiss) && S.dictMiss.length>40) S.dictMiss = S.dictMiss.slice(-40);
+  if(Array.isArray(S.tests) && S.tests.length>24) S.tests = S.tests.slice(-24);
+}
+let sizeWarned = false;
 function save(){
   checkQuests();
   checkAch();
   S.updatedAt = Date.now();
   if(S.journal.length>40) S.journal.length = 40;
   if(S.dict.length>40) S.dict = S.dict.slice(-40);
+  trimState();
   try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
   if(userDoc){ clearTimeout(remoteTimer); remoteTimer = setTimeout(pushRemote, 1500); }
   updateHeader();
@@ -1850,8 +1866,14 @@ async function pushRemote(){
   if(!userDoc) return;
   if(remoteBusy){ remoteAgain = true; return; }
   remoteBusy = true;
+  const body = JSON.stringify(S);
+  if(body.length > STATE_BUDGET){
+    // último recurso: corta o diário até caber; o texto completo continua no aparelho e no backup
+    while(JSON.stringify(S).length > STATE_BUDGET && S.journal.length>1) S.journal.pop();
+    if(!sizeWarned){ sizeWarned = true; toast("Seu diário ficou grande: textos mais antigos saíram da nuvem. Exporte o diário para guardar tudo."); }
+  }
   try{ await userDoc.set(JSON.parse(JSON.stringify(S))); syncState = "cloud"; }
-  catch(e){ syncState = "local"; }
+  catch(e){ syncState = "local"; if(e && (e.code==="invalid_argument"||e.code==="quota_exceeded")) toast("Não foi possível salvar na nuvem agora. Seu progresso está salvo neste aparelho."); }
   remoteBusy = false;
   if(remoteAgain){ remoteAgain = false; pushRemote(); }
 }
