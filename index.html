@@ -2389,6 +2389,45 @@ function feedbackHTML(r){
     ${r.tip?`<p class="note">${esc(r.tip)}</p>`:""}
   </div>`;
 }
+/* ---------- verificador offline de erros típicos de brasileiros (sem IA) ---------- */
+const COMMON_ERRORS = [
+ [/\bI (?:have|had) (?:\d+|twenty|thirty|forty|fifty|sixty)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?(?: years(?: old)?\b|(?=\s*(?:[.,!?;]|and\b|$)))/gi, "I'm … (years old)", "Idade usa to be: “I'm 30” ou “I'm 30 years old”, nunca “I have 30 years”."],
+ [/\bdepend(?:s|ed|ing)? of\b/gi, "depend on", "Em inglês é “depend on”, nunca “depend of”."],
+ [/\bpeople (?:is|was|has)\b/gi, "people are / were / have", "“People” é plural: people are, people were, people have."],
+ [/\bmake (?:a|some|many|more) questions?\b/gi, "ask a question", "Fazer uma pergunta = “ask a question”, não “make”."],
+ [/\b(informations|advices|furnitures|luggages|homeworks|feedbacks|equipments|knowledges|evidences)\b/gi, "sem -s (incontável)", "Essa palavra é incontável em inglês: não leva “s” nem “a/an”. Ex.: some information, a piece of advice."],
+ [/\b(?:I am|I'm|we are|we're|they are|they're|she is|he is) agree\b/gi, "I agree / we agree", "“Agree” é verbo: “I agree”, sem “am”."],
+ [/\bexplain (?:me|him|her|us|them)\b/gi, "explain to me / explain it to me", "Explain pede “to” antes da pessoa: “explain to me” ou “explain it to me”."],
+ [/\bdiscuss(?:ed|ing|es)? about\b/gi, "discuss (sem about)", "“Discuss” é transitivo direto: “discuss the plan”, sem “about”."],
+ [/\bsince (?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|many|several) (?:years?|months?|weeks?|days?|hours?)\b/gi, "for … years", "Duração usa “for”: “for three years”. “Since” vem com ponto de início: since 2020."],
+ [/\bmarried with\b/gi, "married to", "Casado com = “married to”."],
+ [/\barriv(?:e|es|ed|ing) to\b/gi, "arrive in / arrive at", "“Arrive” nunca leva “to”: arrive in (cidade/país), arrive at (lugar)."],
+ [/\b(?:he|she|it) don't\b/gi, "doesn't", "Com he/she/it, o negativo é “doesn't”."],
+ [/\b(?:didn't|did not|does|doesn't|do|don't) (went|saw|did|had|made|took|got|came|gave|told|knew|thought|bought|found|felt|left|wrote|spoke|ate|drank)\b/gi, "verbo na forma base", "Depois de did/didn't/do/does, o verbo volta à forma base: didn't go, did you see."],
+ [/\bmore (easy|big|cheap|fast|good|bad|small|hot|cold|old|young|nice|long|short|happy|busy|early|late)\b/gi, "…er / better / worse", "Adjetivos curtos fazem comparativo com -er (bigger, easier); good → better, bad → worse. Nunca “more big”."],
+ [/\b(?:must|can|could|should|will|would|might|may) to (?=[a-z])/gi, "modal sem “to”", "Depois de modal (must, can, should, will…), o verbo vem sem “to”: “I must go”."],
+ [/\bto can\b/gi, "to be able to", "“Can” não tem infinitivo. Use “to be able to”: I want to be able to speak."],
+ [/\b(?:am|'m|is|are|get|got|getting) used to (wake|work|go|do|speak|live|eat|drive|study|talk|walk|cook|read|travel|sleep)\b/gi, "used to + -ing", "Depois de “be/get used to”, use -ing: I'm used to working."],
+ [/\bin the weekend\b/gi, "on the weekend (EUA) / at the weekend (Reino Unido)", "Fim de semana leva “on” (americano) ou “at” (britânico), não “in”."],
+ [/\bassist(?:ed|ing)? (?:a|the|to) (?:movie|film|game|show|class|lecture)\b/gi, "watch / attend", "Falso cognato: “assist” = ajudar. Assistir a um filme = watch; assistir a uma aula = attend."],
+ [/\bthere (?:have|has|had)\b/gi, "there is / there are", "“Tem” no sentido de existir = there is / there are, não “there have”."],
+ [/\bdon't (?:have|know|see|want|need) (?:nothing|nobody|nowhere)\b/gi, "anything / anybody / anywhere", "Inglês não usa dupla negação: “I don't have anything” ou “I have nothing”."],
+ [/\beverybody (?:are|have|were)\b/gi, "everybody is / has / was", "“Everybody/everyone” é singular: everybody is, everybody has."],
+ [/\bhow (?:do )?you call\b/gi, "what do you call… / how do you say…", "Para perguntar o nome de algo: “What do you call…?” ou “How do you say… in English?”."],
+ [/\b(?:the )?(?:actual|actually) (?=(?:job|company|situation|moment|president|price)\b)/gi, "current / currently", "Falso cognato: “actual” = real, verdadeiro. Atual = current."],
+ [/\bin (?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b/gi, "on Monday", "Dias da semana levam “on”: on Monday."],
+ [/\bI (?:stay|stayed) (?:happy|sad|tired|sick|nervous|angry|worried)\b/gi, "I get / I got / I was", "“Ficar” com emoção ou estado = get/become (I got tired), não “stay”."]
+];
+function commonErrors(text){
+  const out = [];
+  COMMON_ERRORS.forEach(([re,fix,why])=>{ re.lastIndex = 0; let m; while((m = re.exec(text))){ out.push({at:m.index, found:m[0], fix, why}); if(!re.global) break; } });
+  return out.sort((a,b)=>a.at-b.at).slice(0,12);
+}
+function commonErrorsHTML(text){
+  const errs = commonErrors(text);
+  if(!errs.length) return `<p class="note small">Nenhum dos erros típicos de brasileiros encontrado. O verificador pega ~25 padrões comuns — não substitui uma correção completa.</p>`;
+  return `<div class="fb"><div class="eyebrow">Possíveis erros típicos (${errs.length})</div><ul class="errs">${errs.map(e=>`<li><s lang="en">${esc(e.found)}</s> → <ins>${esc(e.fix)}</ins><div class="small muted">${esc(e.why)}</div></li>`).join("")}</ul><p class="small muted">Verificador automático de padrões comuns: pode deixar passar erros e, raramente, marcar algo que está certo no contexto.</p></div>`;
+}
 function correctionPrompt(kind,task,text,targets){
   return `You are an expert English teacher helping a Brazilian Portuguese speaker whose level is ${curLevel().en}.${isBasic()?" Keep corrections and explanations very simple and encouraging; focus only on the most basic errors.":""}
 Correct the learner's ${kind==="speak"?"spoken answer (it is a speech transcript or summary, so ignore punctuation and capitalization)":"written text"} below.
@@ -3078,7 +3117,7 @@ function blockSpeak(el,opt={},forceIdx){
         <label><input type="checkbox"> Na segunda tentativa falei com mais detalhe</label>
       </div>
       ${p.ex?`<details class="rule"><summary>Ver exemplo de resposta</summary><div class="stack" style="margin-top:8px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start">${spk(p.ex,"Ouvir exemplo")}<p lang="en" class="corr" style="flex:1">${esc(p.ex)}</p></div><p class="small muted">Ouça, repita junto uma vez e depois responda com as suas informações. Copiar a estrutura é um ótimo começo.</p></div></details>`:""}
-      <div class="row">${AI?`<button class="btn" id="fb">Corrigir minha resposta (IA)</button><button class="btn ghost" id="model">Ver resposta modelo (IA)</button>`:`<span class="muted small">O feedback com IA aparece quando o app está aberto no Claude.</span>`}</div>
+      <div class="row"><button class="btn" id="chkErrS">Verificar erros comuns</button>${AI?`<button class="btn" id="fb">Corrigir minha resposta (IA)</button><button class="btn ghost" id="model">Ver resposta modelo (IA)</button>`:`<span class="muted small">O feedback com IA aparece quando o app está aberto no Claude.</span>`}</div>
       <div id="aiout" role="status" aria-live="polite"></div>
     </div>`;
     $("#other",el).onclick = ()=>{ idx=(idx+1+Math.floor(Math.random()*(POOL.length-1)))%POOL.length; stopRec(); clearInterval(countdown); draw(); };
@@ -3086,6 +3125,7 @@ function blockSpeak(el,opt={},forceIdx){
     $("#go2",el).onclick = ()=>run(60);
     if(AI){ $("#fb",el).onclick = feedback; $("#model",el).onclick = model; }
     wireRecorder(el,"recS",150);
+    $("#chkErrS",el).onclick = ()=>{ const t = $("#said",el).value.trim(); if(t.split(/\s+/).length<5){ toast("Digite ou dite um resumo do que você disse primeiro"); return; } $("#aiout",el).innerHTML = commonErrorsHTML(t); };
   }
   function run(sec){
     clearInterval(countdown); stopRec();
@@ -3354,7 +3394,7 @@ function blockWrite(el,opt={}){
     ${targets.length?`<div class="stack" style="gap:6px"><span class="eyebrow">Use pelo menos 2 palavras recentes</span><div class="row" id="tg">${targets.map(t=>`<span class="chip" data-t="${esc(t)}">${esc(t)}</span>`).join("")}</div></div>`:""}
     <textarea id="jr" rows="8" placeholder="Start writing… Pense em inglês simples em vez de traduzir frases longas do português.">${esc(S.draft||"")}</textarea>
     <div class="row between"><span class="small muted" id="wc">0 palavras · meta ${goal}</span><span class="small muted">Rascunho salvo automaticamente</span></div>
-    <div class="row">${AI?`<button class="btn primary" id="ai">Corrigir com IA</button>`:""}<button class="btn ${AI?"":"primary"}" id="sv">Salvar no diário</button></div>
+    <div class="row">${AI?`<button class="btn primary" id="ai">Corrigir com IA</button>`:""}<button class="btn" id="chkErr">Verificar erros comuns</button><button class="btn ${AI?"":"primary"}" id="sv">Salvar no diário</button></div>
     ${AI?"":`<div class="checks"><span class="eyebrow">Autorrevisão</span>
       <label><input type="checkbox"> Conferi os tempos verbais (passado × present perfect)</label>
       <label><input type="checkbox"> Usei conectores (however, although, therefore…)</label>
@@ -3371,6 +3411,7 @@ function blockWrite(el,opt={}){
   }
   ta.addEventListener("input",()=>{ upd(); clearTimeout(dt); dt=setTimeout(()=>{ S.draft = ta.value; save(); },800); });
   upd();
+  $("#chkErr",el).onclick = ()=>{ const t = ta.value.trim(); if(t.split(/\s+/).length<5){ toast("Escreva um pouco antes de verificar"); return; } $("#aiout",el).innerHTML = commonErrorsHTML(t); };
   if(AI) $("#ai",el).onclick = async ()=>{
     const text = ta.value.trim(); if(text.split(/\s+/).length<minAI){ toast("Escreva pelo menos "+minAI+" palavras antes de pedir correção"); return; }
     const out = $("#aiout",el); out.innerHTML = loadingHTML("Corrigindo seu texto…");
