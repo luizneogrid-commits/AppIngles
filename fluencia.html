@@ -2772,8 +2772,11 @@ function lcsOk(t,g){
   return ok;
 }
 function blockListen(el,opt={}){
-  let item, shadows = 0, hinted = false;
+  let item, shadows = 0, hinted = false, retry = null;
   function pick(){
+    retry = null;
+    const t = todayKey(), miss = (Array.isArray(S.dictMiss) ? S.dictMiss : []).filter(m=>diffDays(m.d,t)>=2 && LISTEN.some(x=>x[1]===m.t));
+    if(miss.length && Math.random()<0.4){ retry = miss[Math.floor(Math.random()*miss.length)]; item = LISTEN.find(x=>x[1]===retry.t); return; }
     const lvl = S.listenLevel ?? 1;
     let pool = LISTEN.filter(x=>x[0]===lvl && !S.recentListen.includes(x[1]));
     if(!pool.length) pool = LISTEN.filter(x=>x[0]===lvl);
@@ -2784,7 +2787,7 @@ function blockListen(el,opt={}){
     shadows = 0; hinted = false;
     if(isSilent()) return drawVisual();
     el.innerHTML = `<div class="card pad stack">
-      <div class="row between"><h3>Ditado</h3><span class="chip">${LISTEN_NAMES[S.listenLevel]||"Nível "+S.listenLevel}</span></div>
+      <div class="row between"><h3>Ditado</h3><span class="chip">${retry?"Frase que você errou em "+fmtDate(retry.d):(LISTEN_NAMES[S.listenLevel]||"Nível "+S.listenLevel)}</span></div>
       <p class="muted small">Ouça quantas vezes precisar e escreva exatamente o que ouviu. Atenção às palavras “engolidas” na fala rápida (<i>I'd, gonna, of</i>).</p>
       <div class="row"><button class="btn primary" id="p1">${ICON.speaker} Ouvir</button><button class="btn" id="p2">Ouvir devagar</button></div>
       <label for="dict">O que você ouviu</label>
@@ -2823,6 +2826,11 @@ function blockListen(el,opt={}){
     let score = ok.filter(Boolean).length/ok.length;
     if(hinted) score = Math.min(score, 0.9);
     S.dict.push({d:todayKey(),s:Math.round(score*100),l:S.listenLevel});
+    // frases erradas voltam em outro dia; saem da lista quando você acerta 90%+
+    if(!Array.isArray(S.dictMiss)) S.dictMiss = [];
+    const mi = S.dictMiss.findIndex(m=>m.t===item[1]);
+    if(score>=0.9){ if(mi>=0) S.dictMiss.splice(mi,1); }
+    else if(score<0.8){ if(mi>=0){ S.dictMiss[mi].d = todayKey(); S.dictMiss[mi].n = (S.dictMiss[mi].n||1)+1; } else S.dictMiss.push({t:item[1], d:todayKey(), n:1}); S.dictMiss = S.dictMiss.slice(-40); }
     const recent = S.dict.filter(x=>x.l===S.listenLevel).slice(-4);
     let lvlMsg = "";
     if(recent.length>=4){ const avg = recent.reduce((a,x)=>a+x.s,0)/recent.length;
@@ -2835,6 +2843,7 @@ function blockListen(el,opt={}){
       <div class="diff" lang="en">${words.map((w,i)=>ok[i]?`<span class="ok">${esc(w)}</span>`:`<span class="miss" role="button" tabindex="0" style="cursor:pointer" data-say="${esc(w.replace(/[.,!?;:]/g,""))}" title="Toque para ouvir">${esc(w)}</span>`).join(" ")}</div>
       ${ok.some(x=>!x)?`<p class="small muted">Toque numa palavra vermelha para ouvi-la sozinha.</p>`:""}
       ${item[2]?`<p class="small"><span class="eyebrow">Tradução</span><br>${esc(item[2])}</p>`:""}
+      ${retry&&score>=0.9?`<p class="note small"><b>Frase recuperada!</b> Você errou esta em ${fmtDate(retry.d)} e agora acertou. Ela sai da lista de revisão.</p>`:score<0.8?`<p class="small muted">Esta frase vai voltar em outro dia para você tentar de novo.</p>`:""}
       ${lvlMsg?`<p class="note">${lvlMsg}</p>`:""}
       <hr class="sep">
       <h3>Shadowing</h3>
