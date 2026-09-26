@@ -367,6 +367,7 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
     <div class="row between">
       <div class="brand"><span class="logo"><b>15</b>+<i>15</i></span><span class="muted small">Fluência</span></div>
       <div class="pills">
+        <span class="pill" id="offPill" hidden title="Sem internet: tudo funciona, menos a IA">offline</span>
         <span class="pill fire" title="Sequência de dias"><span id="flameIco"></span><span class="mono" id="hStreak">0</span></span>
         <span class="pill" title="Experiência total"><span class="mono" id="hXP">0</span>&nbsp;XP</span>
         <button class="icon-btn" id="searchBtn" aria-label="Buscar no app" title="Buscar (tecla /)" style="width:32px;height:32px"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></button>
@@ -2306,6 +2307,27 @@ function weekStats(offset){
   return {min:Math.round(min),sess,xp,words,days};
 }
 
+/* ---------- app instalável (PWA) e indicador offline ---------- */
+let installEvt = null;
+const inClaudeApp = ()=>!!(window.claude && typeof window.claude.use==="function");
+const isStandalone = ()=>{ try{ return matchMedia("(display-mode: standalone)").matches || navigator.standalone===true; }catch(e){ return false; } };
+const isIOS = ()=>/iphone|ipad|ipod/i.test(navigator.userAgent||"");
+window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); installEvt = e; if(currentTab==="today" || currentTab==="progress") render(); });
+window.addEventListener("appinstalled", ()=>{ installEvt = null; S.installed = true; save(); toast("App instalado! Abra pelo ícone na tela inicial."); });
+function canOfferInstall(){ return !inClaudeApp() && !isStandalone() && !S.installDismissed && (installEvt || isIOS()); }
+function installHTML(compact){
+  if(!canOfferInstall()) return "";
+  const body = installEvt ? `<button class="btn sm primary" id="doInstall">Instalar app</button>` : `<span class="small">No iPhone: toque em <b>Compartilhar</b> e depois em <b>Adicionar à Tela de Início</b>.</span>`;
+  return `<div class="note row between"><span><b>Instale o app:</b> abre como aplicativo, funciona sem internet e fica a um toque de distância.</span><span class="row">${body}${compact?`<button class="btn sm ghost" id="noInstall">Agora não</button>`:""}</span></div>`;
+}
+function wireInstall(root){
+  const d = $("#doInstall",root); if(d) d.onclick = async ()=>{ if(!installEvt) return; installEvt.prompt(); try{ const r = await installEvt.userChoice; if(r && r.outcome==="accepted") toast("Instalando…"); }catch(e){} installEvt = null; render(); };
+  const n = $("#noInstall",root); if(n) n.onclick = ()=>{ S.installDismissed = true; save(); render(); };
+}
+function updateOnline(){ const p = $("#offPill"); if(p) p.hidden = navigator.onLine!==false; }
+window.addEventListener("online", ()=>{ updateOnline(); toast("Conexão de volta"); });
+window.addEventListener("offline", ()=>{ updateOnline(); toast("Sem internet: tudo continua funcionando, menos a IA"); });
+
 /* ---------- keyboard ---------- */
 let keyH = null;
 document.addEventListener("click",e=>{ if(e.target.closest("#searchBtn")) showSearch(); });
@@ -2564,6 +2586,7 @@ function renderToday(){
   </section>
   <div class="stack">
     ${onVacation() ? `<div class="note row between"><span><b>Modo férias até ${fmtDate(vacations().find(v=>v.from<=todayKey()&&todayKey()<=v.to).to)}.</b> Sua sequência está protegida e as revisões esperam por você. Estudar nesses dias é bônus.</span><button class="btn sm" id="vacEnd">Voltar das férias</button></div>` : ""}
+    ${dayIndex()>=2 ? installHTML(true) : ""}
     ${banners.join("")}
     <div class="grid2">${card("m")}${card("n")}</div>
     ${!doneM && !doneN && !(rec.x && rec.x.every(Boolean)) ? `<div class="row between card pad x-mode" style="padding-block:12px"><span><b>Dia corrido?</b> <span class="muted">Sessão expressa de 5 min: revisão + um ditado. Mantém a sequência.</span></span><button class="btn" data-start="x">Fazer 5 min</button></div>` : ""}
@@ -2625,6 +2648,7 @@ function renderToday(){
     $("#reflectOk").onclick = ()=>{ S.settings.weekGoal = +$("#wgoal").value; S.lastReflect = ws; save(); toast("Meta da semana: "+S.settings.weekGoal+" dias"); renderToday(); };
   });
   const ve = $("#vacEnd"); if(ve) ve.onclick = ()=>{ endVacation(); renderToday(); };
+  wireInstall(view);
   const tp = $("#toPlan"); if(tp) tp.onclick = ()=>{ go("progress"); setTimeout(()=>{ const p = $("#plm"); if(p){ p.scrollIntoView({block:"center"}); p.focus(); } },50); };
   const qb = $("#qbk"); if(qb) qb.onclick = async ()=>{ if(await quickBackup()) renderToday(); };
   const vh = $("#vhide"); if(vh) vh.onclick = ()=>{ voiceNoteHidden = true; renderToday(); };
@@ -4385,6 +4409,7 @@ function renderProgress(){
       <p class="small muted">No computador, pressione <span class="kbd">?</span> para ver os atalhos de teclado.</p>
       <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><span class="small muted"><span class="dot ${syncState==="cloud"?"ok":""}"></span> ${syncState==="cloud"?"Progresso salvo na sua conta — abre igual em outros dispositivos.":"Progresso salvo neste navegador."}</span></div>
       <hr class="sep">
+      ${canOfferInstall() ? `<h3>Instalar no aparelho</h3>${installHTML(false)}<hr class="sep">` : ""}
       <h3>Modo férias</h3>
       <p class="small muted">Vai viajar ou ter uma semana impossível? Pause: a sequência fica protegida e, na volta, as revisões acumuladas são distribuídas em 5 dias.</p>
       <div class="row">${onVacation()?`<span class="small"><b>Ativo</b> até ${fmtDate(vacations().find(v=>v.from<=todayKey()&&todayKey()<=v.to).to)}</span><button class="btn sm" id="vacStop">Voltar das férias</button>`:[3,7,14,21].map(n=>`<button class="btn sm" data-vac="${n}">Pausar ${n} dias</button>`).join("")}</div>
@@ -4423,7 +4448,7 @@ function renderProgress(){
   $("#tv").onclick = ()=>speak("Consistency beats intensity. Fifteen minutes in the morning and fifteen at night.",undefined,true);
   $("#ex").onclick = ()=>{ const ta=$("#bk"); ta.value = JSON.stringify(S); ta.select(); S.lastBackup = todayKey(); save();
     if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>toast("Backup copiado"),()=>toast("Selecionado — copie com Ctrl+C")); else toast("Selecionado — copie com Ctrl+C"); };
-  wirePlans(view);
+  wirePlans(view); wireInstall(view);
   $$("[data-vac]").forEach(b=>b.onclick=()=>{ startVacation(+b.dataset.vac); renderProgress(); });
   const vs2 = $("#vacStop"); if(vs2) vs2.onclick = ()=>{ endVacation(); renderProgress(); };
   $("#s-tm").onchange = e=>{ if(e.target.value){ S.settings.tm=e.target.value; save(); } };
@@ -4553,6 +4578,7 @@ function applyPrefs(){
    ============================================================ */
 loadLocal();
 if(spreadAfterVacation(false)) save();
+updateOnline();
 applyPrefs();
 go("today");
 setTimeout(maybeShowNews, 600);
