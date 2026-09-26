@@ -325,6 +325,8 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .wdot.on{background:var(--acc);color:var(--on-acc)}
 .wdot.today{outline:2px solid var(--ink);outline-offset:1px}
 .reflect{border:2px solid var(--acc)}
+.news{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.news li{display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--acc);padding-left:10px}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2447,6 +2449,29 @@ function renderToday(){
   $("#wkd").addEventListener("toggle", e=>{ try{ localStorage.setItem("fluencia:wkOpen", e.target.open?"1":"0"); }catch(err){} });
 }
 
+/* ---------- novidades: mostradas uma vez após cada atualização ---------- */
+const APP_VERSION = "2026.09.26";
+const CHANGELOG = [
+ ["Gramática na revisão","Cada questão das aulas que você já fez volta na revisão da manhã, misturada às palavras."],
+ ["Lembre e digite","O mini-teste das palavras novas agora pede para digitar, com a primeira letra de dica."],
+ ["Antes de dormir","No fim da sessão da noite, 1 minuto para relembrar as palavras do dia."],
+ ["Meta da semana","Escolha quantos dias quer estudar; toda segunda o app pergunta o que atrapalhou."],
+ ["Repetição de tarefa","Temas de fala voltam depois de 2 e 7 dias para você falar com mais fluência."],
+ ["Modo férias","Vai viajar? Pause a sequência e as revisões sem perder nada (Progresso → Ajustes)."],
+ ["Retenção real","Veja em Progresso quanto você realmente lembra nas revisões, comparado à meta."],
+ ["A ciência por trás","As técnicas de aprendizagem do app, com referências, em Praticar → Recursos."]
+];
+function maybeShowNews(){
+  if(!S.onboarded || S.seenVersion===APP_VERSION) return;
+  if(!(S.xp>0)){ S.seenVersion = APP_VERSION; return; }
+  if($("#news")) return;
+  document.body.insertAdjacentHTML("beforeend", `<div id="news" class="overlay" role="dialog" aria-modal="true" aria-labelledby="newsT"><div class="card pad stack" style="max-width:520px;width:100%;max-height:82vh;overflow:auto">
+    <span class="eyebrow">Atualização</span><h2 id="newsT">Novidades no app</h2>
+    <ul class="news">${CHANGELOG.map(([t,d])=>`<li><b>${esc(t)}</b><span class="small muted">${esc(d)}</span></li>`).join("")}</ul>
+    <button class="btn primary" id="helpClose">Entendi</button></div></div>`);
+  const close = ()=>{ const n = $("#news"); if(n) n.remove(); S.seenVersion = APP_VERSION; save(); };
+  $("#helpClose").onclick = close; $("#news").onclick = e=>{ if(e.target.id==="news") close(); };
+}
 function renderOnboarding(){
   let lvl = "b1";
   view.innerHTML = `<section class="hello"><span class="eyebrow">Bem-vindo</span><h1>15 minutos de manhã, 15 à noite.</h1>
@@ -2474,7 +2499,7 @@ function renderOnboarding(){
   $("#ob-t").onclick = ()=>speak("Hi! Fifteen minutes in the morning, fifteen at night. Let's do this.");
   $("#ob-ics").onclick = async ()=>{ readTimes(); if(await saveFile("lembretes-ingles-15-15.ics", icsReminders(), "text/calendar")) toast("Abra o arquivo para adicionar ao calendário"); };
   $("#ob-test").onclick = ()=>{ readTimes(); S.onboarded = true; S.created = todayKey(); save(); go("practice","test"); };
-  $("#ob-go").onclick = ()=>{ const L = LEVELS.find(l=>l.id===lvl); readTimes(); S.listenLevel = L.listen; S.settings.newPerDay = L.newPer; S.settings.level = lvl; S.settings.rate = L.rate; S.level0 = lvl; S.onboarded = true; S.created = todayKey(); save(); go("today"); toast("Plano pronto — bons estudos!"); };
+  $("#ob-go").onclick = ()=>{ const L = LEVELS.find(l=>l.id===lvl); readTimes(); S.listenLevel = L.listen; S.settings.newPerDay = L.newPer; S.settings.level = lvl; S.settings.rate = L.rate; S.level0 = lvl; S.seenVersion = APP_VERSION; S.onboarded = true; S.created = todayKey(); save(); go("today"); toast("Plano pronto — bons estudos!"); };
 }
 
 /* ============================================================
@@ -4161,5 +4186,6 @@ function applyPrefs(){
 loadLocal();
 applyPrefs();
 go("today");
+setTimeout(maybeShowNews, 600);
 initPlatform();
 </script>
