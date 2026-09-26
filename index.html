@@ -3597,6 +3597,7 @@ function renderPractice(){
   if(sub==="phr") return blockPhrases(shell("Frases prontas"));
   if(sub==="quick") return blockQuick(shell("Pergunta rápida"));
   if(sub==="mix") return blockGrammarMix(shell("Prática mista"));
+  if(sub==="nums") return blockNumbers(shell("Números e letras"));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -3614,6 +3615,7 @@ function renderPractice(){
     <section class="pgroup" aria-label="Ouvir e pronunciar"><div class="row between" style="align-items:baseline"><h2>Ouvir e pronunciar</h2><span class="small muted">Ouvido e sotaque</span></div>
     <div class="tiles">
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
+      <button class="card tile" data-s="nums"><span class="ti">${ICON.ear}</span><h3>Números e letras</h3><p>Preços, horas, datas, telefones, 13 × 30 e soletrar e-mails. Exercícios gerados na hora, sem fim.</p></button>
       <button class="card tile" data-s="ear"><span class="ti">${ICON.ear}</span><h3>Ouça e entenda</h3><p>Só áudio: reconheça as palavras do seu baralho de ouvido, sozinhas ou dentro da frase.</p></button>
       <button class="card tile" data-s="pron"><span class="ti">${ICON.mic}</span><h3>Pronúncia para brasileiros</h3><p>O -ed do passado, a sílaba tônica e as letras mudas — os erros que mais denunciam o sotaque.</p></button>
       <button class="card tile" data-s="pairs"><span class="ti">${ICON.wave}</span><h3>Pares mínimos</h3><p>Treine o ouvido para sons que o português não tem: ship × sheep, think × sink.</p></button>
@@ -4129,6 +4131,69 @@ function blockQuick(el){
     $("#qnx",el).onclick = next;
     t = setInterval(()=>{ const el2 = $("#qt",el); if(!el2){ clearInterval(t); return; } left--; el2.textContent = Math.max(0,left); el2.parentElement.style.setProperty("--p", Math.max(0,left/SEC*100)); if(left<=0){ clearInterval(t); setTimeout(next,600); } },1000);
   }
+}
+/* ---------- números e letras: exercícios gerados na hora (conteúdo infinito) ---------- */
+const rnd = (a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const ordinal = n=>n+(n%10===1&&n!==11?"st":n%10===2&&n!==12?"nd":n%10===3&&n!==13?"rd":"th");
+const NAMES_SP = ["Kevin","Jessica","Gabriel","Rachel","Hughes","Wright","Yvonne","Jamie","Georgia","Ethan","Heather","Isaac","Quinn","Jorge","Giovanna","Wesley"];
+const DOMAINS = ["gmail.com","outlook.com","company.co","yahoo.com"];
+const NUM_MODES = {
+  price:{t:"Preços",hint:"Digite o valor, ex.: 47.99",gen:()=>{ const v = rnd(2,299)+"."+String(rnd(0,99)).padStart(2,"0"); return {say:"That'll be $"+v+", please.", ans:v, show:"$"+v}; }},
+  time:{t:"Horas",hint:"Digite a hora, ex.: 4:15",gen:()=>{ const h = rnd(1,12), m = [0,5,10,15,20,30,40,45,50][rnd(0,8)]; const v = h+":"+String(m).padStart(2,"0"); return {say:"The meeting starts at "+(m===0?h+" o'clock":v)+".", ans:v, show:v}; }},
+  date:{t:"Datas",hint:"Digite dia/mês, ex.: 23/03",gen:()=>{ const mo = rnd(0,11), d = rnd(1,28); return {say:"The deadline is "+MONTHS_EN[mo]+" "+ordinal(d)+".", ans:String(d).padStart(2,"0")+"/"+String(mo+1).padStart(2,"0"), show:MONTHS_EN[mo]+" "+ordinal(d)}; }},
+  phone:{t:"Telefones",hint:"Digite só os números",gen:()=>{ const v = Array.from({length:7},()=>rnd(0,9)).join(""); return {say:"My number is "+v.slice(0,3).split("").join(" ")+", "+v.slice(3).split("").join(" ")+".", ans:v, show:v.slice(0,3)+"-"+v.slice(3)}; }},
+  big:{t:"Números grandes",hint:"Digite o número, ex.: 15300",gen:()=>{ const v = [rnd(11,99)*100, rnd(1,99)*1000+rnd(1,9)*100, rnd(100,999)*1000, rnd(1,9)*1000000+rnd(1,9)*100000][rnd(0,3)]; return {say:"The company has "+v.toLocaleString("en-US")+" customers.", ans:String(v), show:v.toLocaleString("en-US")}; }},
+  teens:{t:"13 × 30",hint:"Escolha o número que você ouviu",mc:true,gen:()=>{ const b = rnd(3,9), teen = 10+b, ten = b*10, pick = Math.random()<.5 ? teen : ten; return {say:"It costs "+pick+" dollars.", ans:String(pick), opts:[String(teen),String(ten)], show:String(pick)}; }},
+  spell:{t:"Soletrar",hint:"Digite o que foi soletrado",gen:()=>{ if(Math.random()<.5){ const n = NAMES_SP[rnd(0,NAMES_SP.length-1)]; return {say:"My name is "+n+". That's "+n.toUpperCase().split("").join(", ")+".", ans:n.toLowerCase(), show:n}; }
+    const u = NAMES_SP[rnd(0,NAMES_SP.length-1)].toLowerCase()+"."+["silva","souza","lima","costa"][rnd(0,3)], d = DOMAINS[rnd(0,3)];
+    return {say:"My email is "+u.split("").map(c=>c==="."?"dot":c).join(", ")+", at, "+d.replace(".", " dot ")+".", ans:u+"@"+d, show:u+"@"+d}; }}
+};
+// conferência tolerante ao jeito brasileiro de digitar (vírgula decimal, 8h20, 23/8, 4.400.000)
+const digitsOnly = x=>String(x).replace(/\D/g,"");
+const NUM_CHECK = {
+  price:(g,a)=>{ const v = String(g).replace(/[^0-9.,]/g,""); const f = parseFloat(/,\d{1,2}$/.test(v) ? v.replace(/\./g,"").replace(",",".") : v.replace(/,/g,"")); return Math.abs(f - parseFloat(a)) < 0.001; },
+  time:(g,a)=>{ const v = String(g).trim(), t = a.split(":").map(Number);
+    const m = /^\d{3,4}$/.test(v) ? [null, v.slice(0,-2), v.slice(-2)] : v.match(/(\d{1,2})\D*(\d{2})?/);
+    return !!m && +m[1]===t[0] && (+(m[2]||0))===t[1]; },
+  date:(g,a)=>{ const p = String(g).split(/\D+/).filter(Boolean).map(Number), t = a.split("/").map(Number); return p.length>=2 && p[0]===t[0] && p[1]===t[1]; },
+  phone:(g,a)=>digitsOnly(g)===a,
+  big:(g,a)=>digitsOnly(g)===a,
+  spell:(g,a)=>String(g).toLowerCase().replace(/\s+/g,"").replace(/\.$/,"")===a
+};
+function blockNumbers(el){
+  function menu(){
+    el.innerHTML = `<div class="stack"><p class="muted">Números e letras falados são um ponto fraco clássico: preços, horários, telefones, e “thirteen × thirty”. Os exercícios são gerados na hora — nunca se repetem. Dica para soletrar: em inglês <b>E</b> soa “í”, <b>I</b> soa “ái”, <b>A</b> soa “ei”, <b>G</b> soa “dji” e <b>J</b> soa “djei”.</p>
+      <div class="tiles">${Object.entries(NUM_MODES).map(([k,m])=>`<button class="card tile" data-nm="${k}"><h3>${esc(m.t)}</h3><p>${esc(m.hint)}</p>${S.nums&&S.nums[k]!=null?`<span class="small mono">melhor: ${S.nums[k]}/8</span>`:""}</button>`).join("")}</div></div>`;
+    $$("[data-nm]",el).forEach(b=>b.onclick=()=>play(b.dataset.nm));
+  }
+  function play(k){
+    const m = NUM_MODES[k]; let i = 0, right = 0, cur = null;
+    const normA = x=>String(x).toLowerCase().replace(/^0+(?=\d)/,"").replace(/[^a-z0-9@.]/g,"").replace(/\.$/,"");
+    function q(){
+      if(i>=8){ if(!S.nums) S.nums = {}; S.nums[k] = Math.max(S.nums[k]??0, right); addXP(right*2,"números");
+        el.innerHTML = `<div class="card empty"><h3>${right}/8 em ${esc(m.t)}</h3><p>${right>=7?"Ouvido afiado para números!":"Repita as que errou em voz alta — dizer ajuda a ouvir."}</p><div class="row"><button class="btn" id="nmAg">De novo</button><button class="btn primary" id="nmMenu">Outros treinos</button></div></div>`;
+        $("#nmAg",el).onclick = ()=>play(k); $("#nmMenu",el).onclick = menu; return; }
+      cur = m.gen();
+      el.innerHTML = `<div class="card pad stack">
+        <div class="row between"><span class="eyebrow">${esc(m.t)} · ${i+1}/8</span><button class="btn sm ghost" id="nmBack">‹ Treinos</button></div>
+        <div class="row"><button class="btn primary" id="pl">${ICON.speaker} Ouvir de novo</button><button class="btn" id="nmSlow">Devagar</button></div>
+        ${m.mc?`<div class="opts">${cur.opts.map((o,j)=>`<button class="opt" data-j="${j}" style="text-align:center;font-size:1.3rem">${o}</button>`).join("")}</div>`
+          :`<div class="row" style="flex-wrap:nowrap"><input type="text" id="nmIn" placeholder="${esc(m.hint)}" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="${k==="spell"?"email":"decimal"}" aria-label="Sua resposta"><button class="btn primary" id="nmOk">Conferir</button></div>`}
+        <div id="nmFb" role="status" aria-live="polite"></div></div>`;
+      const say = r=>speak(cur.say, r); $("#pl",el).onclick = ()=>say(); $("#nmSlow",el).onclick = ()=>say(0.7); $("#nmBack",el).onclick = menu;
+      setTimeout(()=>say(),200);
+      const done = (ok,given)=>{ if(ok) right++;
+        $("#nmFb",el).innerHTML = `<p class="typed ${ok?"exact":"wrong"}">${ok?"Certo!":"Era:"} <b lang="en">${esc(cur.show)}</b>${!ok&&given?` · você: ${esc(given)}`:""}</p><p class="small muted" lang="en">“${esc(cur.say)}”</p><button class="btn primary" id="qnx">Próximo →</button>`;
+        $("#qnx",el).onclick = ()=>{ i++; q(); }; $("#qnx",el).focus(); };
+      if(m.mc){ $$(".opt",el).forEach(b=>b.onclick=()=>{ const ok = cur.opts[+b.dataset.j]===cur.ans; $$(".opt",el).forEach(x=>{ x.disabled=true; if(cur.opts[+x.dataset.j]===cur.ans) x.classList.add("right"); }); if(!ok) b.classList.add("wrong"); done(ok); }); }
+      else{ const inp = $("#nmIn",el); inp.focus();
+        const chk = ()=>{ const v = inp.value.trim(); if(!v){ toast("Digite o que ouviu"); return; } inp.disabled = true; $("#nmOk",el).disabled = true; done((NUM_CHECK[k]||((g,a)=>normA(g)===normA(a)))(v, cur.ans), v); };
+        $("#nmOk",el).onclick = chk; inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); chk(); } }); }
+    }
+    q();
+  }
+  menu();
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
