@@ -344,6 +344,7 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .retbar{position:relative;height:12px;border-radius:99px;background:var(--surface2)}
 .retbar span{display:block;height:100%;border-radius:99px;background:var(--acc)}
 .retbar i{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:var(--ink)}
+.msg.playing{outline:3px solid var(--acc);outline-offset:2px}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -3718,6 +3719,20 @@ Start now in character.`},{role:"assistant",content:role.o}];
   }
   pickRole();
 }
+/* ---------- ouvir o diálogo inteiro, com uma voz para cada personagem ---------- */
+function dialogScript(d){ return d.lines.map(l=>l[0]==="a" ? {who:"a", t:l[1]} : {who:"me", t:l[2].find(o=>o[1])[0]}); }
+function playDialog(d, onLine){
+  if(!("speechSynthesis" in window)){ toast("Este navegador não tem voz sintetizada"); return; }
+  speechSynthesis.cancel();
+  const main = pickVoice(), others = voices.filter(v=>v!==main);
+  const same = others.filter(v=>main && v.lang===main.lang), second = same[0] || others[0] || null;
+  dialogScript(d).forEach((l,k)=>{
+    const u = new SpeechSynthesisUtterance(l.t); u.lang = S.settings.accent; u.rate = S.settings.rate;
+    if(l.who==="me"){ if(second) u.voice = second; else { if(main) u.voice = main; u.pitch = 1.25; } } else if(main) u.voice = main;
+    u.onstart = ()=>onLine && onLine(k);
+    speechSynthesis.speak(u);
+  });
+}
 function dlgTurns(d){ return d.lines.filter(l=>l[0]==="me").length; }
 function blockDialogs(el,startId){
   function list(){
@@ -3795,8 +3810,13 @@ function blockDialogs(el,startId){
         <p class="muted">${right===n?"Perfeito! Agora tente o modo desafio: responder em voz alta antes de ver as opções.":"Os erros que você evitou hoje são os que mais aparecem na fala de brasileiros. Repita as frases abaixo até saírem naturalmente."}</p>
         <span class="eyebrow">Suas falas — ouça e repita</span>
         <ul class="exlist">${mine.map(x=>`<li>${spk(x)}<span>${esc(x)}</span></li>`).join("")}</ul>
+        <div class="row"><button class="btn" id="dlgPlay">${ICON.speaker} Ouvir o diálogo inteiro</button><button class="btn ghost sm" id="dlgStop">Parar</button></div>
+        <div class="chat" id="dlgAll" style="max-height:none">${dialogScript(d).map((l,k)=>`<div class="msg ${l.who==="a"?"ai":"me"}" data-dl="${k}" lang="en">${esc(l.t)}</div>`).join("")}</div>
+        <p class="small muted">Ouça a conversa toda e depois leia junto em voz alta, fazendo o seu papel. É shadowing com contexto.</p>
         <div class="row"><button class="btn" id="ag">Fazer de novo</button><button class="btn primary" id="ls">Outros diálogos</button></div></div>`;
       $("#ag",el).onclick = ()=>play(d); $("#ls",el).onclick = list;
+      $("#dlgPlay",el).onclick = ()=>playDialog(d, k=>{ $$("[data-dl]",el).forEach(x=>x.classList.toggle("playing", +x.dataset.dl===k)); const cur = el.querySelector('[data-dl="'+k+'"]'); if(cur) cur.scrollIntoView({block:"nearest",behavior:"smooth"}); });
+      $("#dlgStop",el).onclick = ()=>{ if("speechSynthesis" in window) speechSynthesis.cancel(); $$("[data-dl]",el).forEach(x=>x.classList.remove("playing")); };
     }
     advance();
   }
