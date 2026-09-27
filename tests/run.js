@@ -86,6 +86,11 @@ test("números: aceita o jeito brasileiro de digitar", () => {
   eq(r, [true, true, true, true, true, false]);
 });
 
+test("estrutura de escrita escolhida pelo tipo de tema", () => {
+  eq(E(`["Write an email to a colleague.","Argue for or against a four-day work week.","Write about a mistake you made.","Describe your ideal job."].map(p=>frameFor(p).t)`),
+     ["E-mail ou mensagem", "Opinião", "História", "Descrição"]);
+});
+
 console.log("\nSequência, férias e dados");
 test("férias protegem a sequência", () => {
   const r = E(`(()=>{ const t=todayKey(); S.streak={count:20,best:20,last:addDays(t,-10)}; S.freezes=0;

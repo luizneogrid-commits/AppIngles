@@ -3415,6 +3415,31 @@ function blockGrammarMix(el,opt={}){
   }
 }
 
+/* ---------- estruturas de escrita: um roteiro por tipo de texto ---------- */
+const WRITE_FRAMES = {
+  email:{t:"E-mail ou mensagem",steps:["Saudação","Motivo da mensagem","Detalhes","O que você precisa","Despedida"],p:["Hi …,","I hope you're doing well.","I'm writing to…","Could you please…?","Let me know if…","Thanks in advance,","Best regards,"]},
+  opinion:{t:"Opinião",steps:["Sua opinião em uma frase","Motivo 1 + exemplo","Motivo 2","O outro lado","Conclusão"],p:["In my opinion,…","First of all,…","For example,…","On top of that,…","On the other hand,…","That said,…","All in all,…"]},
+  story:{t:"História",steps:["Quando e onde","O que estava acontecendo","O problema ou a surpresa","O que você fez","Como terminou / o que aprendeu"],p:["A few years ago,…","At first,…","Suddenly,…","After that,…","In the end,…","Looking back,…","It taught me that…"]},
+  describe:{t:"Descrição",steps:["Apresente o assunto","Detalhes principais","Um exemplo ou uma lembrança","Como você se sente sobre isso"],p:["I'd like to talk about…","What I like most is…","There is / There are…","For instance,…","It reminds me of…","Overall,…"]},
+  basic:{t:"Texto simples",steps:["Uma frase de apresentação","Dois ou três detalhes","Uma frase final"],p:["I am…","I like… because…","I usually…","Also,…","But…","I think…"]}
+};
+function frameFor(prompt){
+  if(isBasic()) return WRITE_FRAMES.basic;
+  const p = prompt.toLowerCase();
+  if(/email|message|note|complaint|reply|invit|post|speech|apolog/.test(p)) return WRITE_FRAMES.email;
+  if(/do you think|argue|better|should|pros|compare|opinion|agree|change|matter|important/.test(p)) return WRITE_FRAMES.opinion;
+  if(/story|a time|mistake|yesterday|last |remember|met |happened|trip/.test(p)) return WRITE_FRAMES.story;
+  return WRITE_FRAMES.describe;
+}
+function insertAtCursor(ta, text){
+  const st = ta.selectionStart ?? ta.value.length, en = ta.selectionEnd ?? ta.value.length;
+  const before = ta.value.slice(0,st), sep = before && !/\s$/.test(before) ? " " : "";
+  const ins = sep + text.replace(/…$/,"").trimEnd() + " ";
+  ta.value = before + ins + ta.value.slice(en); const pos = (before+ins).length;
+  ta.focus(); try{ ta.setSelectionRange(pos,pos); }catch(e){}
+  ta.dispatchEvent(new Event("input"));
+}
+
 /* ---------- 6. Writing journal ---------- */
 function blockWrite(el,opt={}){
   const rec = dayRec();
@@ -3429,6 +3454,9 @@ function blockWrite(el,opt={}){
     <h3 class="prompt" lang="en">${esc(prompt)}</h3>
     ${wb?`<p class="muted">${esc(wb[1])} Comece assim: <i>${esc(wb[2])}</i></p>`:""}
     ${targets.length?`<div class="stack" style="gap:6px"><span class="eyebrow">Use pelo menos 2 palavras recentes</span><div class="row" id="tg">${targets.map(t=>`<span class="chip" data-t="${esc(t)}">${esc(t)}</span>`).join("")}</div></div>`:""}
+    ${(()=>{ const f = frameFor(prompt); return `<details class="rule"><summary>Estrutura sugerida: ${esc(f.t)}</summary><div class="stack" style="margin-top:8px;gap:8px">
+      <ol class="steps">${f.steps.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
+      <span class="eyebrow">Toque para inserir no texto</span><div class="row">${f.p.map(x=>`<button type="button" class="chip" data-ins="${esc(x)}" lang="en">${esc(x)}</button>`).join("")}</div></div></details>`; })()}
     <textarea id="jr" rows="8" placeholder="Start writing… Pense em inglês simples em vez de traduzir frases longas do português.">${esc(S.draft||"")}</textarea>
     <div class="row between"><span class="small muted" id="wc">0 palavras · meta ${goal}</span><span class="small muted">Rascunho salvo automaticamente</span></div>
     <div class="row">${AI?`<button class="btn primary" id="ai">Corrigir com IA</button>`:""}<button class="btn" id="chkErr">Verificar erros comuns</button><button class="btn ${AI?"":"primary"}" id="sv">Salvar no diário</button></div>
@@ -3440,6 +3468,7 @@ function blockWrite(el,opt={}){
     <div id="aiout" role="status" aria-live="polite"></div>
   </div>`;
   const ta = $("#jr",el);
+  $$("[data-ins]",el).forEach(b=>b.onclick=()=>insertAtCursor(ta, b.dataset.ins));
   let dt;
   function upd(){
     const txt = ta.value, n = txt.trim()?txt.trim().split(/\s+/).length:0, low = txt.toLowerCase();
