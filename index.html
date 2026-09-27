@@ -2535,8 +2535,8 @@ let navCount = 0;
 function render(){
   document.body.classList.remove("m-mode","n-mode");
   if(currentTab==="session" && session) document.body.classList.add(session.kind+"-mode");
-  document.body.classList.toggle("focus", currentTab==="session" && !!session);
   else document.body.classList.add(new Date().getHours()<14?"m-mode":"n-mode");
+  document.body.classList.toggle("focus", currentTab==="session" && !!session);
   try{
     ({today:renderToday,review:renderReviewTab,practice:renderPractice,progress:renderProgress,session:renderSession}[currentTab]||renderToday)();
     updateHeader();
