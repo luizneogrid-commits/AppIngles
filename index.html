@@ -4496,6 +4496,7 @@ function renderProgress(){
       <div class="legend"><span><i style="background:var(--surface2)"></i>nenhuma sessão</span><span><i style="background:color-mix(in srgb,var(--acc) 45%,var(--surface2))"></i>1 sessão</span><span><i style="background:var(--acc)"></i>manhã e noite</span></div>
     </div>
     ${(()=>{ const w = weaknesses(); return `<div class="card pad stack"><h3>Onde focar agora</h3>${w.length?`<div class="stack" style="gap:10px">${w.map((x,k)=>`<div class="wk"><span class="ti">${ICON[x.icon]}</span><span style="flex:1"><b>${esc(x.t)}</b><span class="small muted" style="display:block">${esc(x.d)}</span></span><button class="btn sm" data-wk="${k}">${esc(x.btn)}</button></div>`).join("")}</div>`:`<p class="small muted">Ainda não há dados suficientes, ou está tudo equilibrado. Continue com as sessões — a análise aparece aqui conforme você pratica.</p>`}</div>`; })()}
+    ${monthCard()}
     ${retentionCard()}
     ${calibrationCard()}
     <div class="grid2">
@@ -4650,6 +4651,26 @@ function weaknesses(){
   const last14 = Array.from({length:14},(_,k)=>S.days[addDays(todayKey(),-k)]).filter(Boolean);
   if(last14.length>=5 && !S.journal.some(j=>diffDays(j.d,todayKey())<=7)) out.push({icon:"pen",t:"Escrita parada",d:"Você não salvou nada no diário nesta semana. Escrever é onde a gramática vira hábito.",go:["practice","write"],btn:"Escrever agora"});
   return out.slice(0,4);
+}
+/* ---------- relatório do mês ---------- */
+function monthStats(ym){
+  const r = {days:0,min:0,xp:0,words:0,rev:0,rn:0,rok:0};
+  Object.entries(S.days).forEach(([k,d])=>{ if(!k.startsWith(ym) || !d) return;
+    if(daySessions(d)>0) r.days++; r.min += (d.sec||0)/60; r.xp += d.xp||0; r.words += (d.newIds||[]).length; r.rev += d.rev||0;
+    if(d.rv){ r.rn += d.rv.n; r.rok += d.rv.ok; } });
+  r.min = Math.round(r.min); r.ret = r.rn>=10 ? Math.round(r.rok/r.rn*100) : null; return r;
+}
+function monthCard(){
+  const t = todayKey(), ym = t.slice(0,7), d = keyToDate(t);
+  const prev = new Date(d.getFullYear(), d.getMonth()-1, 1), pym = prev.getFullYear()+"-"+String(prev.getMonth()+1).padStart(2,"0");
+  const a = monthStats(ym), b = monthStats(pym);
+  if(!a.days && !b.days) return "";
+  const name = x=>x.toLocaleDateString("pt-BR",{month:"long"});
+  const cmp = (x,y)=> y ? `<span class="small ${x>=y?"up":"down"}">${x>=y?"▲":"▼"} ${Math.abs(x-y)}</span>` : "";
+  const rows = [["Dias de estudo",a.days,b.days],["Minutos",a.min,b.min],["XP",a.xp,b.xp],["Palavras novas",a.words,b.words],["Revisões",a.rev,b.rev]];
+  return `<div class="card pad stack"><div class="row between"><h3>Relatório de ${name(d)}</h3><span class="small muted">comparado a ${name(prev)}</span></div>
+    <div class="kv4">${rows.map(([l,x,y])=>`<div><span class="v mono">${x}</span><span class="l">${l} ${cmp(x,y)}</span></div>`).join("")}${a.ret!=null?`<div><span class="v mono">${a.ret}%</span><span class="l">retenção real${b.ret!=null?" "+cmp(a.ret,b.ret):""}</span></div>`:""}</div>
+    <p class="small muted">${a.days>=20?"Mês muito consistente. É assim que o nível sobe.":a.days>=12?"Bom ritmo. Tente não passar de 2 dias seguidos sem estudar.":"Ainda dá tempo: cada dia deste mês conta."}</p></div>`;
 }
 function retentionCard(){
   let n = 0, ok = 0, gn = 0, gok = 0; const t = todayKey();

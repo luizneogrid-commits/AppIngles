@@ -122,6 +122,12 @@ test("estado respeita o limite da nuvem (256 KB)", () => {
   assert(kb < 256, "estado com " + Math.round(kb) + " KB");
 });
 
+test("relatório do mês soma só os dias do mês", () => {
+  const r = E(`(()=>{ const bak = S.days; S.days = {"2026-08-31":{m:[1,1,1],n:[0,0,0],xp:10,newIds:["a"],sec:600,rev:5},"2026-09-01":{m:[1,1,1],n:[1,1,1],xp:40,newIds:["b","c"],sec:1200,rev:20,rv:{n:10,ok:9}},"2026-09-02":{m:[0,0,0],n:[0,0,0],xp:0,newIds:[]}};
+    const m = monthStats("2026-09"); S.days = bak; return [m.days,m.min,m.xp,m.words,m.rev,m.ret]; })()`);
+  eq(r, [1, 20, 40, 2, 20, 90]);
+});
+
 console.log("\nTelas");
 test("todas as telas abrem sem erro em todos os níveis", () => {
   const errs = E(`(()=>{ const errs=[]; const tryv=(n,f)=>{ try{ f(); if(!view.innerHTML.trim()) errs.push(n+": vazia"); if(view.querySelector("#crHome")) errs.push(n+": tela de erro"); }catch(e){ errs.push(n+": "+e.message); } };
