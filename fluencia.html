@@ -2962,7 +2962,7 @@ function blockListen(el,opt={}){
     el.innerHTML = `<div class="card pad stack">
       <div class="row between"><h3>Ditado</h3><span class="chip">${retry?"Frase que você errou em "+fmtDate(retry.d):(LISTEN_NAMES[S.listenLevel]||"Nível "+S.listenLevel)}</span></div>
       <p class="muted small">Ouça quantas vezes precisar e escreva exatamente o que ouviu. Atenção às palavras “engolidas” na fala rápida (<i>I'd, gonna, of</i>).</p>
-      <div class="row"><button class="btn primary" id="p1">${ICON.speaker} Ouvir</button><button class="btn" id="p2">Ouvir devagar</button></div>
+      <div class="row"><button class="btn primary" id="p1">${ICON.speaker} Ouvir</button><button class="btn" id="p2">Ouvir devagar</button><button class="btn ghost" id="p3" title="Velocidade de conversa real (1,15×)">Velocidade real</button></div>
       <label for="dict">O que você ouviu</label>
       <textarea id="dict" rows="2" placeholder="Type what you hear…" autocomplete="off" spellcheck="false"></textarea>
       <div class="row"><button class="btn" id="chk">Conferir</button><button class="btn ghost sm" id="hint">Dica: primeiras letras</button><span class="muted small">Ctrl + Enter confere</span></div>
@@ -2971,6 +2971,7 @@ function blockListen(el,opt={}){
     </div>`;
     $("#p1",el).onclick = ()=>speak(item[1]);
     $("#p2",el).onclick = ()=>speak(item[1],0.7);
+    $("#p3",el).onclick = ()=>speak(item[1],Math.min(1.3,S.settings.rate*1.2));
     $("#chk",el).onclick = check;
     $("#hint",el).onclick = ()=>{ hinted = true; const h=$("#hintTxt",el); h.hidden=false; h.textContent = item[1].split(" ").map(w=>w.replace(/^([^A-Za-z]*[A-Za-z'’]?)([A-Za-z'’]*)/,(m,a,b)=>a+b.replace(/[A-Za-z]/g,"_"))).join(" ") + "  (a dica limita a nota a 90%)"; };
     $("#dict",el).addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); check(); } });
