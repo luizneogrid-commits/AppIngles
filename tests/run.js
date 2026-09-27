@@ -165,6 +165,10 @@ test("modo foco: sem abas durante a sessão, de volta ao sair", () => {
   const r = E(`(()=>{ session=null; startSession("m"); const inS = document.body.classList.contains("focus"); session=null; go("today"); return [inS, document.body.classList.contains("focus")]; })()`);
   eq(r, [true, false]);
 });
+test("rodapé mostra a versão e onde o progresso está salvo", () => {
+  const r = E(`(()=>{ go("today"); const t = view.querySelector(".vfoot").textContent; go("progress"); return [t.includes(APP_VERSION), t.includes("só neste aparelho"), !!view.querySelector(".vfoot")]; })()`);
+  eq(r, [true, true, true]);
+});
 test("nenhum erro de script durante os testes", () => { eq(pageErrors, []); });
 
 // ---------- áudio no iPhone: navegador simulado com user-agent do iOS e voz sintetizada falsa ----------
@@ -227,7 +231,20 @@ async function iosAudioTests() {
   });
 }
 
-iosAudioTests().then(() => {
+async function updateTests() {
+  console.log("\nAtualização do app do celular");
+  w.fetch = async () => ({ ok: true, text: async () => 'const APP_VERSION = "2099.01.01";' });
+  E(`lastVersionCheck = 0; checkForUpdate()`);
+  await new Promise(r => setTimeout(r, 50));
+  test("versão nova publicada mostra o aviso Atualizar agora", () => { assert(E(`!!document.querySelector("#updGo")`), "aviso não apareceu"); });
+  E(`document.querySelector("#updBar").remove()`);
+  w.fetch = async () => ({ ok: true, text: async () => 'const APP_VERSION = "' + E("APP_VERSION") + '";' });
+  E(`lastVersionCheck = 0; checkForUpdate()`);
+  await new Promise(r => setTimeout(r, 50));
+  test("mesma versão não mostra aviso", () => { assert(E(`!document.querySelector("#updBar")`), "aviso apareceu sem versão nova"); });
+}
+
+updateTests().then(iosAudioTests).then(() => {
   console.log(`\n${pass} passaram, ${fail} falharam`);
   process.exit(fail ? 1 : 0);
 });

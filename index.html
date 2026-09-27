@@ -354,6 +354,8 @@ body.focus .tabs{display:none}
   body.focus .sess-foot{bottom:env(safe-area-inset-bottom,0px)}
   body.focus #toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 }
+.vfoot{text-align:center;border-top:1px solid var(--line);padding-top:12px}
+.updbar{position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:70;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:2px solid var(--acc);border-radius:14px;padding:10px 14px;box-shadow:var(--shadow);max-width:560px;margin:0 auto}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2710,6 +2712,7 @@ function renderToday(){
       ${st?`<span class="small muted">Já está no seu baralho · ${STAGE_LABEL[stageOf(w.id)]}</span>`:`<div class="row"><button class="btn sm" id="wodAdd">Adicionar ao baralho</button><button class="btn sm ghost" id="wodKnow">Já conheço</button></div>`}
     </div>`; })()}
     ${!S.settings.planM && !S.settings.planN ? `<div class="note row between"><span><b>Crie seu gatilho:</b> planos do tipo “depois de tomar café, eu estudo” aumentam bastante a chance de o hábito acontecer.</span><button class="btn sm" id="toPlan">Criar plano</button></div>` : ""}
+    ${versionFooter()}
     <p class="small muted" style="text-align:center">Dúvidas? <button class="btn sm ghost" id="toGuide" style="display:inline-flex">Como usar o app</button></p>
     <details class="card method">
       <summary>Por que este método funciona</summary>
@@ -2748,8 +2751,10 @@ function renderToday(){
 }
 
 /* ---------- novidades: mostradas uma vez após cada atualização ---------- */
-const APP_VERSION = "2026.09.27.2";
+const APP_VERSION = "2026.09.27.3";
 const CHANGELOG = [
+ ["Duas versões, dois progressos","A versão do Claude e a do celular (link do GitHub) guardam progressos separados. O rodapé da tela Hoje mostra qual é qual; para igualar, use Progresso → Backup."],
+ ["Atualização no celular","O app do celular agora avisa quando há uma versão nova e atualiza com um toque."],
  ["Escolha sua voz","Voz artificial ou estranha? Em Progresso → Ajustes → Escolher voz, ouça cada voz em inglês do seu aparelho e escolha a melhor."],
  ["Make, do, take…","Jogo com 37 combinações de verbos que não se traduzem: make a decision, do homework, take a break."],
  ["Preposições","30 combinações como interested in, good at, depend on e married to."],
@@ -2771,6 +2776,31 @@ function maybeShowNews(){
   const close = ()=>{ const n = $("#news"); if(n) n.remove(); S.seenVersion = APP_VERSION; save(); };
   $("#helpClose").onclick = close; $("#news").onclick = e=>{ if(e.target.id==="news") close(); };
 }
+/* ---------- qual versão é esta, e onde o progresso fica ---------- */
+function whereLabel(){
+  if(inClaudeApp()) return syncState==="cloud" ? {k:"claude", t:"Versão do Claude · progresso salvo na sua conta (sincroniza entre aparelhos pelo Claude)"} : {k:"claude-local", t:"Versão do Claude · progresso salvo neste navegador (a conta ainda não conectou)"};
+  return {k:"device", t:"Versão do celular/navegador · progresso salvo só neste aparelho (não sincroniza com a versão do Claude)"};
+}
+function versionFooter(){
+  const w = whereLabel(), words = Object.keys(S.cards).length;
+  return `<p class="small muted vfoot">Versão ${APP_VERSION} · ${esc(w.t)}.<br>Neste progresso: ${S.xp.toLocaleString("pt-BR")} XP · ${words} palavras · nível ${esc(curLevel().t)}.</p>`;
+}
+/* ---------- app do celular: avisa quando há versão nova publicada ---------- */
+let newVersionSeen = null, lastVersionCheck = 0;
+async function checkForUpdate(){
+  if(inClaudeApp() || location.protocol!=="https:" || Date.now()-lastVersionCheck<60000) return;
+  lastVersionCheck = Date.now();
+  try{
+    const r = await fetch("./index.html?v="+Date.now(), {cache:"no-store"}); if(!r.ok) return;
+    const m = (await r.text()).match(/APP_VERSION = "([^"]+)"/);
+    if(m && m[1]!==APP_VERSION && !$("#updBar")){
+      newVersionSeen = m[1];
+      document.body.insertAdjacentHTML("beforeend", `<div id="updBar" class="updbar" role="status"><span><b>Nova versão disponível.</b> Seu progresso fica salvo.</span><button class="btn sm primary" id="updGo">Atualizar agora</button></div>`);
+      $("#updGo").onclick = ()=>{ save(); location.reload(); };
+    }
+  }catch(e){}
+}
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") checkForUpdate(); });
 function renderOnboarding(){
   let lvl = "b1";
   view.innerHTML = `<section class="hello"><span class="eyebrow">Bem-vindo</span><h1>15 minutos de manhã, 15 à noite.</h1>
@@ -4658,7 +4688,8 @@ function renderProgress(){
       </div>
       <p class="small ${voiceStatus().ok?"muted":""}" ${voiceStatus().ok?"":'style="color:var(--bad)"'}>${esc(voiceStatus().msg)}${voiceStatus().ok?"":"<br>"+VOICE_HELP}</p>
       <p class="small muted">No computador, pressione <span class="kbd">?</span> para ver os atalhos de teclado.</p>
-      <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><button class="btn sm primary" id="toVoices">Escolher voz (ouvir cada uma)</button><span class="small muted"><span class="dot ${syncState==="cloud"?"ok":""}"></span> ${syncState==="cloud"?"Progresso salvo na sua conta — abre igual em outros dispositivos.":"Progresso salvo neste navegador."}</span></div>
+      <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><button class="btn sm primary" id="toVoices">Escolher voz (ouvir cada uma)</button></div>
+      ${versionFooter()}
       <hr class="sep">
       ${canOfferInstall() ? `<h3>Instalar no aparelho</h3>${installHTML(false)}<hr class="sep">` : ""}
       <h3>Modo férias</h3>
@@ -4673,8 +4704,8 @@ function renderProgress(){
       <div class="row"><label for="s-tm" style="display:flex;gap:8px;align-items:center">Manhã <input type="time" id="s-tm" value="${S.settings.tm}" style="width:auto"></label><label for="s-tn" style="display:flex;gap:8px;align-items:center">Noite <input type="time" id="s-tn" value="${S.settings.tn}" style="width:auto"></label></div>
       <div class="row"><button class="btn sm" id="ics">Adicionar lembretes ao calendário (.ics)</button></div>
       <hr class="sep">
-      <h3>Backup</h3>
-      <p class="small muted">Copie o código para guardar ou levar seu progresso para outro navegador. Para restaurar, cole e importe.</p>
+      <h3>Backup e levar o progresso para a outra versão</h3>
+      <p class="small muted">A versão do Claude e a do celular (link do GitHub) guardam progressos separados. Para deixar as duas iguais: na versão com o progresso que você quer manter, toque em <b>Gerar e copiar backup</b>; na outra, cole abaixo e toque em <b>Importar backup</b>. O importado substitui o progresso daquela versão.</p>
       <textarea id="bk" rows="3" spellcheck="false" placeholder="Cole aqui um backup para importar"></textarea>
       <div class="row"><button class="btn sm" id="ex">Gerar e copiar backup</button><button class="btn sm" id="im">Importar backup</button><button class="btn sm" id="exf">Salvar backup em arquivo</button><label class="btn sm" for="imf" style="cursor:pointer">Abrir arquivo de backup<input type="file" id="imf" accept=".json,application/json" hidden></label><button class="btn sm ghost" id="rs" style="color:var(--bad)">Apagar todo o progresso</button></div>
       <div id="cfm"></div>
@@ -4709,7 +4740,8 @@ function renderProgress(){
   $("#exf").onclick = quickBackup;
   $("#imf").onchange = e=>{ const f = e.target.files[0]; if(!f) return; const rd = new FileReader(); rd.onload = ()=>{ $("#bk").value = rd.result; $("#im").click(); }; rd.readAsText(f); };
   $("#im").onclick = ()=>{ let o; try{ o = JSON.parse($("#bk").value); if(!o || typeof o!=="object" || !o.cards) throw 0; }catch(e){ toast("Esse texto não é um backup válido"); return; }
-    confirmBox("Substituir o progresso atual por este backup?","Importar",()=>{ S = merge(o); save(); toast("Backup importado"); renderProgress(); }); };
+    const oo = merge(JSON.parse(JSON.stringify(o)));
+    confirmBox("Substituir o progresso atual ("+S.xp+" XP, "+Object.keys(S.cards).length+" palavras) pelo do backup ("+(oo.xp||0)+" XP, "+Object.keys(oo.cards||{}).length+" palavras)?","Importar",()=>{ S = merge(o); save(); toast("Backup importado"); renderProgress(); }); };
   $("#rs").onclick = ()=>confirmBox("Apagar XP, sequência, palavras e diário? Isso não pode ser desfeito.","Apagar tudo",()=>{ const keep=S.settings; S = defaultState(); S.settings=keep; save(); toast("Progresso apagado"); renderProgress(); });
 }
 /* ---------- imagem para compartilhar ---------- */
@@ -4865,6 +4897,7 @@ function applyPrefs(){
 loadLocal();
 if(spreadAfterVacation(false)) save();
 updateOnline();
+setTimeout(checkForUpdate, 4000);
 applyPrefs();
 go("today");
 setTimeout(maybeShowNews, 600);

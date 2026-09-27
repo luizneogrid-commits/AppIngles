@@ -1,5 +1,5 @@
 // Service worker: app funciona offline depois da primeira visita.
-const CACHE = "fluencia-v19";
+const CACHE = "fluencia-v20";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
@@ -9,10 +9,15 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
+  const same = req.url.startsWith(self.location.origin);
   // Rede primeiro (pega atualizações), cache como reserva offline.
+  // Arquivos do próprio app: "no-cache" revalida com o servidor em vez de usar a cópia HTTP de até 10 min.
+  const net = !same ? fetch(req)
+    : req.mode === "navigate" ? fetch(req.url, { cache: "no-cache", credentials: "same-origin" })
+    : fetch(req, { cache: "no-cache" });
   e.respondWith(
-    fetch(req).then(res => {
-      if (res.ok && (req.url.startsWith(self.location.origin) || req.url.includes("fonts.g"))) {
+    net.then(res => {
+      if (res.ok && (same || req.url.includes("fonts.g"))) {
         const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy));
       }
       return res;
