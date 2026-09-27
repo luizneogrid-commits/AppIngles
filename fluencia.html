@@ -2237,21 +2237,37 @@ const NOVELTY_VOICES = /^(albert|bad news|bahh|bells|boing|bubbles|cellos|good n
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent||"") || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
 function loadVoices(){ try{ voices = speechSynthesis.getVoices().filter(v=>(/^en[-_]/i.test(v.lang)||v.lang==="en") && !NOVELTY_VOICES.test(v.name)); }catch(e){ voices=[]; } }
 if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+// Vozes boas do iPhone/Mac por sotaque, em ordem de preferência (as versões "Enhanced"/"Premium" soam bem mais naturais)
+const IOS_PREF = {"en-us":["ava","samantha","allison","susan","nicky","joelle","zoe","evan","tom","aaron","nathan","fred"],"en-gb":["daniel","kate","serena","oliver","arthur","martha","jamie"],"en-au":["karen","matilda","lee"],"en-ie":["moira"],"en-in":["rishi","veena"]};
+function voiceScore(v, acc){
+  const n = v.name.toLowerCase(), lang = v.lang.toLowerCase().replace("_","-");
+  let sc = 0;
+  if(lang===acc) sc += 100; else if(lang.startsWith("en")) sc += 50;
+  if(/enhanced|premium/i.test(n)) sc += 30;
+  if(/natural|neural|online|google/i.test(n)) sc += 20;
+  const pref = IOS_PREF[lang] || []; const i = pref.findIndex(p=>n.startsWith(p)); if(i>=0) sc += 15 - i;
+  if(v.localService===false) sc -= 5; // vozes de rede podem falhar sem internet
+  return sc;
+}
 function pickVoice(){
+  if(!voices.length) loadVoices(); // iOS às vezes só entrega a lista na segunda chamada
   if(S.settings.voice){ const v=voices.find(v=>v.name===S.settings.voice); if(v) return v; }
+  if(!voices.length) return null;
   const acc = S.settings.accent.toLowerCase();
-  const same = voices.filter(v=>v.lang.toLowerCase().replace("_","-")===acc);
-  const pool = same.length?same:voices;
-  // no iOS, forçar uma voz tem bugs que causam silêncio: sem escolha do usuário, deixa o sistema usar a voz padrão do idioma
-  if(IS_IOS) return null;
-  return pool.find(v=>/natural|neural|online|google/i.test(v.name)) || pool.find(v=>/samantha|daniel|karen|moira|ava|allison|susan|serena|alex/i.test(v.name)) || pool[0] || null;
+  // sempre escolhe uma voz em inglês explicitamente: o iPhone costuma ignorar o idioma pedido e usar a voz padrão do aparelho (português) — que lê inglês de forma artificial e soletra palavras
+  return voices.slice().sort((a,b)=>voiceScore(b,acc)-voiceScore(a,acc))[0];
+}
+// prepara o texto para a voz: tira marcações e sinais que as vozes leem em voz alta ou soletram
+function ttsText(text){
+  return plain(text).replace(/…/g,"").replace(/[—–]/g,", ").replace(/\s*\/\s*/g," or ").replace(/[*_#`]/g,"").replace(/\s{2,}/g," ").replace(/\s+([,.!?])/g,"$1").replace(/^[,\s]+/,"").trim();
 }
 const VOICE_HELP = "<b>iPhone sem som?</b> Desligue o modo silencioso (chave na lateral ou Central de Controle), aumente o volume e toque em qualquer botão de áudio. <b>Android:</b> Configurações → Sistema → Idiomas → Saída de texto para fala → Mecanismo do Google → instalar voz em inglês. <b>iPhone:</b> Ajustes → Acessibilidade → Conteúdo Falado → Vozes → Inglês. <b>Windows:</b> Configurações → Hora e idioma → Fala → Adicionar vozes → English. Depois, feche e abra o app.";
 let voiceNoteHidden = false, voicesChecked = false;
 function voiceStatus(){
   if(!("speechSynthesis" in window)) return {ok:false,msg:"Este navegador não tem voz sintetizada. Use Chrome, Edge ou Safari."};
   // iPhone sempre tem inglês embutido, mas às vezes demora para listar as vozes: não é motivo para alarme
-  if(!voices.length && IS_IOS) return {ok:true,msg:"Voz: padrão do iPhone para "+S.settings.accent};
+  if(!voices.length) loadVoices();
+  if(!voices.length && IS_IOS) return {ok:false,msg:"O iPhone ainda não listou as vozes em inglês. Feche e abra o app; se continuar, vá em Ajustes → Acessibilidade → Conteúdo Falado → Vozes → Inglês e baixe uma voz (Samantha ou Daniel, de preferência a versão Enhanced)."};
   if(!voices.length) return {ok:false,msg:"Nenhuma voz em inglês instalada neste aparelho — o áudio do app não vai funcionar direito."};
   const v = pickVoice(); return {ok:true,msg:"Voz em uso: "+(v?v.name+" ("+v.lang+")":"padrão do sistema")};
 }
@@ -2277,8 +2293,8 @@ function unlockTTS(){
 ["touchend","click","keydown"].forEach(ev=>document.addEventListener(ev, unlockTTS, {capture:true, passive:true}));
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && "speechSynthesis" in window){ try{ speechSynthesis.resume(); }catch(e){} } });
 function makeUtter(text, rate){
-  const u = new SpeechSynthesisUtterance(plain(text));
-  u.lang = S.settings.accent; const v = pickVoice() || (S.settings.voice ? voices.find(x=>x.name===S.settings.voice) : null); if(v) u.voice = v;
+  const u = new SpeechSynthesisUtterance(ttsText(text));
+  const v = pickVoice(); if(v){ u.voice = v; u.lang = v.lang || S.settings.accent; } else u.lang = S.settings.accent;
   u.rate = rate ?? S.settings.rate; u.volume = 1;
   liveUtter.push(u); if(liveUtter.length>30) liveUtter.shift();
   u.addEventListener("end", ()=>{ const i = liveUtter.indexOf(u); if(i>=0) liveUtter.splice(i,1); });
@@ -3852,11 +3868,12 @@ Start now in character.`},{role:"assistant",content:role.o}];
 function dialogScript(d){ return d.lines.map(l=>l[0]==="a" ? {who:"a", t:l[1]} : {who:"me", t:l[2].find(o=>o[1])[0]}); }
 function playDialog(d, onLine){
   if(!("speechSynthesis" in window)){ toast("Este navegador não tem voz sintetizada"); return; }
-  const main = pickVoice(), others = voices.filter(v=>v!==main);
-  const same = others.filter(v=>main && v.lang===main.lang), second = same[0] || others[0] || null;
+  const main = pickVoice(), acc = S.settings.accent.toLowerCase();
+  const others = voices.filter(v=>v!==main).sort((a,b)=>voiceScore(b,acc)-voiceScore(a,acc));
+  const second = others.find(v=>main && v.lang===main.lang) || others[0] || null;
   const us = dialogScript(d).map((l,k)=>{
     const u = makeUtter(l.t);
-    if(l.who==="me"){ if(second && !IS_IOS) u.voice = second; else u.pitch = 1.25; }
+    if(l.who==="me"){ if(second){ u.voice = second; u.lang = second.lang; } else u.pitch = 1.25; }
     u.onstart = ()=>onLine && onLine(k);
     return u;
   });
@@ -4608,7 +4625,7 @@ function renderProgress(){
   $("#s-new").onchange = e=>{ S.settings.newPerDay=+e.target.value; save(); };
   $("#s-theme").onchange = e=>{ S.settings.theme=e.target.value; save(); applyPrefs(); };
   $("#s-big").onchange = e=>{ S.settings.big=e.target.value==="1"; save(); applyPrefs(); };
-  $("#tv").onclick = ()=>speak("Consistency beats intensity. Fifteen minutes in the morning and fifteen at night.",undefined,true);
+  $("#tv").onclick = ()=>{ speak("Consistency beats intensity. Fifteen minutes in the morning and fifteen at night.",undefined,true); const v = pickVoice(); toast(v ? "Voz: "+v.name+" ("+v.lang+")" : "Nenhuma voz em inglês encontrada neste aparelho"); };
   $("#ex").onclick = ()=>{ const ta=$("#bk"); ta.value = JSON.stringify(S); ta.select(); S.lastBackup = todayKey(); save();
     if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>toast("Backup copiado"),()=>toast("Selecionado — copie com Ctrl+C")); else toast("Selecionado — copie com Ctrl+C"); };
   wirePlans(view); wireInstall(view);

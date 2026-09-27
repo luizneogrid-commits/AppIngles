@@ -176,7 +176,7 @@ async function iosAudioTests() {
     userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
     beforeParse(win) {
       Object.defineProperty(win.navigator, "userAgent", { get: () => "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" });
-      const voicesList = ["Albert", "Bad News", "Samantha", "Daniel", "Whisper", "Zarvox", "Karen"].map(n => ({ name: n, lang: n === "Daniel" ? "en-GB" : "en-US" }));
+      const voicesList = ["Luciana", "Albert", "Bad News", "Samantha", "Samantha (Enhanced)", "Daniel", "Whisper", "Zarvox", "Karen"].map(n => ({ name: n, lang: n === "Daniel" ? "en-GB" : n === "Karen" ? "en-AU" : n === "Luciana" ? "pt-BR" : "en-US", localService: true }));
       win.SpeechSynthesisUtterance = function (t) { this.text = t; this.volume = 1; this._l = {}; this.addEventListener = (e, f) => { this._l[e] = f; }; };
       win.speechSynthesis = { speaking: false, pending: false, onvoiceschanged: null,
         getVoices: () => voicesList, speak(u) { log.push(["speak", u.text, u.volume, u.voice ? u.voice.name : null]); },
@@ -186,8 +186,15 @@ async function iosAudioTests() {
   });
   const I = code => ios.window.eval(code);
   I(`S = merge({}); S.onboarded = true; S.seenVersion = APP_VERSION; go("today");`);
-  test("vozes de brincadeira ficam de fora", () => { eq(I(`voices.map(v=>v.name)`), ["Samantha", "Daniel", "Karen"]); });
-  test("no iOS não força voz (usa a padrão do sistema)", () => { eq(I(`pickVoice()`), null); });
+  test("vozes de brincadeira e de outros idiomas ficam de fora", () => { eq(I(`voices.map(v=>v.name)`), ["Samantha", "Samantha (Enhanced)", "Daniel", "Karen"]); });
+  test("escolhe explicitamente a melhor voz em inglês do sotaque (nunca a padrão em português)", () => {
+    eq(I(`pickVoice().name`), "Samantha (Enhanced)");
+    eq(I(`S.settings.accent="en-GB"; const n = pickVoice().name; S.settings.accent="en-US"; n`), "Daniel");
+    eq(I(`makeUtter("hello").voice.name`), "Samantha (Enhanced)");
+  });
+  test("texto para a voz: tira reticências, travessões e barras", () => {
+    eq(I(`ttsText("I'd rather… — *stay* home / go out")`), "I'd rather, stay home or go out");
+  });
   test("primeiro toque destrava o áudio com uma fala muda", () => {
     log.length = 0; ios.window.document.body.dispatchEvent(new ios.window.Event("touchend", { bubbles: true }));
     eq(log.filter(x => x[0] === "speak"), [["speak", " ", 0, null]]);
