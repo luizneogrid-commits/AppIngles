@@ -345,6 +345,8 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .retbar span{display:block;height:100%;border-radius:99px;background:var(--acc)}
 .retbar i{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:var(--ink)}
 .msg.playing{outline:3px solid var(--acc);outline-offset:2px}
+.opts.gm.many{grid-template-columns:repeat(3,1fr)}
+.opts.gm.many .opt{text-align:center}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2127,7 +2129,7 @@ function nextNewIds(n){ const out=[]; const basic = VOCAB.filter(isBasicItem), r
 function addMistake(m){
   if(!Array.isArray(S.mistakes)) S.mistakes = [];
   if(m.hi==null) m.hi = 0;
-  const key = m.k==="g" ? "g:"+m.l+":"+m.q : m.k==="w" ? "w:"+m.o.toLowerCase() : "d:"+m.d+":"+m.l;
+  const key = m.k==="g" ? "g:"+m.l+":"+m.q : m.k==="w" ? "w:"+m.o.toLowerCase() : m.k==="c" ? "c:"+m.p : "d:"+m.d+":"+m.l;
   const ex = S.mistakes.find(x=>x.key===key);
   if(ex){ ex.streak = 0; if(m.hi) ex.hi = 1; } else S.mistakes.push(Object.assign({key,streak:0,date:todayKey()},m));
   if(S.mistakes.length>80) S.mistakes = S.mistakes.slice(-80);
@@ -2140,6 +2142,7 @@ function addAIErrors(r){
   if(n){ save(); toast(n+(n===1?" erro foi para":" erros foram para")+" o deck Meus erros"); }
 }
 function mistakeItem(m){
+  if(m.k==="c") return {title:"Jogo rápido", ctx:"", prompt:esc(m.p).replace("___",'<span class="gap">_____</span>'), opts:m.o.map(x=>[x, m.a.includes(x), m.y])};
   if(m.k==="w") return {title:"Do seu texto", ctx:"", prompt:"Qual é a forma correta?", opts:[[m.f,1,m.y||"Correção feita no seu texto."],[m.o,0,"Essa foi a sua versão original."]]};
   if(m.k==="g"){ const L = GRAMMAR.find(l=>l.id===m.l); const q = L && L.q[m.q]; if(!q) return null;
     return {title:L.t, ctx:"", prompt:esc(q[0]).replace("___",'<span class="gap">_____</span>'), opts:q[1].map((o,j)=>[o,j===q[2],q[3]])}; }
@@ -3674,6 +3677,7 @@ function renderPractice(){
   if(sub==="mix") return blockGrammarMix(shell("Prática mista"));
   if(sub==="nums") return blockNumbers(shell("Números e letras"));
   if(sub==="irreg") return blockIrregular(shell("Verbos irregulares"));
+  if(sub && sub.startsWith("gm:") && GAMES[sub.slice(3)]) return blockGame(shell(GAMES[sub.slice(3)].t), sub.slice(3));
   if(sub==="journal") return blockJournal(shell("Seu diário"));
   if(sub && sub.startsWith("g:")) return blockGrammar(shell("Gramática"),{},sub.slice(2));
   if(sub==="write") return blockWrite(shell("Escrita livre"));
@@ -3699,6 +3703,9 @@ function renderPractice(){
     <section class="pgroup" aria-label="Ler e escrever"><div class="row between" style="align-items:baseline"><h2>Ler e escrever</h2><span class="small muted">Vocabulário em contexto</span></div>
     <div class="tiles">
       <button class="card tile" data-s="reading"><span class="ti">${ICON.book}</span><h3>Leitura</h3><p>${READINGS.length} textos curtos com tradução ao toque, áudio e perguntas. Mande palavras novas para o seu baralho.</p></button>
+      <button class="card tile" data-s="gm:colloc"><span class="ti">${ICON.pen}</span><h3>Make, do, take…</h3><p>${COLLOC.length} combinações de verbos que não se traduzem: make a decision, do homework, take a break.</p></button>
+      <button class="card tile" data-s="gm:prep"><span class="ti">${ICON.pen}</span><h3>Preposições</h3><p>${PREPS.length} combinações como interested in, good at, depend on, married to.</p></button>
+      <button class="card tile" data-s="gm:ff"><span class="ti">${ICON.pen}</span><h3>Falsos cognatos</h3><p>${FALSE_FRIENDS.length} armadilhas: actually × currently, pretend × intend, library × bookstore.</p></button>
       <button class="card tile" data-s="irreg"><span class="ti">${ICON.pen}</span><h3>Verbos irregulares</h3><p>${IRREG.length} verbos: digite passado e particípio de memória. Caixas de Leitner espaçam os que você já sabe.</p></button>
       <button class="card tile" data-s="build"><span class="ti">${ICON.pen}</span><h3>Monte a frase</h3><p>Ouça e toque nas palavras na ordem certa. Treina a estrutura da frase em inglês, sem digitar.</p></button>
       <button class="card tile" data-s="write"><span class="ti">${ICON.pen}</span><h3>Escrita livre</h3><p>Mais um texto no diário, com correção.</p></button>
@@ -4347,6 +4354,62 @@ function blockIrregular(el){
     };
     $("#ivOk",el).onclick = ()=>check(false); $("#ivSkip",el).onclick = ()=>check(true);
     [$("#ivP",el),$("#ivPP",el)].forEach((x,k)=>x.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); if(k===0) $("#ivPP",el).focus(); else check(false); } }));
+  }
+}
+/* ---------- jogos rápidos: combinações de verbos, preposições e falsos cognatos ---------- */
+const COLLOC_OPTS = ["make","do","take","have","get","pay"];
+const COLLOC_WHY = {make:"make: criar, produzir, causar um resultado.",do:"do: tarefas, trabalho e atividades em geral.",take:"take: pegar, fazer uma ação pontual.",have:"have: experiências, refeições, conversas.",get:"get: mudança de estado ou obter algo.",pay:"pay: dar (atenção, visita, elogio)."};
+const COLLOC = [["___ a decision",["make"]],["___ a mistake",["make"]],["___ progress",["make"]],["___ money",["make"]],["___ an effort",["make"]],["___ friends",["make"]],["___ a phone call",["make"]],["___ sense",["make"]],
+ ["___ homework",["do"]],["___ the dishes",["do"]],["___ research",["do"]],["___ business",["do"]],["___ your best",["do"]],["___ someone a favor",["do"]],["___ exercise",["do"]],
+ ["___ a break",["take","have"]],["___ a photo",["take"]],["___ a shower",["take","have"]],["___ notes",["take"]],["___ a risk",["take"]],["___ place (acontecer)",["take"]],["___ advantage of",["take"]],["___ care of",["take"]],
+ ["___ a look",["have","take"]],["___ fun",["have"]],["___ a good time",["have"]],["___ a chat",["have"]],["___ lunch",["have"]],["___ an argument",["have"]],
+ ["___ ready",["get"]],["___ lost",["get"]],["___ married",["get"]],["___ better (melhorar)",["get"]],["___ a job",["get"]],
+ ["___ attention",["pay"]],["___ a compliment",["pay"]],["___ a visit",["pay"]]];
+const PREP_OPTS = ["in","on","at","of","for","to","with","about","from"];
+const PREPS = [["I'm interested ___ history.","in"],["She's good ___ math.","at"],["It depends ___ the price.","on"],["I'm afraid ___ dogs.","of"],["He's responsible ___ the budget.","for"],["Listen ___ me.","to"],["I agree ___ you.","with"],["We talked ___ the project.","about"],["She's married ___ a lawyer.","to"],["I'm tired ___ waiting.","of"],["Thanks ___ your help.","for"],["I'm looking forward ___ the trip.","to"],["Congratulations ___ your new job!","on"],["It's different ___ what I expected.","from"],["I'm worried ___ the exam.","about"],["She's proud ___ her son.","of"],["He apologized ___ being late.","for"],["I'm used ___ it.","to"],["Can you wait ___ me?","for"],["I'm bad ___ remembering names.","at"],["Are you aware ___ the risks?","of"],["We arrived ___ the airport late.","at"],["We arrived ___ Paris on Monday.","in"],["This bag belongs ___ my brother.","to"],["I'm keen ___ learning new things.","on"],["Let's focus ___ the details.","on"],["I'm fed up ___ the noise.","with"],["He insisted ___ paying.","on"],["The book consists ___ five chapters.","of"],["I'm not sure ___ that.","about"]];
+const PREP_WHY = "Preposições dependentes não seguem lógica fixa nem batem com o português — vale decorar em bloco: verbo/adjetivo + preposição.";
+// [frase com lacuna, certa, armadilha, explicação]
+const FALSE_FRIENDS = [["I ___ live in Recife. (atualmente)","currently","actually","Atualmente = currently. “Actually” = na verdade."],["___, I've never been there. (na verdade)","Actually","Currently","Na verdade = actually."],
+ ["She ___ to be sick to skip school. (fingiu)","pretended","intended","Fingir = pretend. Pretender = intend."],["I ___ to travel next year. (pretendo)","intend","pretend","Pretender (ter intenção) = intend."],
+ ["My ___ live in Salvador. (pais)","parents","relatives","Pais = parents. Parentes = relatives."],["All my ___ came to the wedding. (parentes)","relatives","parents","Parentes = relatives."],
+ ["I borrowed a book from the ___. (biblioteca)","library","bookstore","Biblioteca = library. Livraria = bookstore."],["I bought a novel at the ___. (livraria)","bookstore","library","Livraria = bookstore."],
+ ["More than 200 people ___ the event. (compareceram)","attended","answered","Comparecer = attend. Atender (telefone) = answer."],["Can you ___ the phone? (atender)","answer","attend","Atender o telefone = answer the phone."],
+ ["That's a very ___ decision. (sensata)","sensible","sensitive","Sensato = sensible. Sensível = sensitive."],["He's very ___ and cries easily. (sensível)","sensitive","sensible","Sensível = sensitive."],
+ ["What ___ are you wearing to the party? (fantasia)","costume","custom","Fantasia = costume. Costume (hábito) = custom."],["It's a local ___ to eat late. (costume)","custom","costume","Costume, tradição = custom."],
+ ["We must fight ___ at work. (preconceito)","prejudice","damage","Preconceito = prejudice. Prejuízo = damage/loss."],["The storm caused a lot of ___. (prejuízo)","damage","prejudice","Prejuízo, dano = damage."],
+ ["The meeting will ___ after lunch. (retomar)","resume","summarize","Retomar = resume. Resumir = summarize."],["Can you ___ the report in two lines? (resumir)","summarize","resume","Resumir = summarize."],
+ ["He ___ at 65. (aposentou-se)","retired","removed","Aposentar-se = retire. Retirar = remove/take out."],["Please ___ your bag from the chair. (retire)","remove","retire","Retirar = remove."],
+ ["The ___ of the city spoke on TV. (prefeito)","mayor","major","Prefeito = mayor. Major = principal, importante."],["I studied at a small ___ in Boston. (faculdade)","college","high school","Faculdade = college. Colégio = high school."],
+ ["___ the door, don't pull it. (empurre)","Push","Pull","Empurrar = push. Puxar = pull."],["It took years, but ___ she became CEO. (por fim)","eventually","occasionally","Por fim, com o tempo = eventually. Eventualmente (às vezes) = occasionally."],
+ ["I didn't ___ it was so late. (perceber)","realize","perform","Perceber = realize. Realizar (executar) = carry out/perform."],["They had a big ___ about money. (briga)","argument","discussion","Briga, bate-boca = argument. Discussion = conversa, debate."]];
+const GAMES = {
+  colloc:{t:"Make, do, take…",intro:"Complete com o verbo que um nativo usaria. Essas combinações (collocations) não se traduzem palavra por palavra: é “make a decision”, mas “do homework”.",
+    make:()=>{ const [p,a] = COLLOC[rnd(0,COLLOC.length-1)]; return {p, o:COLLOC_OPTS, a, y:COLLOC_WHY[a[0]]+(a.length>1?" Aqui “"+a.join("” e “")+"” são aceitos (inglês americano × britânico).":"")}; }},
+  prep:{t:"Preposições",intro:"Escolha a preposição certa. Estas combinações dependem da palavra anterior — e quase nunca batem com o português (depend on, married to, good at).",
+    make:()=>{ const [p,a] = PREPS[rnd(0,PREPS.length-1)]; return {p, o:PREP_OPTS, a:[a], y:PREP_WHY}; }},
+  ff:{t:"Falsos cognatos",intro:"Palavras que parecem português, mas enganam. Escolha a certa para o significado entre parênteses.",
+    make:()=>{ const [p,a,trap,y] = FALSE_FRIENDS[rnd(0,FALSE_FRIENDS.length-1)]; return {p, o:shuffle([a,trap]), a:[a], y}; }}
+};
+function blockGame(el,key){
+  const g = GAMES[key], N = 10, used = new Set();
+  const round = []; let tries = 0; while(round.length<N && tries<200){ tries++; const it = g.make(); if(!used.has(it.p)){ used.add(it.p); round.push(it); } }
+  let i = 0, right = 0;
+  el.innerHTML = `<div class="card pad stack"><h2>${esc(g.t)}</h2><p class="muted">${esc(g.intro)}</p><button class="btn primary" id="gmGo">Começar (${round.length})</button></div>`;
+  $("#gmGo",el).onclick = q;
+  function q(){
+    if(i>=round.length){ if(!S.games) S.games = {}; S.games[key] = Math.max(S.games[key]??0, right); addXP(right*2,"jogo");
+      el.innerHTML = `<div class="card empty"><h3>${right}/${round.length} em ${esc(g.t)}</h3><p>Os que você errou foram para Meus erros e voltam até você acertar 2 vezes seguidas.</p><button class="btn primary" id="gmAg">Mais uma rodada</button></div>`; $("#gmAg",el).onclick = ()=>blockGame(el,key); return; }
+    const it = round[i];
+    el.innerHTML = `<div class="card pad stack"><div class="row between"><span class="eyebrow">${esc(g.t)} · ${i+1}/${round.length}</span></div>
+      <div class="progressbar"><span style="width:${i/round.length*100}%"></span></div>
+      <p class="qsent" lang="en">${esc(it.p).replace("___",'<span class="gap">_____</span>')}</p>
+      <div class="opts gm${it.o.length>3?" many":""}">${it.o.map((x,j)=>`<button class="opt" data-j="${j}" lang="en">${esc(x)}</button>`).join("")}</div>
+      <div id="gmFb" role="status" aria-live="polite"></div></div>`;
+    $$(".opt",el).forEach(b=>b.onclick=()=>{ const pick = it.o[+b.dataset.j], ok = it.a.includes(pick); if(ok) right++; else { addMistake({k:"c", p:it.p, o:it.o, a:it.a, y:it.y}); save(); }
+      $$(".opt",el).forEach(x=>{ x.disabled = true; if(it.a.includes(it.o[+x.dataset.j])) x.classList.add("right"); }); if(!ok) b.classList.add("wrong");
+      const full = it.p.replace(/ \(.*\)$/,"").replace("___", it.a[0]); speak(full);
+      $("#gmFb",el).innerHTML = `<p class="note small">${ok?"<b>Certo.</b> ":""}${esc(it.y)}</p><button class="btn primary" id="qnx" style="margin-top:8px">Próximo →</button>`;
+      $("#qnx",el).onclick = ()=>{ i++; q(); }; });
   }
 }
 function blockJournal(el){

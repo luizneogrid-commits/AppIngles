@@ -53,6 +53,13 @@ test("verbos irregulares sem duplicatas", () => {
   eq(E(`(()=>{ const b = IRREG.map(v=>v[0]); return b.filter((x,i)=>b.indexOf(x)!==i); })()`), []);
 });
 
+test("jogos rápidos: respostas entre as opções e frases com lacuna", () => {
+  eq(E(`COLLOC.filter(([p,a])=>!p.includes("___") || !a.every(x=>COLLOC_OPTS.includes(x))).map(x=>x[0])`), []);
+  eq(E(`PREPS.filter(([p,a])=>!p.includes("___") || !PREP_OPTS.includes(a)).map(x=>x[0])`), []);
+  eq(E(`FALSE_FRIENDS.filter(x=>!x[0].includes("___") || x[1]===x[2] || x.length!==4).map(x=>x[0])`), []);
+  eq(E(`(()=>{ const all = COLLOC.map(x=>x[0]).concat(PREPS.map(x=>x[0]), FALSE_FRIENDS.map(x=>x[0])); return all.filter((x,i)=>all.indexOf(x)!==i); })()`), [], "itens repetidos");
+});
+
 console.log("\nFSRS");
 test("cartão novo: De novo 1d, Bom 4d, Fácil 14d", () => {
   const r = E(`(()=>{ const c={due:todayKey(),ivl:0,reps:0,lapses:0}; return [0,1,2,3].map(q=>schedule(c,q).ivl); })()`);
@@ -113,7 +120,7 @@ test("todas as telas abrem sem erro em todos os níveis", () => {
   const errs = E(`(()=>{ const errs=[]; const tryv=(n,f)=>{ try{ f(); if(!view.innerHTML.trim()) errs.push(n+": vazia"); if(view.querySelector("#crHome")) errs.push(n+": tela de erro"); }catch(e){ errs.push(n+": "+e.message); } };
     for(let i=0;i<20;i++) S.cards["v"+i]={due:todayKey(),ivl:3,reps:2,lapses:i%4,s:3,d:5,last:addDays(todayKey(),-3)};
     ["pp","fs","ut"].forEach(id=>S.grammar[id]={best:4,last:3,date:addDays(todayKey(),-3),stage:0,due:todayKey()});
-    const subs=["listen","speak","pairs","chat","dialogs","mistakes","reading","ear","test","world","write","journal","build","guide","pron","phr","quick","mix","science","nums","irreg","g:b_be","d:cafe","r:memory"];
+    const subs=["listen","speak","pairs","chat","dialogs","mistakes","reading","ear","test","world","write","journal","build","guide","pron","phr","quick","mix","science","nums","irreg","gm:colloc","gm:prep","gm:ff","g:b_be","d:cafe","r:memory"];
     ["a1","a2","b1","b1p","b2"].forEach(l=>{ S.settings.level=l;
       ["today","review","practice","progress"].forEach(t=>tryv(l+"/"+t,()=>go(t)));
       subs.forEach(s=>tryv(l+"/practice/"+s,()=>go("practice",s)));
@@ -132,6 +139,14 @@ test("revisão completa termina (palavras + gramática)", () => {
       else break; }
     return {done: !!view.querySelector(".empty"), steps:n}; })()`);
   assert(r.done, "revisão não terminou em " + r.steps + " passos");
+});
+test("jogo rápido: rodada sem repetição e erro vai para Meus erros", () => {
+  const r = E(`(()=>{ S.mistakes=[]; go("practice","gm:prep"); view.querySelector("#gmGo").click(); const seen=[]; let wrong=false;
+    for(let k=0;k<10;k++){ const p=view.querySelector(".qsent").textContent; seen.push(p);
+      const btns=[...view.querySelectorAll(".opt")]; const item=PREPS.find(x=>x[0].replace("___","_____")===p);
+      const b = !wrong ? btns.find(x=>x.textContent!==item[1]) : btns.find(x=>x.textContent===item[1]); wrong=true; b.click(); view.querySelector("#qnx").click(); }
+    go("practice","mistakes"); return {uniq:new Set(seen).size, mistakes:S.mistakes.filter(m=>m.k==="c").length, deckShows:!!view.querySelector(".qsent")}; })()`);
+  eq(r, { uniq: 10, mistakes: 1, deckShows: true });
 });
 test("nenhum erro de script durante os testes", () => { eq(pageErrors, []); });
 
