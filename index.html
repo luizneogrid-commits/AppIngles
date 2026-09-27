@@ -3501,6 +3501,20 @@ function blockWrite(el,opt={}){
    REVIEW TAB
    ============================================================ */
 function markTarget(ex,w){ if(ex.includes("*")) return ex; const i = ex.toLowerCase().indexOf(w.toLowerCase()); return i>=0 ? ex.slice(0,i)+"*"+ex.slice(i,i+w.length)+"*"+ex.slice(i+w.length) : ex; }
+// arquivo exportado pelo Anki ("Notas em texto simples"): campos separados por tab, podem ter HTML
+function stripHTML(x){ return String(x||"").replace(/<br\s*\/?>/gi," / ").replace(/<[^>]+>/g,"").replace(/&nbsp;/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/\s+/g," ").trim(); }
+function parseAnki(txt, invert){
+  const out = [];
+  String(txt).split(/\r?\n/).forEach(l=>{
+    if(!l.trim() || l.startsWith("#")) return;
+    const f = l.split("\t").map(stripHTML).filter(Boolean);
+    if(f.length<2) return;
+    let [front, back] = invert ? [f[1], f[0]] : [f[0], f[1]];
+    back = back.split(" / ")[0];
+    out.push({w:front.slice(0,80), pt:back.slice(0,120), ex:""});
+  });
+  return out;
+}
 function parseWordList(txt){
   const out = [];
   txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).forEach(l=>{
@@ -3584,6 +3598,8 @@ function renderReviewTab(){
           <p class="small muted">Uma palavra por linha, no formato <span class="mono">palavra - significado</span> (também aceita ponto e vírgula ou tab, e um exemplo opcional como terceiro campo).</p>
           <textarea id="imp" rows="5" placeholder="take for granted - não dar valor\nhang out - sair, passar tempo junto\nbrand new; novinho em folha; I bought a brand new bike."></textarea>
           ${AI?`<label class="small row" style="font-weight:400;cursor:pointer"><input type="checkbox" id="impAI" checked style="accent-color:var(--acc)"> Gerar frases de exemplo com IA para as que não têm</label>`:""}
+          <div class="row"><label class="btn sm" for="ankiF" style="cursor:pointer">Abrir arquivo do Anki (.txt)<input type="file" id="ankiF" accept=".txt,.tsv,text/plain" hidden></label><label class="small row" style="font-weight:400;cursor:pointer"><input type="checkbox" id="ankiInv" style="accent-color:var(--acc)"> Frente em português</label></div>
+          <p class="small muted">No Anki: Arquivo → Exportar → “Notas em texto simples”. As palavras entram na caixa acima para você conferir antes de importar.</p>
           <div class="row"><button class="btn" id="impGo">Importar</button><span class="small muted" id="impMsg"></span></div>
         </div></details>
     </div>
@@ -3607,6 +3623,11 @@ function renderReviewTab(){
   const ge = $("#genEx"); if(ge) ge.onclick = async ()=>{ const w=$("#nw-w").value.trim(); if(!w){ toast("Digite a palavra primeiro"); return; } ge.disabled=true; ge.textContent="Gerando…";
     try{ const m = await aiExamples([w]); const ex = m[w.toLowerCase()]; if(ex) $("#nw-e").value = ex; else toast("Não veio exemplo; tente de novo"); }catch(e){ toast(aiErr(e)); }
     ge.disabled=false; ge.textContent="Gerar exemplo com IA"; };
+  $("#ankiF").onchange = e=>{ const f = e.target.files[0]; if(!f) return; const rd = new FileReader();
+    rd.onload = ()=>{ const list = parseAnki(rd.result, $("#ankiInv").checked);
+      if(!list.length){ $("#impMsg").textContent = "Não encontrei cartões nesse arquivo. Exporte como “Notas em texto simples”."; return; }
+      $("#imp").value = list.map(x=>x.w+" ; "+x.pt).join("\n"); $("#impMsg").textContent = list.length+" cartões lidos do Anki. Confira e toque em Importar."; };
+    rd.readAsText(f); };
   $("#impGo").onclick = async ()=>{
     const list = parseWordList($("#imp").value), msg = $("#impMsg");
     if(!list.length){ msg.textContent = "Nenhuma linha no formato palavra - significado."; return; }

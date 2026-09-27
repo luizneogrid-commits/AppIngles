@@ -98,6 +98,13 @@ test("estrutura de escrita escolhida pelo tipo de tema", () => {
      ["E-mail ou mensagem", "Opinião", "História", "Descrição"]);
 });
 
+test("importação do Anki: remove HTML, ignora cabeçalho e inverte", () => {
+  const txt = "#separator:tab\n#html:true\ntake for granted\tnão dar valor<br><br><i>Don&#39;t take it for granted.</i>\n<b>hang out</b>\tsair junto\nsó um campo\n";
+  eq(E(`parseAnki(${JSON.stringify(txt)}, false)`), [{ w: "take for granted", pt: "não dar valor", ex: "" }, { w: "hang out", pt: "sair junto", ex: "" }]);
+  eq(E(`parseAnki(${JSON.stringify("sair junto\thang out")}, true)[0].w`), "hang out");
+  eq(E(`parseWordList(parseAnki(${JSON.stringify(txt)}, false).map(x=>x.w+" ; "+x.pt).join("\\n")).length`), 2, "formato intermediário reimportável");
+});
+
 console.log("\nSequência, férias e dados");
 test("férias protegem a sequência", () => {
   const r = E(`(()=>{ const t=todayKey(); S.streak={count:20,best:20,last:addDays(t,-10)}; S.freezes=0;
