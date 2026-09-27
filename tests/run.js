@@ -167,5 +167,51 @@ test("modo foco: sem abas durante a sessão, de volta ao sair", () => {
 });
 test("nenhum erro de script durante os testes", () => { eq(pageErrors, []); });
 
-console.log(`\n${pass} passaram, ${fail} falharam`);
-process.exit(fail ? 1 : 0);
+// ---------- áudio no iPhone: navegador simulado com user-agent do iOS e voz sintetizada falsa ----------
+async function iosAudioTests() {
+  console.log("\nÁudio no iPhone (simulado)");
+  const log = [];
+  const ios = new JSDOM(html, {
+    runScripts: "dangerously", url: "https://localhost/", virtualConsole: new VirtualConsole(),
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    beforeParse(win) {
+      Object.defineProperty(win.navigator, "userAgent", { get: () => "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" });
+      const voicesList = ["Albert", "Bad News", "Samantha", "Daniel", "Whisper", "Zarvox", "Karen"].map(n => ({ name: n, lang: n === "Daniel" ? "en-GB" : "en-US" }));
+      win.SpeechSynthesisUtterance = function (t) { this.text = t; this.volume = 1; this._l = {}; this.addEventListener = (e, f) => { this._l[e] = f; }; };
+      win.speechSynthesis = { speaking: false, pending: false, onvoiceschanged: null,
+        getVoices: () => voicesList, speak(u) { log.push(["speak", u.text, u.volume, u.voice ? u.voice.name : null]); },
+        cancel() { log.push(["cancel"]); }, resume() { log.push(["resume"]); } };
+      win.scrollTo = () => {};
+    }
+  });
+  const I = code => ios.window.eval(code);
+  I(`S = merge({}); S.onboarded = true; S.seenVersion = APP_VERSION; go("today");`);
+  test("vozes de brincadeira ficam de fora", () => { eq(I(`voices.map(v=>v.name)`), ["Samantha", "Daniel", "Karen"]); });
+  test("no iOS não força voz (usa a padrão do sistema)", () => { eq(I(`pickVoice()`), null); });
+  test("primeiro toque destrava o áudio com uma fala muda", () => {
+    log.length = 0; ios.window.document.body.dispatchEvent(new ios.window.Event("touchend", { bubbles: true }));
+    eq(log.filter(x => x[0] === "speak"), [["speak", " ", 0, null]]);
+  });
+  test("sem nada tocando: fala na hora e não chama cancel()", () => {
+    log.length = 0; I(`speakNow("hello")`);
+    eq(log.map(x => x[0]), ["resume", "speak"]); eq(log[1][1], "hello");
+  });
+  log.length = 0; I(`speechSynthesis.speaking = true; speakNow("second")`);
+  const sync = log.map(x => x[0]);
+  await new Promise(r => setTimeout(r, 250));
+  test("com algo tocando: cancela e só fala depois de uma pausa (evita o descarte do iOS)", () => {
+    eq(sync, ["cancel", "resume"], "chamadas imediatas");
+    eq(log.map(x => x[0]), ["cancel", "resume", "speak"], "depois da pausa");
+  });
+  I(`speechSynthesis.speaking = false`);
+  test("aviso do modo silencioso aparece só uma vez", () => { eq(I(`S.iosAudioHint`), true); });
+  test("escolha manual de voz é respeitada no iOS", () => {
+    log.length = 0; I(`S.settings.voice = "Karen"; speakNow("hi"); S.settings.voice = ""`);
+    eq(log.find(x => x[0] === "speak")[3], "Karen");
+  });
+}
+
+iosAudioTests().then(() => {
+  console.log(`\n${pass} passaram, ${fail} falharam`);
+  process.exit(fail ? 1 : 0);
+});

@@ -2249,19 +2249,26 @@ const STAGE_LABEL = {new:"Nova",lrn:"Aprendendo",young:"Jovem",mat:"Madura"};
 
 /* ---------- TTS ---------- */
 let voices = [];
-function loadVoices(){ try{ voices = speechSynthesis.getVoices().filter(v=>/^en[-_]/i.test(v.lang)||v.lang==="en"); }catch(e){ voices=[]; } }
+// iPhone/iPad/Mac: lista traz "vozes de brincadeira" (Whisper quase não se ouve, Zarvox é robô…); ficam de fora
+const NOVELTY_VOICES = /^(albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|pipe organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|princess)\b/i;
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent||"") || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+function loadVoices(){ try{ voices = speechSynthesis.getVoices().filter(v=>(/^en[-_]/i.test(v.lang)||v.lang==="en") && !NOVELTY_VOICES.test(v.name)); }catch(e){ voices=[]; } }
 if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 function pickVoice(){
   if(S.settings.voice){ const v=voices.find(v=>v.name===S.settings.voice); if(v) return v; }
   const acc = S.settings.accent.toLowerCase();
   const same = voices.filter(v=>v.lang.toLowerCase().replace("_","-")===acc);
   const pool = same.length?same:voices;
-  return pool.find(v=>/natural|neural|online|google/i.test(v.name)) || pool[0] || null;
+  // no iOS, forçar uma voz tem bugs que causam silêncio: sem escolha do usuário, deixa o sistema usar a voz padrão do idioma
+  if(IS_IOS) return null;
+  return pool.find(v=>/natural|neural|online|google/i.test(v.name)) || pool.find(v=>/samantha|daniel|karen|moira|ava|allison|susan|serena|alex/i.test(v.name)) || pool[0] || null;
 }
-const VOICE_HELP = "<b>Android:</b> Configurações → Sistema → Idiomas → Saída de texto para fala → Mecanismo do Google → instalar voz em inglês. <b>iPhone:</b> Ajustes → Acessibilidade → Conteúdo Falado → Vozes → Inglês. <b>Windows:</b> Configurações → Hora e idioma → Fala → Adicionar vozes → English. Depois, feche e abra o app.";
+const VOICE_HELP = "<b>iPhone sem som?</b> Desligue o modo silencioso (chave na lateral ou Central de Controle), aumente o volume e toque em qualquer botão de áudio. <b>Android:</b> Configurações → Sistema → Idiomas → Saída de texto para fala → Mecanismo do Google → instalar voz em inglês. <b>iPhone:</b> Ajustes → Acessibilidade → Conteúdo Falado → Vozes → Inglês. <b>Windows:</b> Configurações → Hora e idioma → Fala → Adicionar vozes → English. Depois, feche e abra o app.";
 let voiceNoteHidden = false, voicesChecked = false;
 function voiceStatus(){
   if(!("speechSynthesis" in window)) return {ok:false,msg:"Este navegador não tem voz sintetizada. Use Chrome, Edge ou Safari."};
+  // iPhone sempre tem inglês embutido, mas às vezes demora para listar as vozes: não é motivo para alarme
+  if(!voices.length && IS_IOS) return {ok:true,msg:"Voz: padrão do iPhone para "+S.settings.accent};
   if(!voices.length) return {ok:false,msg:"Nenhuma voz em inglês instalada neste aparelho — o áudio do app não vai funcionar direito."};
   const v = pickVoice(); return {ok:true,msg:"Voz em uso: "+(v?v.name+" ("+v.lang+")":"padrão do sistema")};
 }
@@ -2272,13 +2279,41 @@ function speak(text,rate,force){
   if(isSilent() && !force){ if(Date.now()-silentToastAt>8000){ silentToastAt = Date.now(); toast("Modo sem áudio ligado (desligue na tela Hoje)"); } return; }
   return speakNow(text,rate);
 }
+/* Áudio robusto para iPhone (WebKit):
+   - o iOS só libera a voz dentro de um toque: o primeiro toque em qualquer lugar "destrava" com uma fala muda;
+   - cancel() seguido de speak() no mesmo instante faz o iOS descartar a fala nova: só cancela se algo estiver tocando, e espera um pouco;
+   - a voz pode ficar pausada depois de o app ir para segundo plano: resume() antes de falar;
+   - guarda referência das falas para o navegador não descartá-las antes de terminar. */
+let ttsUnlocked = false;
+const liveUtter = [];
+function unlockTTS(){
+  if(ttsUnlocked || !("speechSynthesis" in window)) return;
+  ttsUnlocked = true;
+  try{ const u = new SpeechSynthesisUtterance(" "); u.volume = 0; u.lang = S.settings.accent; speechSynthesis.speak(u); }catch(e){}
+}
+["touchend","click","keydown"].forEach(ev=>document.addEventListener(ev, unlockTTS, {capture:true, passive:true}));
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && "speechSynthesis" in window){ try{ speechSynthesis.resume(); }catch(e){} } });
+function makeUtter(text, rate){
+  const u = new SpeechSynthesisUtterance(plain(text));
+  u.lang = S.settings.accent; const v = pickVoice() || (S.settings.voice ? voices.find(x=>x.name===S.settings.voice) : null); if(v) u.voice = v;
+  u.rate = rate ?? S.settings.rate; u.volume = 1;
+  liveUtter.push(u); if(liveUtter.length>30) liveUtter.shift();
+  u.addEventListener("end", ()=>{ const i = liveUtter.indexOf(u); if(i>=0) liveUtter.splice(i,1); });
+  return u;
+}
+function ttsSpeak(utters){
+  const ss = speechSynthesis, busy = ss.speaking || ss.pending;
+  if(busy) ss.cancel();
+  try{ ss.resume(); }catch(e){}
+  const go = ()=>utters.forEach(u=>ss.speak(u));
+  if(busy && IS_IOS) setTimeout(go, 150); else go();
+}
 function speakNow(text,rate){
   if(!("speechSynthesis" in window)){ toast("Este navegador não tem voz sintetizada"); return; }
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(plain(text));
-  u.lang = S.settings.accent; const v = pickVoice(); if(v) u.voice = v;
-  u.rate = rate ?? S.settings.rate;
-  speechSynthesis.speak(u);
+  const u = makeUtter(text, rate);
+  ttsSpeak([u]);
+  // o navegador não consegue saber se o iPhone está no modo silencioso: avisa uma vez, no primeiro áudio
+  if(IS_IOS && !S.iosAudioHint && u.text.trim()){ S.iosAudioHint = true; save(); setTimeout(()=>toast("Não ouviu? Desligue o modo silencioso do iPhone e aumente o volume."), 1200); }
   return u;
 }
 function spk(text,label){ return `<button class="icon-btn" data-say="${esc(plain(text))}" aria-label="${esc(label||"Ouvir")}" title="Ouvir">${ICON.speaker}</button>`; }
@@ -3834,15 +3869,15 @@ Start now in character.`},{role:"assistant",content:role.o}];
 function dialogScript(d){ return d.lines.map(l=>l[0]==="a" ? {who:"a", t:l[1]} : {who:"me", t:l[2].find(o=>o[1])[0]}); }
 function playDialog(d, onLine){
   if(!("speechSynthesis" in window)){ toast("Este navegador não tem voz sintetizada"); return; }
-  speechSynthesis.cancel();
   const main = pickVoice(), others = voices.filter(v=>v!==main);
   const same = others.filter(v=>main && v.lang===main.lang), second = same[0] || others[0] || null;
-  dialogScript(d).forEach((l,k)=>{
-    const u = new SpeechSynthesisUtterance(l.t); u.lang = S.settings.accent; u.rate = S.settings.rate;
-    if(l.who==="me"){ if(second) u.voice = second; else { if(main) u.voice = main; u.pitch = 1.25; } } else if(main) u.voice = main;
+  const us = dialogScript(d).map((l,k)=>{
+    const u = makeUtter(l.t);
+    if(l.who==="me"){ if(second && !IS_IOS) u.voice = second; else u.pitch = 1.25; }
     u.onstart = ()=>onLine && onLine(k);
-    speechSynthesis.speak(u);
+    return u;
   });
+  ttsSpeak(us);
 }
 function dlgTurns(d){ return d.lines.filter(l=>l[0]==="me").length; }
 function blockDialogs(el,startId){
@@ -4151,7 +4186,7 @@ const GUIDE = [
  ["As revisões acumularam. E agora?","Priorize a revisão por alguns dias. O app reduz sozinho as palavras novas quando há 40 ou mais revisões pendentes, para a pilha não crescer."],
  ["Onde meu progresso fica salvo?","Aberto pelo Claude, fica salvo na sua conta. No app do celular (link do GitHub), fica só no aparelho — faça backup em Progresso → Backup (o app lembra a cada 14 dias). O backup também serve para levar o progresso de um para o outro."],
  ["O microfone não funciona.","Dentro do Claude o microfone é bloqueado por segurança. Use o app do celular (Chrome, Edge ou Safari) para gravar sua voz, checar a pronúncia e falar nos diálogos. No Claude, fale em voz alta mesmo assim e digite um resumo se quiser correção."],
- ["Não ouço o áudio.","Seu aparelho precisa de uma voz em inglês instalada. O app mostra um aviso com o passo a passo quando não encontra nenhuma. Em Progresso → Ajustes você escolhe a voz, o sotaque e a velocidade."],
+ ["Não ouço o áudio.","No iPhone: desligue o modo silencioso (chave na lateral ou Central de Controle — com ele ligado, a voz do app fica muda), aumente o volume e toque uma vez em qualquer botão de áudio. Nos outros aparelhos, é preciso ter uma voz em inglês instalada. O app mostra um aviso com o passo a passo quando não encontra nenhuma. Em Progresso → Ajustes você escolhe a voz, o sotaque e a velocidade."],
  ["Como mudo meu nível?","Em Progresso → Ajustes → Seu nível, a qualquer momento. Na dúvida, faça o teste de nível (Praticar ou Progresso): ele sugere o nível certo e mede sua evolução mês a mês."],
  ["Onde a IA funciona?","A correção do diário e da fala, a conversa livre, os exemplos automáticos e as leituras geradas funcionam quando o app está aberto pelo Claude. Todo o resto funciona em qualquer lugar, até sem internet."],
  ["Como instalo no celular?","Abra o link do GitHub. Android (Chrome): menu ⋮ → Instalar app. iPhone (Safari): Compartilhar → Adicionar à Tela de Início. Depois ele abre como um app e funciona offline."],
