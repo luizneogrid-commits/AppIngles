@@ -3329,7 +3329,8 @@ function blockGrammar(el,opt={},lessonId){
         if(ok){ right++; addXP(3); } else { addMistake({k:"g",l:L.id,q:L.q.indexOf(qs[i]),hi:conf===2?1:0}); save(); }
         $$(".opt",el).forEach(x=>{ x.disabled=true; if(+x.dataset.j===a) x.classList.add("right"); });
         if(!ok) b.classList.add("wrong");
-        const full = s.replace("___", o[a].replace(" / "," … "));
+        // questões do tipo "Which sentence is correct?" não têm lacuna: o áudio lê a resposta certa
+        const full = s.includes("___") ? s.replace("___", o[a].replace(" / "," … ")) : o[a];
         const showFb = (pre="")=>{
           if(!ok){ const rl = $("#rule",el); if(rl) rl.open = true; }
           $("#gf",el).innerHTML = `<p class="note ${!ok&&conf===2?"warn":""}">${pre}${confNote(conf,ok)}${ok?"<b>Certo.</b> ":"<b>Resposta: "+esc(o[a])+".</b> "}${esc(e)}</p><div class="row" style="margin-top:10px">${o[a].includes("/")?"":spk(full,"Ouvir a frase")}<button class="btn primary" id="gn">Continuar →</button></div>`;

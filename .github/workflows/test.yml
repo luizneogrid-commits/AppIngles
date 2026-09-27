@@ -1,0 +1,22 @@
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: index.html está atualizado com fluencia.html
+        run: |
+          node build.js
+          git diff --exit-code index.html || (echo "Rode 'node build.js' e faça commit do index.html" && exit 1)
+      - run: npm test

@@ -64,6 +64,16 @@ O app aplica técnicas da ciência da aprendizagem, 21 técnicas, cada uma docum
 
 ## Desenvolvimento
 
+Testes automáticos (conteúdo, algoritmo FSRS, verificadores de resposta, sequência, dados e todas as telas em todos os níveis):
+
+```bash
+npm install
+npm test
+```
+
+O GitHub Actions roda os testes a cada push.
+
+
 Edite `fluencia.html` e rode:
 
 ```bash

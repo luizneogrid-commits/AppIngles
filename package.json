@@ -1,0 +1,12 @@
+{
+  "name": "fluencia-15-15",
+  "private": true,
+  "description": "App de inglês com sessões de 15 + 15 minutos",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node tests/run.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  }
+}
