@@ -161,6 +161,10 @@ test("jogo rápido: rodada sem repetição e erro vai para Meus erros", () => {
     go("practice","mistakes"); return {uniq:new Set(seen).size, mistakes:S.mistakes.filter(m=>m.k==="c").length, deckShows:!!view.querySelector(".qsent")}; })()`);
   eq(r, { uniq: 10, mistakes: 1, deckShows: true });
 });
+test("modo foco: sem abas durante a sessão, de volta ao sair", () => {
+  const r = E(`(()=>{ session=null; startSession("m"); const inS = document.body.classList.contains("focus"); session=null; go("today"); return [inS, document.body.classList.contains("focus")]; })()`);
+  eq(r, [true, false]);
+});
 test("nenhum erro de script durante os testes", () => { eq(pageErrors, []); });
 
 console.log(`\n${pass} passaram, ${fail} falharam`);

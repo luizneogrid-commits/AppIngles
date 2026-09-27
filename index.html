@@ -347,6 +347,13 @@ svg.xpc{width:100%;min-width:420px;height:auto;display:block}
 .msg.playing{outline:3px solid var(--acc);outline-offset:2px}
 .opts.gm.many{grid-template-columns:repeat(3,1fr)}
 .opts.gm.many .opt{text-align:center}
+/* modo foco: durante a sessão, sem abas */
+body.focus .tabs{display:none}
+@media (max-width:640px){
+  body.focus .wrap{padding-block:0 calc(24px + env(safe-area-inset-bottom,0px))}
+  body.focus .sess-foot{bottom:env(safe-area-inset-bottom,0px)}
+  body.focus #toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2528,6 +2535,7 @@ let navCount = 0;
 function render(){
   document.body.classList.remove("m-mode","n-mode");
   if(currentTab==="session" && session) document.body.classList.add(session.kind+"-mode");
+  document.body.classList.toggle("focus", currentTab==="session" && !!session);
   else document.body.classList.add(new Date().getHours()<14?"m-mode":"n-mode");
   try{
     ({today:renderToday,review:renderReviewTab,practice:renderPractice,progress:renderProgress,session:renderSession}[currentTab]||renderToday)();
