@@ -2236,7 +2236,20 @@ let voices = [];
 const NOVELTY_VOICES = /^(albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|pipe organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|princess)\b/i;
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent||"") || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
 function loadVoices(){ try{ voices = speechSynthesis.getVoices().filter(v=>(/^en[-_]/i.test(v.lang)||v.lang==="en") && !NOVELTY_VOICES.test(v.name)); }catch(e){ voices=[]; } }
-if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+let allVoices = [];
+// roda também antes de o app terminar de carregar: não pode depender de currentTab estar pronto
+function rerenderVoices(){ try{ if(currentTab==="practice" && sub==="voices") render(); }catch(e){} }
+function pollVoices(tries){
+  if(!("speechSynthesis" in window)) return;
+  try{ allVoices = speechSynthesis.getVoices() || []; }catch(e){ allVoices = []; }
+  loadVoices();
+  if(!voices.length && tries>0) setTimeout(()=>pollVoices(tries-1), 300);
+  else if(voices.length) rerenderVoices();
+}
+if("speechSynthesis" in window){
+  speechSynthesis.onvoiceschanged = ()=>{ try{ allVoices = speechSynthesis.getVoices() || []; }catch(e){} loadVoices(); rerenderVoices(); };
+  pollVoices(20);
+}
 // Vozes boas do iPhone/Mac por sotaque, em ordem de preferência (as versões "Enhanced"/"Premium" soam bem mais naturais)
 const IOS_PREF = {"en-us":["ava","samantha","allison","susan","nicky","joelle","zoe","evan","tom","aaron","nathan","fred"],"en-gb":["daniel","kate","serena","oliver","arthur","martha","jamie"],"en-au":["karen","matilda","lee"],"en-ie":["moira"],"en-in":["rishi","veena"]};
 function voiceScore(v, acc){
@@ -2306,6 +2319,11 @@ function ttsSpeak(utters){
   try{ ss.resume(); }catch(e){}
   const go = ()=>utters.forEach(u=>ss.speak(u));
   if(busy && IS_IOS) setTimeout(go, 150); else go();
+}
+function speakWith(voice, text){
+  if(!("speechSynthesis" in window)) return;
+  const u = makeUtter(text); if(voice){ u.voice = voice; u.lang = voice.lang; }
+  ttsSpeak([u]);
 }
 function speakNow(text,rate){
   if(!("speechSynthesis" in window)){ toast("Este navegador não tem voz sintetizada"); return; }
@@ -2627,7 +2645,7 @@ function renderToday(){
   const tests = S.tests||[], lastT = tests.length ? tests[tests.length-1].d : null;
   const testDue = lastT ? diffDays(lastT,todayKey())>=30 : dayIndex()>=7;
   const banners = [
-    voicesChecked && !vs.ok && !voiceNoteHidden ? `<div class="note warn stack" style="gap:6px" role="alert"><span><b>Áudio indisponível.</b> ${esc(vs.msg)}</span><span class="small">${VOICE_HELP}</span><button class="btn sm" id="vhide" style="align-self:flex-start">Entendi</button></div>` : "",
+    voicesChecked && !vs.ok && !voiceNoteHidden ? `<div class="note warn stack" style="gap:6px" role="alert"><span><b>Áudio indisponível.</b> ${esc(vs.msg)}</span><span class="small">${VOICE_HELP}</span><span class="row"><button class="btn sm primary" id="vfix">Resolver agora</button><button class="btn sm" id="vhide">Entendi</button></span></div>` : "",
     atRisk ? `<div class="note warn"><b>Sua sequência de ${streak} ${streak===1?"dia":"dias"} está em risco.</b> Faça ao menos uma sessão hoje${S.freezes?" (você tem "+S.freezes+" proteção, mas melhor não gastar)":""}.</div>` : "",
     needsBackup() ? `<div class="note row between"><span><b>Seu progresso fica só neste aparelho.</b> ${S.lastBackup?"Último backup em "+fmtDate(S.lastBackup)+".":"Você ainda não fez backup."} Salve um arquivo de segurança — leva 5 segundos.</span><button class="btn sm" id="qbk">Salvar backup</button></div>` : "",
     testDue ? `<div class="note row between"><span><b>${lastT?"Faz um mês do seu último teste.":"Que tal medir seu nível?"}</b> Um teste de 5 minutos mostra sua evolução.</span><button class="btn sm" id="gotest">Fazer teste</button></div>` : ""
@@ -2707,13 +2725,15 @@ function renderToday(){
   wireInstall(view);
   const tp = $("#toPlan"); if(tp) tp.onclick = ()=>{ go("progress"); setTimeout(()=>{ const p = $("#plm"); if(p){ p.scrollIntoView({block:"center"}); p.focus(); } },50); };
   const qb = $("#qbk"); if(qb) qb.onclick = async ()=>{ if(await quickBackup()) renderToday(); };
+  const vf = $("#vfix"); if(vf) vf.onclick = ()=>go("practice","voices");
   const vh = $("#vhide"); if(vh) vh.onclick = ()=>{ voiceNoteHidden = true; renderToday(); };
   $("#wkd").addEventListener("toggle", e=>{ try{ localStorage.setItem("fluencia:wkOpen", e.target.open?"1":"0"); }catch(err){} });
 }
 
 /* ---------- novidades: mostradas uma vez após cada atualização ---------- */
-const APP_VERSION = "2026.09.27";
+const APP_VERSION = "2026.09.27.2";
 const CHANGELOG = [
+ ["Escolha sua voz","Voz artificial ou estranha? Em Progresso → Ajustes → Escolher voz, ouça cada voz em inglês do seu aparelho e escolha a melhor."],
  ["Make, do, take…","Jogo com 37 combinações de verbos que não se traduzem: make a decision, do homework, take a break."],
  ["Preposições","30 combinações como interested in, good at, depend on e married to."],
  ["Falsos cognatos","26 armadilhas: actually × currently, pretend × intend, library × bookstore."],
@@ -3734,6 +3754,7 @@ function renderPractice(){
   if(sub==="world") return blockResources(shell("Inglês no mundo real"));
   if(sub==="build") return blockBuild(shell("Monte a frase"));
   if(sub==="guide") return blockGuide(shell("Como usar o app"));
+  if(sub==="voices") return blockVoices(shell("Vozes"));
   if(sub==="science") return blockScience(shell("A ciência por trás"));
   if(sub==="pron") return blockPron(shell("Pronúncia"));
   if(sub==="phr") return blockPhrases(shell("Frases prontas"));
@@ -4477,6 +4498,39 @@ function blockGame(el,key){
       $("#qnx",el).onclick = ()=>{ i++; q(); }; });
   }
 }
+function voiceDiag(){
+  const env = inClaudeApp() ? "app do Claude" : isStandalone() ? "app instalado na tela inicial" : "navegador";
+  const plat = IS_IOS ? "iPhone/iPad" : /android/i.test(navigator.userAgent) ? "Android" : "computador";
+  const v = pickVoice();
+  return ["Fluência 15+15 · diagnóstico de voz", "Aparelho: "+plat, "Aberto pelo: "+env, "Navegador: "+navigator.userAgent,
+    "Vozes no aparelho: "+allVoices.length, "Vozes em inglês: "+voices.length+(voices.length?" ("+voices.map(x=>x.name+" "+x.lang+(x.localService===false?" online":"")).join("; ")+")":""),
+    "Voz em uso: "+(v ? v.name+" ("+v.lang+")" : "nenhuma — o aparelho usa a voz padrão"), "Escolha manual: "+(S.settings.voice||"automática"),
+    "Sotaque: "+S.settings.accent+" · velocidade "+S.settings.rate].join("\n");
+}
+function blockVoices(el){
+  const SAMPLE = "Hi! I'm really glad you're here. Let's practice a little English every day.";
+  const acc = S.settings.accent.toLowerCase(), cur = pickVoice();
+  const list = voices.slice().sort((a,b)=>voiceScore(b,acc)-voiceScore(a,acc));
+  el.innerHTML = `<div class="stack">
+    <p class="muted">Toque em <b>Ouvir</b> para testar cada voz em inglês do seu aparelho e escolha a que soar mais natural. Vozes marcadas como <b>aprimorada</b> costumam ser bem melhores.</p>
+    ${!list.length ? `<div class="note warn stack" style="gap:6px"><b>Nenhuma voz em inglês encontrada${allVoices.length?" (o aparelho tem "+allVoices.length+" vozes, mas nenhuma em inglês)":""}.</b>
+      ${IS_IOS && inClaudeApp() ? "<span>Dentro do app do Claude, o iPhone às vezes não mostra as vozes. Abra o app pelo Safari (link do GitHub) ou instale-o na tela inicial.</span>" : ""}
+      <span>${IS_IOS ? "No iPhone: Ajustes → Acessibilidade → Conteúdo Falado → Vozes → Inglês → baixe Samantha ou Ava (Aprimorada). Depois feche e abra o app." : VOICE_HELP}</span>
+      <button class="btn sm" id="vRetry" style="align-self:flex-start">Procurar vozes de novo</button></div>` : ""}
+    <div class="card pad stack">${list.map((v,i)=>{ const chosen = S.settings.voice===v.name || (!S.settings.voice && cur===v);
+      return `<div class="res"><div class="row between" style="flex-wrap:nowrap"><span><b>${esc(v.name)}</b> <span class="small muted">${esc(v.lang)}${/enhanced|premium|aprimorad/i.test(v.name)?" · aprimorada":""}${v.localService===false?" · online":""}</span></span>
+        <span class="row" style="flex-wrap:nowrap"><button class="btn sm" data-vt="${i}">${ICON.speaker} Ouvir</button>${chosen?'<span class="chip used">em uso</span>':`<button class="btn sm primary" data-vu="${i}">Usar</button>`}</span></div></div>`; }).join("") || '<p class="small muted">Sem vozes para listar.</p>'}</div>
+    <div class="row"><button class="btn sm" id="vAuto" ${S.settings.voice?"":"disabled"}>Voltar para escolha automática</button></div>
+    <details class="card pad"><summary style="cursor:pointer;font-weight:700">Diagnóstico (para enviar se o áudio continuar ruim)</summary>
+      <textarea id="vDiag" rows="8" readonly style="margin-top:8px;font-family:var(--mono);font-size:.8rem">${esc(voiceDiag())}</textarea>
+      <button class="btn sm" id="vCopy" style="margin-top:8px">Copiar diagnóstico</button></details></div>`;
+  $$("[data-vt]",el).forEach(b=>b.onclick=()=>speakWith(list[+b.dataset.vt], SAMPLE));
+  $$("[data-vu]",el).forEach(b=>b.onclick=()=>{ const v = list[+b.dataset.vu]; S.settings.voice = v.name; save(); speakWith(v, "Great choice. This is the voice I'll use from now on."); toast("Voz escolhida: "+v.name); blockVoices(el); });
+  $("#vAuto",el).onclick = ()=>{ S.settings.voice = ""; save(); toast("Escolha automática"); blockVoices(el); };
+  const r = $("#vRetry",el); if(r) r.onclick = ()=>{ pollVoices(20); toast("Procurando vozes…"); setTimeout(()=>blockVoices(el), 1500); };
+  $("#vCopy",el).onclick = ()=>{ const ta = $("#vDiag",el); ta.select();
+    if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>toast("Diagnóstico copiado"),()=>toast("Selecionado — copie com o menu do sistema")); else toast("Selecionado — copie com o menu do sistema"); };
+}
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
   el.innerHTML = `<div class="stack"><div class="row"><button class="btn sm" id="jexp">Exportar diário (.txt)</button><span class="small muted">${S.journal.length} ${S.journal.length===1?"texto":"textos"}</span></div>${S.journal.map(j=>`<article class="card pad stack">
@@ -4587,7 +4641,7 @@ function renderProgress(){
       </div>
       <p class="small ${voiceStatus().ok?"muted":""}" ${voiceStatus().ok?"":'style="color:var(--bad)"'}>${esc(voiceStatus().msg)}${voiceStatus().ok?"":"<br>"+VOICE_HELP}</p>
       <p class="small muted">No computador, pressione <span class="kbd">?</span> para ver os atalhos de teclado.</p>
-      <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><span class="small muted"><span class="dot ${syncState==="cloud"?"ok":""}"></span> ${syncState==="cloud"?"Progresso salvo na sua conta — abre igual em outros dispositivos.":"Progresso salvo neste navegador."}</span></div>
+      <div class="row"><button class="btn sm" id="tv">${ICON.speaker} Testar voz</button><button class="btn sm primary" id="toVoices">Escolher voz (ouvir cada uma)</button><span class="small muted"><span class="dot ${syncState==="cloud"?"ok":""}"></span> ${syncState==="cloud"?"Progresso salvo na sua conta — abre igual em outros dispositivos.":"Progresso salvo neste navegador."}</span></div>
       <hr class="sep">
       ${canOfferInstall() ? `<h3>Instalar no aparelho</h3>${installHTML(false)}<hr class="sep">` : ""}
       <h3>Modo férias</h3>
@@ -4615,6 +4669,7 @@ function renderProgress(){
   $("#share").onclick = shareProgress;
   $("#s-lvl").onchange = e=>{ const L = LEVELS.find(l=>l.id===e.target.value); S.settings.level = L.id; S.listenLevel = L.listen; save(); toast("Nível: "+L.t+". Palavras, aulas, ditado, fala e escrita foram ajustados."); renderProgress(); };
   $("#s-acc").onchange = e=>{ S.settings.accent=e.target.value; S.settings.voice=""; save(); renderProgress(); };
+  $("#toVoices").onclick = ()=>go("practice","voices");
   $("#s-voice").onchange = e=>{ S.settings.voice=e.target.value; save(); };
   $("#s-rate").oninput = e=>{ S.settings.rate=+e.target.value; $("#rv").textContent=S.settings.rate.toFixed(2)+"×"; };
   $("#s-rate").onchange = ()=>save();

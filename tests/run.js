@@ -133,7 +133,7 @@ test("todas as telas abrem sem erro em todos os níveis", () => {
   const errs = E(`(()=>{ const errs=[]; const tryv=(n,f)=>{ try{ f(); if(!view.innerHTML.trim()) errs.push(n+": vazia"); if(view.querySelector("#crHome")) errs.push(n+": tela de erro"); }catch(e){ errs.push(n+": "+e.message); } };
     for(let i=0;i<20;i++) S.cards["v"+i]={due:todayKey(),ivl:3,reps:2,lapses:i%4,s:3,d:5,last:addDays(todayKey(),-3)};
     ["pp","fs","ut"].forEach(id=>S.grammar[id]={best:4,last:3,date:addDays(todayKey(),-3),stage:0,due:todayKey()});
-    const subs=["listen","speak","pairs","chat","dialogs","mistakes","reading","ear","test","world","write","journal","build","guide","pron","phr","quick","mix","science","nums","irreg","gm:colloc","gm:prep","gm:ff","g:b_be","d:cafe","r:memory"];
+    const subs=["listen","speak","pairs","chat","dialogs","mistakes","reading","ear","test","world","write","journal","build","guide","pron","phr","quick","mix","science","nums","irreg","gm:colloc","gm:prep","gm:ff","voices","g:b_be","d:cafe","r:memory"];
     ["a1","a2","b1","b1p","b2"].forEach(l=>{ S.settings.level=l;
       ["today","review","practice","progress"].forEach(t=>tryv(l+"/"+t,()=>go(t)));
       subs.forEach(s=>tryv(l+"/practice/"+s,()=>go("practice",s)));
@@ -192,6 +192,9 @@ async function iosAudioTests() {
     eq(I(`S.settings.accent="en-GB"; const n = pickVoice().name; S.settings.accent="en-US"; n`), "Daniel");
     eq(I(`makeUtter("hello").voice.name`), "Samantha (Enhanced)");
   });
+  test("lista de vozes que chega atrasada ainda resulta em voz em inglês", () => {
+    eq(I(`voices = []; pickVoice().name`), "Samantha (Enhanced)");
+  });
   test("texto para a voz: tira reticências, travessões e barras", () => {
     eq(I(`ttsText("I'd rather… — *stay* home / go out")`), "I'd rather, stay home or go out");
   });
@@ -215,6 +218,12 @@ async function iosAudioTests() {
   test("escolha manual de voz é respeitada no iOS", () => {
     log.length = 0; I(`S.settings.voice = "Karen"; speakNow("hi"); S.settings.voice = ""`);
     eq(log.find(x => x[0] === "speak")[3], "Karen");
+  });
+  test("tela de vozes: lista, testa e escolhe uma voz", () => {
+    const r = I(`(()=>{ go("practice","voices"); const n = view.querySelectorAll("[data-vt]").length; view.querySelector("[data-vt]").click();
+      const b = view.querySelector("[data-vu]"); b.click(); const chosen = S.settings.voice; const diag = view.querySelector("#vDiag").value;
+      view.querySelector("#vAuto").click(); return {n, chosen, diagOk: diag.includes("Vozes em inglês: 4") && diag.includes("iPhone"), back: S.settings.voice}; })()`);
+    eq(r.n, 4, "vozes listadas"); assert(r.chosen && r.chosen !== "", "voz não foi escolhida"); assert(r.diagOk, "diagnóstico incompleto"); eq(r.back, "", "volta ao automático");
   });
 }
 
