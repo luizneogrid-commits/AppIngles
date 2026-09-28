@@ -198,6 +198,14 @@ test("importar backup pela tela: Juntar os dois", () => {
     const res = [shown, Object.keys(S.cards).sort(), S.xp >= 9999]; S = merge(JSON.parse(bak)); return res; })()`);
   eq(r, [true, ["v5", "v6"], true]);
 });
+test("bloco de escuta da manhã alterna entre ditado, monte a frase e ouvido", () => {
+  const r = E(`(()=>{ const bak = S.created, out = [];
+    for(let d=0; d<4; d++){ S.created = addDays(todayKey(), -d); session=null; startSession("m"); session.i=1; go("session");
+      out.push([listenPlan("m").t, !!view.querySelector("#dict,.build-line,#ivGo,#pl,[data-nm]")]); }
+    S.created = bak; session=null; go("today"); return out; })()`);
+  eq(r.map(x => x[0]), ["Ditado + shadowing", "Ditado + shadowing", "Monte a frase", "Ouça e entenda"]);
+  assert(r.every(x => x[1]), "algum bloco não abriu o exercício: " + JSON.stringify(r));
+});
 test("rodapé mostra a versão e onde o progresso está salvo", () => {
   const r = E(`(()=>{ go("today"); const t = view.querySelector(".vfoot").textContent; go("progress"); return [t.includes(APP_VERSION), t.includes("só neste aparelho"), !!view.querySelector(".vfoot")]; })()`);
   eq(r, [true, true, true]);

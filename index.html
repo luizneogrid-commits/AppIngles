@@ -2687,7 +2687,7 @@ function renderToday(){
     return `<article class="card sess-card ${k}-mode ${k===recKind&&!all?"rec":""}">
       <div class="sess-head"><div class="sess-ico">${ICON[d.icon]}</div>
         <div><div class="eyebrow">${k===recKind&&!all?"Sugerida agora · ":""}${sessMinOf(k)} min</div><h2>${d.name} · ${d.sub}</h2>${k!=="x"&&(k==="m"?S.settings.planM:S.settings.planN)?`<span class="small plan">Seu plano: depois de ${esc(k==="m"?S.settings.planM:S.settings.planN)}, eu estudo.</span>`:""}</div></div>
-      <ul class="blist">${d.blocks.map((b,i)=>`<li><span class="bcheck ${r[i]?"on":""}">${r[i]?ICON.check:""}</span><span><span class="t">${b.t} <span class="muted small mono">${blockMin(k,b)} min</span></span><span class="d">${b.d}</span></span></li>`).join("")}</ul>
+      <ul class="blist">${d.blocks.map((b,i)=>`<li><span class="bcheck ${r[i]?"on":""}">${r[i]?ICON.check:""}</span><span><span class="t">${blockInfo(k,b).t} <span class="muted small mono">${blockMin(k,b)} min</span></span><span class="d">${blockInfo(k,b).d}</span></span></li>`).join("")}</ul>
       <button class="btn ${all?"":"primary"}" data-start="${k}">${all?"Refazer sessão":started?"Continuar":"Começar sessão"}</button>
     </article>`;
   };
@@ -2886,7 +2886,7 @@ function renderSession(){
       <div class="sess-title">${ICON[def.icon]} ${def.name} · ${def.sub}</div>
       <button class="timer mono" id="timer" title="Toque para pausar" aria-label="Cronômetro do bloco; toque para pausar">${fmtTime(blockSec(session.kind,b))}</button>
     </div>
-    <ol class="stepper" style="grid-template-columns:repeat(${def.blocks.length},1fr)">${def.blocks.map((x,j)=>`<li class="${j===session.i?"cur":""} ${rec[session.kind][j]?"done":""}"><button data-j="${j}" aria-label="Bloco ${j+1}: ${esc(x.t)}"><span class="n">${rec[session.kind][j]?ICON.check:j+1}</span><span class="lbl">${esc(x.t)}</span></button></li>`).join("")}</ol>
+    <ol class="stepper" style="grid-template-columns:repeat(${def.blocks.length},1fr)">${def.blocks.map((x,j)=>`<li class="${j===session.i?"cur":""} ${rec[session.kind][j]?"done":""}"><button data-j="${j}" aria-label="Bloco ${j+1}: ${esc(blockInfo(session.kind,x).t)}"><span class="n">${rec[session.kind][j]?ICON.check:j+1}</span><span class="lbl">${esc(blockInfo(session.kind,x).t)}</span></button></li>`).join("")}</ol>
     <div id="block"></div>
     <div class="sess-foot"><span class="muted small" id="tmsg">Sugestão: ${blockMin(session.kind,b)} minutos neste bloco. O cronômetro guia, não bloqueia.</span>
       <button class="btn primary" id="bdone">${session.i<def.blocks.length-1?"Concluir bloco →":"Concluir sessão"}</button></div>
@@ -2978,7 +2978,17 @@ function renderSessionDone(){
 /* ============================================================
    BLOCKS
    ============================================================ */
-const BLOCKS = {review:blockReview, listen:blockListen, speak:blockSpeak, "new":blockNew, grammar:(el,opt)=> isMixDay() ? blockGrammarMix(el,opt) : blockGrammar(el,opt), write:blockWrite};
+// metade dos dias é ditado (o treino central); nos outros, variações que treinam o ouvido de outro jeito
+function listenPlan(k){
+  const i = dayIndex()%4;
+  if(k==="x" || isSilent() || i<2) return {t:"Ditado + shadowing", d:"Ouça, escreva o que ouviu e repita junto", run:blockListen};
+  if(i===2) return {t:"Monte a frase", d:"Ouça e toque nas palavras na ordem certa", run:blockBuild};
+  return Object.keys(S.cards).filter(cardById).length>=4
+    ? {t:"Ouça e entenda", d:"Reconheça as suas palavras só de ouvido", run:blockEarGame}
+    : {t:"Números e letras", d:"Preços, horas e datas de ouvido", run:(el)=>blockNumbers(el)};
+}
+function blockInfo(k,b){ if(b.k==="listen"){ const p = listenPlan(k); return {t:k==="x"?b.t:p.t, d:k==="x"?b.d:p.d}; } return {t:b.t, d:b.d}; }
+const BLOCKS = {review:blockReview, listen:(el,opt)=>listenPlan(session&&session.kind).run(el,opt), speak:blockSpeak, "new":blockNew, grammar:(el,opt)=> isMixDay() ? blockGrammarMix(el,opt) : blockGrammar(el,opt), write:blockWrite};
 
 /* ---------- 1. Spaced repetition ---------- */
 function blockReview(el,opt={}){
