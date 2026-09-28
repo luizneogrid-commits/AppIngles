@@ -165,6 +165,11 @@ test("modo foco: sem abas durante a sessão, de volta ao sair", () => {
   const r = E(`(()=>{ session=null; startSession("m"); const inS = document.body.classList.contains("focus"); session=null; go("today"); return [inS, document.body.classList.contains("focus")]; })()`);
   eq(r, [true, false]);
 });
+test("velocidade rápida: botões mudam a velocidade da voz", () => {
+  const r = E(`(()=>{ go("practice","listen"); view.querySelector('[data-spd="1.15"]').click(); const a = S.settings.rate; const p = view.querySelector('[data-spd="1.15"]').getAttribute("aria-pressed");
+    view.querySelector('[data-spd="0.95"]').click(); return [a, p, S.settings.rate]; })()`);
+  eq(r, [1.15, "true", 0.95]);
+});
 test("rodapé mostra a versão e onde o progresso está salvo", () => {
   const r = E(`(()=>{ go("today"); const t = view.querySelector(".vfoot").textContent; go("progress"); return [t.includes(APP_VERSION), t.includes("só neste aparelho"), !!view.querySelector(".vfoot")]; })()`);
   eq(r, [true, true, true]);

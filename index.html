@@ -2370,6 +2370,16 @@ function speakSequence(list, onStart, rate, gapMs){
 }
 let readTimer = null;
 function stopSpeech(){ clearTimeout(readTimer); if("speechSynthesis" in window){ try{ speechSynthesis.cancel(); }catch(e){} } }
+// ---------- 82: velocidade da voz ao alcance do dedo ----------
+const SPEEDS = [[0.75,"Devagar"],[0.95,"Normal"],[1.15,"Rápido"]];
+function speedChips(){
+  const cur = S.settings.rate, near = SPEEDS.reduce((a,b)=>Math.abs(b[0]-cur)<Math.abs(a[0]-cur)?b:a)[0];
+  return `<div class="row speeds" role="group" aria-label="Velocidade da voz"><span class="small muted">Voz:</span>${SPEEDS.map(([v,l])=>`<button type="button" class="chip" data-spd="${v}" aria-pressed="${v===near}" style="${v===near?"background:var(--acc);color:var(--on-acc)":""}">${l}</button>`).join("")}</div>`;
+}
+document.addEventListener("click", e=>{ const b = e.target.closest("[data-spd]"); if(!b) return;
+  S.settings.rate = +b.dataset.spd; save();
+  $$("[data-spd]").forEach(x=>{ const on = x===b || +x.dataset.spd===+b.dataset.spd; x.setAttribute("aria-pressed", on); x.style.background = on ? "var(--acc)" : ""; x.style.color = on ? "var(--on-acc)" : ""; });
+  speak("This is the new speed.", undefined, true); });
 function speakNow(text,rate){
   if(!("speechSynthesis" in window)){ toast("Este navegador não tem voz sintetizada"); return; }
   const u = makeUtter(text, rate);
@@ -3112,6 +3122,7 @@ function blockListen(el,opt={}){
     shadows = 0; hinted = false;
     if(isSilent()) return drawVisual();
     el.innerHTML = `<div class="card pad stack">
+      ${speedChips()}
       <div class="row between"><h3>Ditado</h3><span class="chip">${retry?"Frase que você errou em "+fmtDate(retry.d):(LISTEN_NAMES[S.listenLevel]||"Nível "+S.listenLevel)}</span></div>
       <p class="muted small">Ouça quantas vezes precisar e escreva exatamente o que ouviu. Atenção às palavras “engolidas” na fala rápida (<i>I'd, gonna, of</i>).</p>
       <div class="row"><button class="btn primary" id="p1">${ICON.speaker} Ouvir</button><button class="btn" id="p2">Ouvir devagar</button><button class="btn ghost" id="p3" title="Velocidade de conversa real (1,15×)">Velocidade real</button></div>
@@ -4096,6 +4107,7 @@ Return ONLY JSON: {"title":"...","text":"...","gloss":{"expression exactly as in
     el.innerHTML = `<div class="card pad stack">
       <div class="row between"><button class="btn sm ghost" id="rl">‹ Leituras</button><span class="tag">${esc(r.lvl)}</span></div>
       <h2>${esc(r.t)}</h2>
+      ${speedChips()}
       <div class="row"><button class="btn sm" id="ra">${ICON.speaker} Ouvir o texto</button><button class="btn sm" id="rj">Ler junto (frase a frase)</button><button class="btn sm ghost" id="rs">Parar</button></div>
       <div id="rjBox" class="rjbox" lang="en" hidden></div>
       <p class="reading" lang="en">${html}</p>
