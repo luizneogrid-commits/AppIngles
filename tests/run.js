@@ -116,6 +116,26 @@ test("estado corrompido é reparado", () => {
   const r = E(`(()=>{ const m = merge({xp:"abc",cards:[1],journal:"x",days:{"lixo":{}, "2026-01-01":{m:null}},listenLevel:9}); return [m.xp, Array.isArray(m.cards), Array.isArray(m.journal), Object.keys(m.days), m.days["2026-01-01"].m, m.listenLevel]; })()`);
   eq(r, [0, false, true, ["2026-01-01"], [0, 0, 0], 1]);
 });
+test("juntar progressos: combina palavras, dias, diário e mantém as configurações", () => {
+  const r = E(`(()=>{
+    const A = merge({xp:500, onboarded:true, settings:{level:"b1", accent:"en-US"}, streak:{count:3,best:5,last:"2026-09-20"},
+      cards:{v1:{due:"2026-10-01",ivl:5,reps:3,last:"2026-09-20"}, v2:{due:"2026-09-25",ivl:2,reps:1,last:"2026-09-10"}},
+      days:{"2026-09-20":{m:[1,1,1],n:[0,0,0],xp:40,newIds:["v1"]}}, journal:[{d:"2026-09-20",p:"p",text:"texto A"}], custom:[{id:"c1",w:"brand new",pt:"novinho",ex:"x"}]});
+    const B = merge({xp:300, onboarded:true, settings:{level:"a1", accent:"en-GB"}, streak:{count:7,best:7,last:"2026-09-26"},
+      cards:{v2:{due:"2026-10-09",ivl:14,reps:4,last:"2026-09-25"}, v3:{due:"2026-09-30",ivl:3,reps:1,last:"2026-09-26"}},
+      days:{"2026-09-20":{m:[0,0,0],n:[1,1,1],xp:25,newIds:["v3"]}, "2026-09-26":{m:[1,1,1],n:[0,0,0],xp:30,newIds:[]}},
+      journal:[{d:"2026-09-20",p:"p",text:"texto A"},{d:"2026-09-26",p:"p",text:"texto B"}], custom:[{id:"c9",w:"Brand new",pt:"novo",ex:"y"}]});
+    const M = mergeStates(A, B);
+    return {cards:Object.keys(M.cards).sort(), v2ivl:M.cards.v2.ivl, day20:[M.days["2026-09-20"].m, M.days["2026-09-20"].n, M.days["2026-09-20"].xp, M.days["2026-09-20"].newIds.sort()],
+      days:Object.keys(M.days).sort(), journal:M.journal.length, custom:M.custom.length, xp:M.xp, streak:[M.streak.count, M.streak.best, M.streak.last], level:M.settings.level, accent:M.settings.accent};
+  })()`);
+  eq(r.cards, ["v1", "v2", "v3"], "palavras dos dois");
+  eq(r.v2ivl, 14, "fica a revisão mais recente");
+  eq(r.day20, [[1, 1, 1], [1, 1, 1], 40, ["v1", "v3"]], "mesmo dia: sessões dos dois");
+  eq(r.days, ["2026-09-20", "2026-09-26"]);
+  eq(r.journal, 2, "diário sem duplicar"); eq(r.custom, 1, "palavra própria sem duplicar");
+  eq(r.xp, 500); eq(r.streak, [7, 7, "2026-09-26"]); eq([r.level, r.accent], ["b1", "en-US"], "configurações deste aparelho");
+});
 test("estado respeita o limite da nuvem (256 KB)", () => {
   const kb = E(`(()=>{ const t=todayKey(); for(let j=0;j<40;j++) S.journal.push({d:t,p:"p",text:"x".repeat(4000),fb:{corrected:"y".repeat(4000)}});
     for(let k=0;k<700;k++) S.days[addDays(t,-k)]={m:[1,1,1],n:[1,1,1],xp:50,newIds:[]}; trimState(); const r=JSON.stringify(S).length/1024; S=merge({}); S.onboarded=true; S.seenVersion=APP_VERSION; return r; })()`);
@@ -169,6 +189,14 @@ test("velocidade rápida: botões mudam a velocidade da voz", () => {
   const r = E(`(()=>{ go("practice","listen"); view.querySelector('[data-spd="1.15"]').click(); const a = S.settings.rate; const p = view.querySelector('[data-spd="1.15"]').getAttribute("aria-pressed");
     view.querySelector('[data-spd="0.95"]').click(); return [a, p, S.settings.rate]; })()`);
   eq(r, [1.15, "true", 0.95]);
+});
+test("importar backup pela tela: Juntar os dois", () => {
+  const r = E(`(()=>{ const bak = JSON.stringify(S); S.cards = {v5:{due:todayKey(),ivl:3,reps:1,last:todayKey()}};
+    const other = merge({xp:9999, cards:{v6:{due:todayKey(),ivl:8,reps:2,last:todayKey()}}});
+    go("progress"); view.querySelector("#bk").value = JSON.stringify(other); view.querySelector("#im").click();
+    const shown = !!view.querySelector("#imMerge"); view.querySelector("#imMerge").click();
+    const res = [shown, Object.keys(S.cards).sort(), S.xp >= 9999]; S = merge(JSON.parse(bak)); return res; })()`);
+  eq(r, [true, ["v5", "v6"], true]);
 });
 test("rodapé mostra a versão e onde o progresso está salvo", () => {
   const r = E(`(()=>{ go("today"); const t = view.querySelector(".vfoot").textContent; go("progress"); return [t.includes(APP_VERSION), t.includes("só neste aparelho"), !!view.querySelector(".vfoot")]; })()`);

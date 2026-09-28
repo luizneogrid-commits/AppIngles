@@ -4733,7 +4733,7 @@ function renderProgress(){
       <div class="row"><button class="btn sm" id="ics">Adicionar lembretes ao calendário (.ics)</button></div>
       <hr class="sep">
       <h3>Backup e levar o progresso para a outra versão</h3>
-      <p class="small muted">A versão do Claude e a do celular (link do GitHub) guardam progressos separados. Para deixar as duas iguais: na versão com o progresso que você quer manter, toque em <b>Gerar e copiar backup</b>; na outra, cole abaixo e toque em <b>Importar backup</b>. O importado substitui o progresso daquela versão.</p>
+      <p class="small muted">A versão do Claude e a do celular (link do GitHub) guardam progressos separados. Para deixar as duas iguais: na versão com o progresso que você quer manter, toque em <b>Gerar e copiar backup</b>; na outra, cole abaixo e toque em <b>Importar backup</b> → <b>Juntar os dois</b>. Nada se perde: o app combina palavras, dias estudados e textos das duas versões.</p>
       <textarea id="bk" rows="3" spellcheck="false" placeholder="Cole aqui um backup para importar"></textarea>
       <div class="row"><button class="btn sm" id="ex">Gerar e copiar backup</button><button class="btn sm" id="im">Importar backup</button><button class="btn sm" id="exf">Salvar backup em arquivo</button><label class="btn sm" for="imf" style="cursor:pointer">Abrir arquivo de backup<input type="file" id="imf" accept=".json,application/json" hidden></label><button class="btn sm ghost" id="rs" style="color:var(--bad)">Apagar todo o progresso</button></div>
       <div id="cfm"></div>
@@ -4768,8 +4768,14 @@ function renderProgress(){
   $("#exf").onclick = quickBackup;
   $("#imf").onchange = e=>{ const f = e.target.files[0]; if(!f) return; const rd = new FileReader(); rd.onload = ()=>{ $("#bk").value = rd.result; $("#im").click(); }; rd.readAsText(f); };
   $("#im").onclick = ()=>{ let o; try{ o = JSON.parse($("#bk").value); if(!o || typeof o!=="object" || !o.cards) throw 0; }catch(e){ toast("Esse texto não é um backup válido"); return; }
-    const oo = merge(JSON.parse(JSON.stringify(o)));
-    confirmBox("Substituir o progresso atual ("+S.xp+" XP, "+Object.keys(S.cards).length+" palavras) pelo do backup ("+(oo.xp||0)+" XP, "+Object.keys(oo.cards||{}).length+" palavras)?","Importar",()=>{ S = merge(o); save(); toast("Backup importado"); renderProgress(); }); };
+    const oo = merge(JSON.parse(JSON.stringify(o))), mm = mergeStates(S, oo);
+    const c = $("#cfm"); c.innerHTML = `<div class="confirm" style="background:var(--acc-soft)"><div class="stack" style="gap:8px;width:100%">
+      <span><b>Este aparelho:</b> ${S.xp} XP · ${Object.keys(S.cards).length} palavras · ${S.journal.length} textos<br><b>Backup:</b> ${oo.xp||0} XP · ${Object.keys(oo.cards||{}).length} palavras · ${oo.journal.length} textos<br><b>Juntando os dois:</b> ${mm.xp} XP · ${Object.keys(mm.cards).length} palavras · ${mm.journal.length} textos</span>
+      <div class="row"><button class="btn sm primary" id="imMerge">Juntar os dois (recomendado)</button><button class="btn sm" id="imReplace" style="color:var(--bad)">Substituir pelo backup</button><button class="btn sm ghost" id="imCancel">Cancelar</button></div>
+      <span class="small muted">Juntar mantém tudo: cada palavra fica com a revisão mais recente, os dias estudados nos dois aparelhos entram no histórico e os textos do diário são somados. As configurações deste aparelho não mudam.</span></div></div>`;
+    $("#imMerge").onclick = ()=>{ S = mm; save(); toast("Progressos juntados"); renderProgress(); };
+    $("#imReplace").onclick = ()=>{ S = oo; save(); toast("Backup importado"); renderProgress(); };
+    $("#imCancel").onclick = ()=>c.innerHTML = ""; };
   $("#rs").onclick = ()=>confirmBox("Apagar XP, sequência, palavras e diário? Isso não pode ser desfeito.","Apagar tudo",()=>{ const keep=S.settings; S = defaultState(); S.settings=keep; save(); toast("Progresso apagado"); renderProgress(); });
 }
 /* ---------- imagem para compartilhar ---------- */
@@ -4904,6 +4910,51 @@ function xpChart(){
     ${avg?`<line x1="${L}" x2="${W-4}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--ink)" stroke-dasharray="4 4" stroke-width="1.2" opacity=".6"/>`:""}
     ${labels}</svg>
     <div class="row between small muted"><span>${active.length} de 30 dias com estudo</span><span>linha tracejada = média de ${Math.round(avg)} XP nos dias estudados</span></div>`;
+}
+/* ---------- 83: juntar dois progressos (ex.: versão do Claude + versão do celular) sem perder nada ---------- */
+function mergeStates(A, B){
+  const a = merge(JSON.parse(JSON.stringify(A))), b = merge(JSON.parse(JSON.stringify(B)));
+  const out = merge(JSON.parse(JSON.stringify(a))); // configurações e preferências: ficam as deste aparelho
+  const newer = (x,y)=>{ if(!x) return y; if(!y) return x; const lx = x.last || "", ly = y.last || "";
+    if(lx!==ly) return lx>ly ? x : y; if((x.reps||0)!==(y.reps||0)) return (x.reps||0)>(y.reps||0) ? x : y; return (x.due||"")>=(y.due||"") ? x : y; };
+  const mergeMap = (k, pick)=>{ const r = {}; new Set([...Object.keys(a[k]||{}), ...Object.keys(b[k]||{})]).forEach(id=>{ r[id] = pick((a[k]||{})[id], (b[k]||{})[id]); }); out[k] = r; };
+  mergeMap("cards", newer); mergeMap("gcards", newer);
+  mergeMap("grammar", (x,y)=>!x?y:!y?x:((x.date||"")>=(y.date||"") ? Object.assign({},x,{best:Math.max(x.best||0,y.best||0)}) : Object.assign({},y,{best:Math.max(x.best||0,y.best||0)})));
+  ["dialogs","reading","pron","nums","games"].forEach(k=>mergeMap(k,(x,y)=>x==null?y:y==null?x:Math.max(x,y)));
+  mergeMap("irreg", (x,y)=>!x?y:!y?x:((x.box||0)!==(y.box||0) ? ((x.box||0)>(y.box||0)?x:y) : ((x.due||"")>=(y.due||"")?x:y)));
+  mergeMap("speakRep", (x,y)=>!x?y:!y?x:((x.n||0)>=(y.n||0)?x:y));
+  mergeMap("ach", (x,y)=>!x?y:!y?x:(x<y?x:y));
+  mergeMap("reflect", (x,y)=>x||y);
+  // dias: une; no mesmo dia, fica o maior de cada número e as sessões feitas em qualquer um
+  mergeMap("days", (x,y)=>{ if(!x) return y; if(!y) return x; const d = Object.assign({}, x);
+    ["m","n","x"].forEach(k=>{ if(x[k]||y[k]){ const ax = x[k]||[], ay = y[k]||[]; d[k] = Array.from({length:Math.max(ax.length,ay.length)},(_,i)=>(ax[i]||ay[i])?1:0); } });
+    ["xp","sec","rev","dlg","read","mfix"].forEach(k=>{ if(x[k]!=null||y[k]!=null) d[k] = Math.max(x[k]||0, y[k]||0); });
+    ["rv","rg"].forEach(k=>{ if(x[k]||y[k]) d[k] = ((x[k]&&x[k].n)||0)>=((y[k]&&y[k].n)||0) ? x[k] : y[k]; });
+    d.newIds = [...new Set([...(x.newIds||[]), ...(y.newIds||[])])];
+    d.qd = Object.assign({}, x.qd||{}, y.qd||{});
+    if(x.wrote||y.wrote) d.wrote = 1; if(x.sleepRecall||y.sleepRecall) d.sleepRecall = 1;
+    return d; });
+  // listas: une sem repetir
+  const uniq = (arr, key)=>{ const seen = new Set(); return arr.filter(x=>{ const k = key(x); if(seen.has(k)) return false; seen.add(k); return true; }); };
+  out.custom = uniq([...a.custom, ...b.custom], c=>c.id); out.custom = uniq(out.custom, c=>c.w.toLowerCase());
+  out.journal = uniq([...a.journal, ...b.journal], j=>j.d+"|"+String(j.text).slice(0,80)).sort((x,y)=>(y.d||"")<(x.d||"")?-1:1);
+  out.mistakes = uniq([...(a.mistakes||[]), ...(b.mistakes||[])], m=>m.key);
+  out.tests = uniq([...(a.tests||[]), ...(b.tests||[])], t=>t.d+"|"+t.pct).sort((x,y)=>x.d<y.d?-1:1);
+  out.dict = uniq([...a.dict, ...b.dict], x=>x.d+"|"+x.s+"|"+x.l).sort((x,y)=>(x.d||"")<(y.d||"")?-1:1).slice(-40);
+  out.dictMiss = uniq([...(a.dictMiss||[]), ...(b.dictMiss||[])], m=>m.t);
+  out.vacations = uniq([...(a.vacations||[]), ...(b.vacations||[])], v=>v.from+"|"+v.to);
+  // números acumulados: o maior (não dá para saber quanto é comum aos dois)
+  const daysXP = Object.values(out.days).reduce((t,d)=>t+(d.xp||0),0);
+  out.xp = Math.max(a.xp||0, b.xp||0, daysXP); out.spent = Math.max(a.spent||0, b.spent||0);
+  out.freezes = Math.max(a.freezes||0, b.freezes||0);
+  out.stats = {reviews:Math.max(a.stats.reviews||0,b.stats.reviews||0), correct:Math.max(a.stats.correct||0,b.stats.correct||0)};
+  ["calib","pretest","selfexp"].forEach(k=>{ const tot = x=>Array.isArray(x) ? x.reduce((t,y)=>t+(y.n||0),0) : (x&&x.n)||0; out[k] = tot(a[k])>=tot(b[k]) ? a[k] : b[k]; });
+  out.streak = ((a.streak.last||"")>(b.streak.last||"") || ((a.streak.last||"")===(b.streak.last||"") && a.streak.count>=b.streak.count)) ? Object.assign({},a.streak) : Object.assign({},b.streak);
+  out.streak.best = Math.max(a.streak.best||0, b.streak.best||0, out.streak.count||0);
+  out.created = [a.created, b.created].filter(Boolean).sort()[0] || a.created;
+  out.onboarded = true; out.listenLevel = Math.max(a.listenLevel||0, b.listenLevel||0);
+  out.lastBackup = [a.lastBackup, b.lastBackup].filter(Boolean).sort().pop() || null;
+  return merge(out);
 }
 function confirmBox(msg,label,fn){
   const c = $("#cfm"); c.innerHTML = `<div class="confirm"><span>${esc(msg)}</span><button class="btn sm" id="cy" style="color:var(--bad)">${esc(label)}</button><button class="btn sm ghost" id="cn">Cancelar</button></div>`;
