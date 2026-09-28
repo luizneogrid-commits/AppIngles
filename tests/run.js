@@ -153,7 +153,7 @@ test("todas as telas abrem sem erro em todos os níveis", () => {
   const errs = E(`(()=>{ const errs=[]; const tryv=(n,f)=>{ try{ f(); if(!view.innerHTML.trim()) errs.push(n+": vazia"); if(view.querySelector("#crHome")) errs.push(n+": tela de erro"); }catch(e){ errs.push(n+": "+e.message); } };
     for(let i=0;i<20;i++) S.cards["v"+i]={due:todayKey(),ivl:3,reps:2,lapses:i%4,s:3,d:5,last:addDays(todayKey(),-3)};
     ["pp","fs","ut"].forEach(id=>S.grammar[id]={best:4,last:3,date:addDays(todayKey(),-3),stage:0,due:todayKey()});
-    const subs=["listen","speak","pairs","chat","dialogs","mistakes","reading","ear","test","world","write","journal","build","guide","pron","phr","quick","mix","science","nums","irreg","gm:colloc","gm:prep","gm:ff","voices","g:b_be","d:cafe","r:memory"];
+    const subs=["listen","speak","pairs","chat","dialogs","mistakes","reading","ear","test","world","write","journal","build","guide","pron","phr","quick","mix","science","nums","irreg","gm:colloc","gm:prep","gm:ff","voices","hf","week","g:b_be","d:cafe","r:memory"];
     ["a1","a2","b1","b1p","b2"].forEach(l=>{ S.settings.level=l;
       ["today","review","practice","progress"].forEach(t=>tryv(l+"/"+t,()=>go(t)));
       subs.forEach(s=>tryv(l+"/practice/"+s,()=>go("practice",s)));
@@ -295,6 +295,21 @@ async function iosAudioTests() {
       eq(firstBatch, ["One."], "só a primeira frase no início");
       eq(all, ["One.", "Two.", "Three."], "as outras vêm depois de cada pausa");
     });
+  }
+  {
+    // modo ouvir: palavra (EN) → significado (PT) → exemplo (EN) → próxima palavra
+    I(`S.cards = {v0:{due:todayKey(),ivl:3,reps:2,lapses:0,last:addDays(todayKey(),-3)}, v1:{due:addDays(todayKey(),2),ivl:5,reps:2,lapses:0,last:addDays(todayKey(),-3)}}; HF_PAUSE = 5; go("practice","hf");`);
+    log.length = 0; I(`view.querySelector("#hfPlay").click()`);
+    for (let k = 0; k < 4; k++) { I(`(liveUtter[liveUtter.length-1]||{}).onend && liveUtter[liveUtter.length-1].onend()`); await new Promise(r => setTimeout(r, 1500)); }
+    const spoken = log.filter(x => x[0] === "speak").map(x => x[1]);
+    const v0 = I(`[VOCAB[0].w, VOCAB[0].ex.replace(/\\*/g,""), VOCAB[1].w]`);
+    test("modo ouvir: palavra, significado em português, exemplo e a próxima", () => {
+      eq(spoken[0], v0[0], "palavra em inglês primeiro");
+      assert(/descobrir/.test(spoken[1] || ""), "significado em português: " + spoken[1]);
+      eq(spoken[2], v0[1], "exemplo");
+      eq(spoken[3], v0[2], "próxima palavra");
+    });
+    I(`view.querySelector("#hfStop").click(); go("today")`);
   }
   test("tela de vozes: lista, testa e escolhe uma voz", () => {
     const r = I(`(()=>{ go("practice","voices"); const n = view.querySelectorAll("[data-vt]").length; view.querySelector("[data-vt]").click();

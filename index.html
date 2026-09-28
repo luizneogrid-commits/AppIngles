@@ -359,6 +359,7 @@ body.focus .tabs{display:none}
 .speaking{background:var(--acc-soft);outline:2px solid var(--acc);border-radius:4px}
 .rjbox{display:flex;flex-direction:column;gap:6px;background:var(--bg);border-radius:12px;padding:12px}
 .rjs{padding:4px 8px;border-radius:8px;line-height:1.6}
+.hf{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:18px;background:var(--bg);border-radius:12px;min-height:170px;justify-content:center}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -3900,6 +3901,7 @@ function renderPractice(){
   if(sub==="guide") return blockGuide(shell("Como usar o app"));
   if(sub==="voices") return blockVoices(shell("Vozes"));
   if(sub==="week") return blockWeekReview(shell("Revisão da semana"));
+  if(sub==="hf") return blockHandsFree(shell("Modo ouvir"));
   if(sub==="science") return blockScience(shell("A ciência por trás"));
   if(sub==="pron") return blockPron(shell("Pronúncia"));
   if(sub==="phr") return blockPhrases(shell("Frases prontas"));
@@ -3925,6 +3927,7 @@ function renderPractice(){
     <section class="pgroup" aria-label="Ouvir e pronunciar"><div class="row between" style="align-items:baseline"><h2>Ouvir e pronunciar</h2><span class="small muted">Ouvido e sotaque</span></div>
     <div class="tiles">
       <button class="card tile" data-s="listen"><span class="ti">${ICON.ear}</span><h3>Ditado livre</h3><p>Mais frases para ouvir, escrever e repetir. O nível se ajusta sozinho.</p></button>
+      <button class="card tile" data-s="hf"><span class="ti">${ICON.speaker}</span><h3>Modo ouvir (mãos livres)</h3><p>Suas palavras em áudio: inglês, pausa para lembrar, significado e exemplo. Para o trajeto, sem olhar a tela.</p></button>
       <button class="card tile" data-s="nums"><span class="ti">${ICON.ear}</span><h3>Números e letras</h3><p>Preços, horas, datas, telefones, 13 × 30 e soletrar e-mails. Exercícios gerados na hora, sem fim.</p></button>
       <button class="card tile" data-s="ear"><span class="ti">${ICON.ear}</span><h3>Ouça e entenda</h3><p>Só áudio: reconheça as palavras do seu baralho de ouvido, sozinhas ou dentro da frase.</p></button>
       <button class="card tile" data-s="pron"><span class="ti">${ICON.mic}</span><h3>Pronúncia para brasileiros</h3><p>O -ed do passado, a sílaba tônica e as letras mudas — os erros que mais denunciam o sotaque.</p></button>
@@ -4704,6 +4707,45 @@ function blockWeekReview(el){
     if(mis){ el.innerHTML = `<div class="card empty"><h3>${right}/${n} palavras lembradas</h3><p>Agora, 5 dos seus erros guardados.</p><button class="btn primary" id="wrM">Continuar</button></div>`;
       $("#wrM",el).onclick = ()=>blockMistakes(el,{limit:5, done:finish}); }
     else finish(); }});
+}
+/* ---------- 89: modo ouvir (mãos livres): palavra → pausa para lembrar → significado → exemplo ---------- */
+let HF_PAUSE = 2500, hfWake = null;
+function ptVoice(){ return allVoices.find(v=>/^pt[-_]br/i.test(v.lang)) || allVoices.find(v=>/^pt/i.test(v.lang)) || null; }
+function ptUtter(text){ const u = new SpeechSynthesisUtterance(text); u.lang = "pt-BR"; const v = ptVoice(); if(v) u.voice = v; u.rate = 1; liveUtter.push(u); if(liveUtter.length>30) liveUtter.shift(); return u; }
+function hfWords(){
+  const t = todayKey();
+  return Object.keys(S.cards).filter(id=>cardById(id) && !S.cards[id].known)
+    .sort((a,b)=>{ const da = diffDays(t, S.cards[a].due), db = diffDays(t, S.cards[b].due); return da-db || (S.cards[b].lapses||0)-(S.cards[a].lapses||0); })
+    .slice(0,20);
+}
+function blockHandsFree(el){
+  const ids = hfWords();
+  if(!ids.length){ el.innerHTML = `<div class="card empty"><h3>Ainda não há palavras para ouvir</h3><p>O modo ouvir usa as palavras do seu baralho. Aprenda algumas na sessão da noite e volte aqui.</p></div>`; return; }
+  if(isSilent()){ el.innerHTML = `<div class="card empty"><h3>Modo sem áudio está ligado</h3><p>Desligue o modo sem áudio na tela Hoje para usar o modo ouvir.</p></div>`; return; }
+  let i = 0, step = 0, running = false;
+  el.innerHTML = `<div class="card pad stack"><h2>Modo ouvir</h2>
+    <p class="muted">${ids.length} palavras do seu baralho, começando pelas que vencem primeiro. Para cada uma: você ouve a palavra, tem uns segundos para lembrar o significado, depois ouve a resposta${ptVoice()?" em português":""} e um exemplo. Dá para usar sem olhar para a tela.</p>
+    <div class="hf" aria-live="polite"><div class="word" lang="en" id="hfW">—</div><div class="pt" id="hfP"></div><p class="ex" lang="en" id="hfE"></p></div>
+    <div class="progressbar"><span id="hfBar" style="width:0%"></span></div>
+    <div class="row"><button class="btn primary" id="hfPlay">${ICON.speaker} Começar</button><button class="btn" id="hfSkip">Pular</button><button class="btn ghost" id="hfStop">Parar</button></div>
+    <p class="small muted">Não altera os intervalos da revisão. Mantenha a tela ligada: o iPhone pausa a voz quando a tela apaga.</p></div>`;
+  const show = ()=>{ const c = cardById(ids[i]); $("#hfW",el).textContent = c ? c.w : "—"; $("#hfP",el).textContent = step>=1 && c ? c.pt : ""; $("#hfE",el).innerHTML = step>=2 && c ? bolded(c.ex) : ""; $("#hfBar",el).style.width = (i/ids.length*100)+"%"; };
+  const wake = async on=>{ try{ if(on && navigator.wakeLock && !hfWake) hfWake = await navigator.wakeLock.request("screen"); else if(!on && hfWake){ await hfWake.release(); hfWake = null; } }catch(e){} };
+  function run(){
+    if(!running || !document.body.contains(el)) return;
+    if(i>=ids.length){ running = false; wake(false); addXP(Math.min(20, ids.length),"modo ouvir"); $("#hfPlay",el).textContent = "Ouvir de novo"; $("#hfW",el).textContent = "Fim!"; $("#hfP",el).textContent = ids.length+" palavras ouvidas"; $("#hfE",el).textContent = ""; $("#hfBar",el).style.width = "100%"; i = 0; step = 0; return; }
+    const c = cardById(ids[i]); show();
+    let u, wait;
+    if(step===0){ u = makeUtter(c.w, Math.min(S.settings.rate,0.9)); wait = HF_PAUSE; }
+    else if(step===1){ u = ptUtter(c.pt.replace(/\(.*?\)/g,"").replace(/;/g,",")); wait = 600; }
+    else { u = makeUtter(plain(c.ex)); wait = 1400; }
+    u.onend = ()=>{ if(!running) return; step++; if(step>2){ step = 0; i++; } readTimer = setTimeout(run, wait); };
+    ttsSpeak([u]);
+  }
+  $("#hfPlay",el).onclick = ()=>{ if(running){ running = false; stopSpeech(); wake(false); $("#hfPlay",el).innerHTML = ICON.speaker+" Continuar"; return; }
+    running = true; wake(true); $("#hfPlay",el).textContent = "Pausar"; run(); };
+  $("#hfSkip",el).onclick = ()=>{ stopSpeech(); step = 0; i++; if(running) run(); else show(); };
+  $("#hfStop",el).onclick = ()=>{ running = false; stopSpeech(); wake(false); i = 0; step = 0; show(); $("#hfPlay",el).innerHTML = ICON.speaker+" Começar"; };
 }
 function blockJournal(el){
   if(!S.journal.length){ el.innerHTML = `<div class="card empty"><h3>Seu diário está vazio</h3><p>Os textos salvos no bloco “Diário em inglês” aparecem aqui.</p></div>`; return; }
