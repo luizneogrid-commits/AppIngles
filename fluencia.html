@@ -342,6 +342,9 @@ body.focus .tabs{display:none}
 }
 .vfoot{text-align:center;border-top:1px solid var(--line);padding-top:12px}
 .updbar{position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:70;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:2px solid var(--acc);border-radius:14px;padding:10px 14px;box-shadow:var(--shadow);max-width:560px;margin:0 auto}
+.speaking{background:var(--acc-soft);outline:2px solid var(--acc);border-radius:4px}
+.rjbox{display:flex;flex-direction:column;gap:6px;background:var(--bg);border-radius:12px;padding:12px}
+.rjs{padding:4px 8px;border-radius:8px;line-height:1.6}
 /* conquistas */
 .ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .achi{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg);opacity:.6}
@@ -2327,6 +2330,29 @@ function speakWith(voice, text){
   const u = makeUtter(text); if(voice){ u.voice = voice; u.lang = voice.lang; }
   ttsSpeak([u]);
 }
+// fala destacando cada palavra (spans na mesma ordem das palavras do texto); sem suporte a limites, destaca a frase inteira
+function speakHighlight(text, spans, rate){
+  if(isSilent() || !("speechSynthesis" in window)) return speak(text, rate);
+  const u = makeUtter(text, rate), t = u.text, starts = []; let pos = 0;
+  t.split(" ").forEach(w=>{ starts.push(pos); pos += w.length + 1; });
+  const mark = k=>spans.forEach((sp,i)=>sp.classList.toggle("speaking", i===k));
+  let gotBoundary = false;
+  u.onboundary = e=>{ if(e.name && e.name!=="word") return; gotBoundary = true; let k = 0; while(k+1<starts.length && starts[k+1]<=e.charIndex) k++; mark(k); };
+  u.onstart = ()=>{ setTimeout(()=>{ if(!gotBoundary) spans.forEach(sp=>sp.classList.add("speaking")); }, 700); };
+  u.onend = ()=>spans.forEach(sp=>sp.classList.remove("speaking"));
+  ttsSpeak([u]); return u;
+}
+// fala várias frases em sequência, com callback quando cada uma começa (ler junto)
+function speakSequence(list, onStart, rate, gapMs){
+  if(isSilent() || !("speechSynthesis" in window)) return;
+  const us = list.map((t,k)=>{ const u = makeUtter(t, rate); u.onstart = ()=>onStart && onStart(k); if(k===list.length-1) u.onend = ()=>onStart && onStart(-1); return u; });
+  if(gapMs){ // pausa para repetir: fala uma frase por vez
+    let k = 0; const next = ()=>{ if(k>=us.length) return; const u = us[k++]; const prevEnd = u.onend; u.onend = ()=>{ prevEnd && prevEnd(); readTimer = setTimeout(next, gapMs); }; ttsSpeak([u]); };
+    clearTimeout(readTimer); next();
+  } else ttsSpeak(us);
+}
+let readTimer = null;
+function stopSpeech(){ clearTimeout(readTimer); if("speechSynthesis" in window){ try{ speechSynthesis.cancel(); }catch(e){} } }
 function speakNow(text,rate){
   if(!("speechSynthesis" in window)){ toast("Este navegador não tem voz sintetizada"); return; }
   const u = makeUtter(text, rate);
@@ -2578,7 +2604,7 @@ function icsReminders(){
 let currentTab = "today", sub = null, session = null, timerI = null;
 const view = $("#view");
 function go(tab,subv=null){
-  keyH = null; clearInterval(timerI); stopRec(); stopRecorder();
+  keyH = null; clearInterval(timerI); stopRec(); stopRecorder(); clearTimeout(readTimer);
   if("speechSynthesis" in window) speechSynthesis.cancel();
   currentTab = tab; sub = subv;
   $$("#tabs button").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===(tab==="session"?"today":tab)?"page":"false"));
@@ -3135,7 +3161,7 @@ function blockListen(el,opt={}){
       ${pronCheckHTML()}
       ${recorderHTML("recL","Gravar e comparar")}
     </div>`;
-    $("#sh",el).onclick = ()=>{ speak(item[1], shadows===0?0.75:S.settings.rate); shadows=Math.min(3,shadows+1); $("#shc",el).textContent=shadows+"/3"; if(shadows===3) addXP(3,"shadowing"); };
+    $("#sh",el).onclick = ()=>{ speakHighlight(item[1], $$(".diff span",el), shadows===0?0.75:S.settings.rate); shadows=Math.min(3,shadows+1); $("#shc",el).textContent=shadows+"/3"; if(shadows===3) addXP(3,"shadowing"); };
     $("#nx",el).onclick = ()=>{ stopRecorder(); pick(); draw(); };
     wireRecorder(el,"recL",20);
     wirePronCheck(el,item[1]);
@@ -4053,14 +4079,21 @@ Return ONLY JSON: {"title":"...","text":"...","gloss":{"expression exactly as in
     el.innerHTML = `<div class="card pad stack">
       <div class="row between"><button class="btn sm ghost" id="rl">‹ Leituras</button><span class="tag">${esc(r.lvl)}</span></div>
       <h2>${esc(r.t)}</h2>
-      <div class="row"><button class="btn sm" id="ra">${ICON.speaker} Ouvir o texto</button><button class="btn sm ghost" id="rs">Parar</button></div>
+      <div class="row"><button class="btn sm" id="ra">${ICON.speaker} Ouvir o texto</button><button class="btn sm" id="rj">Ler junto (frase a frase)</button><button class="btn sm ghost" id="rs">Parar</button></div>
+      <div id="rjBox" class="rjbox" lang="en" hidden></div>
       <p class="reading" lang="en">${html}</p>
       <div id="glbox" role="status" aria-live="polite"></div>
       ${r.q.length?`<button class="btn primary" id="rq">Responder às perguntas</button>`:""}
       <div id="rqbox"></div></div>`;
     $("#rl",el).onclick = ()=>{ speechSynthesis && speechSynthesis.cancel(); list(); };
     $("#ra",el).onclick = ()=>speak(r.text, Math.min(S.settings.rate,0.95));
-    $("#rs",el).onclick = ()=>{ if("speechSynthesis" in window) speechSynthesis.cancel(); };
+    $("#rj",el).onclick = ()=>{
+      const box = $("#rjBox",el), sents = r.text.split(/(?<=[.!?]["”]?)\s+/).filter(Boolean);
+      box.hidden = false;
+      box.innerHTML = `<p class="small muted" lang="pt-BR">Cada frase toca e depois há uma pausa para você repetir em voz alta.</p>${sents.map((x,k)=>`<p class="rjs" data-rj="${k}">${esc(x)}</p>`).join("")}`;
+      speakSequence(sents, k=>{ $$(".rjs",box).forEach(p=>p.classList.toggle("speaking", +p.dataset.rj===k)); const c = box.querySelector('[data-rj="'+k+'"]'); if(c) c.scrollIntoView({block:"nearest",behavior:"smooth"}); }, Math.min(S.settings.rate,0.95), 2600);
+    };
+    $("#rs",el).onclick = ()=>{ stopSpeech(); $$(".rjs",el).forEach(p=>p.classList.remove("speaking")); };
     $$(".gl",el).forEach(b=>b.onclick=()=>{
       const k = b.dataset.g, pt = r.gloss[k], sent = sentences.find(s=>s.toLowerCase().includes(k.toLowerCase())) || k;
       const exists = S.custom.some(c=>c.w.toLowerCase()===k.toLowerCase()) || VOCAB.some(c=>c.w.toLowerCase()===k.toLowerCase());

@@ -223,6 +223,26 @@ async function iosAudioTests() {
     log.length = 0; I(`S.settings.voice = "Karen"; speakNow("hi"); S.settings.voice = ""`);
     eq(log.find(x => x[0] === "speak")[3], "Karen");
   });
+  test("destaque acompanha a palavra falada", () => {
+    const r = I(`(()=>{ const box = document.createElement("div"); box.innerHTML = "<span>I'm</span> <span>not</span> <span>used</span> <span>to</span> <span>it.</span>"; document.body.appendChild(box);
+      const spans = [...box.querySelectorAll("span")]; const u = speakHighlight("I'm not used to it.", spans);
+      const on = ()=>spans.findIndex(x=>x.classList.contains("speaking"));
+      u.onboundary({name:"word", charIndex:0}); const a = on(); u.onboundary({name:"word", charIndex:8}); const b = on(); u.onboundary({name:"word", charIndex:16}); const c = on();
+      u.onend(); const d = on(); box.remove(); return [a,b,c,d]; })()`);
+    eq(r, [0, 2, 4, -1]);
+  });
+  {
+    log.length = 0; const seen = [];
+    I(`window.__seen = []; speakSequence(["One.","Two.","Three."], k=>window.__seen.push(k), 1, 30)`);
+    const firstBatch = log.filter(x => x[0] === "speak").map(x => x[1]);
+    // o mock não dispara "end": simulamos o fim de cada frase
+    for (let k = 0; k < 3; k++) { I(`(liveUtter.filter(u=>["One.","Two.","Three."].includes(u.text)).pop()||{}).onend && liveUtter.filter(u=>["One.","Two.","Three."].includes(u.text)).find(u=>!u.__done && (u.__done=true)).onend()`); await new Promise(r => setTimeout(r, 60)); }
+    const all = log.filter(x => x[0] === "speak").map(x => x[1]);
+    test("ler junto: uma frase por vez, com pausa entre elas", () => {
+      eq(firstBatch, ["One."], "só a primeira frase no início");
+      eq(all, ["One.", "Two.", "Three."], "as outras vêm depois de cada pausa");
+    });
+  }
   test("tela de vozes: lista, testa e escolhe uma voz", () => {
     const r = I(`(()=>{ go("practice","voices"); const n = view.querySelectorAll("[data-vt]").length; view.querySelector("[data-vt]").click();
       const b = view.querySelector("[data-vu]"); b.click(); const chosen = S.settings.voice; const diag = view.querySelector("#vDiag").value;
