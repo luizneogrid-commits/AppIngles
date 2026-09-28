@@ -2838,19 +2838,16 @@ function renderToday(){
 }
 
 /* ---------- novidades: mostradas uma vez após cada atualização ---------- */
-const APP_VERSION = "2026.09.27.3";
+const APP_VERSION = "2026.09.28";
 const CHANGELOG = [
- ["Duas versões, dois progressos","A versão do Claude e a do celular (link do GitHub) guardam progressos separados. O rodapé da tela Hoje mostra qual é qual; para igualar, use Progresso → Backup."],
- ["Atualização no celular","O app do celular agora avisa quando há uma versão nova e atualiza com um toque."],
- ["Escolha sua voz","Voz artificial ou estranha? Em Progresso → Ajustes → Escolher voz, ouça cada voz em inglês do seu aparelho e escolha a melhor."],
- ["Make, do, take…","Jogo com 37 combinações de verbos que não se traduzem: make a decision, do homework, take a break."],
- ["Preposições","30 combinações como interested in, good at, depend on e married to."],
- ["Falsos cognatos","26 armadilhas: actually × currently, pretend × intend, library × bookstore."],
- ["Estrutura no diário","Cada tema mostra um roteiro (e-mail, opinião, história…) e frases de ligação que você toca para inserir."],
- ["Relatório do mês","No Progresso: dias, minutos, palavras e retenção deste mês comparados ao anterior."],
- ["Importar do Anki","Traga seus baralhos: Revisar → Importar uma lista → Abrir arquivo do Anki."],
- ["Velocidade real","No ditado, ouça também na velocidade de uma conversa de verdade."],
- ["Modo foco","Durante a sessão, as abas somem: menos distração e mais espaço no celular."]
+ ["Juntar progressos","Usa o app no Claude e no celular? Em Progresso → Backup, importe o backup da outra versão e toque em “Juntar os dois”: nada se perde."],
+ ["Modo ouvir","Praticar → Modo ouvir: suas palavras em áudio, com pausa para lembrar, significado e exemplo — sem olhar a tela."],
+ ["Ler junto","Nas leituras, “Ler junto” toca uma frase por vez com pausa para você repetir, e destaca a frase atual."],
+ ["Palavra destacada","No shadowing do ditado, cada palavra acende enquanto a voz fala."],
+ ["Velocidade na mão","Devagar, normal ou rápido direto no ditado e nas leituras."],
+ ["Manhã variada","O bloco de escuta alterna ditado, Monte a frase e Ouça e entenda."],
+ ["Revisão da semana","No fim de semana, relembre as palavras dos últimos 7 dias."],
+ ["4 aulas novas","Advérbios de frequência, say × tell, ordem dos adjetivos e borrow × lend e outros pares."]
 ];
 function maybeShowNews(){
   if(!S.onboarded || S.seenVersion===APP_VERSION) return;
