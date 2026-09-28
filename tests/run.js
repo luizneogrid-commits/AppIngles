@@ -304,6 +304,17 @@ async function iosAudioTests() {
   });
 }
 
+async function overlayTests() {
+  console.log("\nJanelas acessíveis");
+  E(`go("today"); document.querySelector("#searchBtn").focus(); showHelp();`);
+  await new Promise(r => setTimeout(r, 20));
+  const inside = E(`document.querySelector("#help").contains(document.activeElement)`);
+  E(`document.querySelector("#helpClose").click()`);
+  await new Promise(r => setTimeout(r, 20));
+  const back = E(`document.activeElement && document.activeElement.id`);
+  test("janelas: foco entra na janela e volta ao fechar", () => { assert(inside, "foco não entrou na janela"); eq(back, "searchBtn", "foco não voltou"); });
+}
+
 async function updateTests() {
   console.log("\nAtualização do app do celular");
   w.fetch = async () => ({ ok: true, text: async () => 'const APP_VERSION = "2099.01.01";' });
@@ -317,7 +328,7 @@ async function updateTests() {
   test("mesma versão não mostra aviso", () => { assert(E(`!document.querySelector("#updBar")`), "aviso apareceu sem versão nova"); });
 }
 
-updateTests().then(iosAudioTests).then(() => {
+overlayTests().then(updateTests).then(iosAudioTests).then(() => {
   console.log(`\n${pass} passaram, ${fail} falharam`);
   process.exit(fail ? 1 : 0);
 });

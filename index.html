@@ -2529,6 +2529,21 @@ function showSearch(){
   };
   $("#sq").addEventListener("input", draw); $("#sq").focus();
 }
+/* ---------- 88: janelas (ajuda, busca, novidades) acessíveis: foco preso dentro e devolvido ao fechar ---------- */
+let lastOutsideFocus = null;
+document.addEventListener("focusin", e=>{ if(e.target && e.target.closest && !e.target.closest(".overlay")) lastOutsideFocus = e.target; });
+new MutationObserver(muts=>{ muts.forEach(m=>{
+  m.addedNodes.forEach(n=>{ if(n.nodeType===1 && n.classList.contains("overlay")){ setTimeout(()=>{ const f = n.querySelector("input,button,[tabindex]"); if(f && !n.contains(document.activeElement)) f.focus(); }, 0); } });
+  m.removedNodes.forEach(n=>{ if(n.nodeType===1 && n.classList.contains("overlay") && !document.querySelector(".overlay") && lastOutsideFocus && document.body.contains(lastOutsideFocus)){ try{ lastOutsideFocus.focus(); }catch(e){} } });
+}); }).observe(document.body, {childList:true});
+document.addEventListener("keydown", e=>{
+  if(e.key!=="Tab") return; const ov = [...document.querySelectorAll(".overlay")].pop(); if(!ov) return;
+  const f = [...ov.querySelectorAll("button,input,textarea,select,a[href],[tabindex]:not([tabindex='-1'])")].filter(x=>!x.disabled);
+  if(!f.length) return; const first = f[0], last = f[f.length-1];
+  if(!ov.contains(document.activeElement)){ e.preventDefault(); first.focus(); }
+  else if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+}, true);
 function showHelp(){
   if($("#help") || $("#srch")) return;
   const rows = [["?","Abrir esta ajuda"],["/","Buscar no app"],["Esc","Voltar / sair / fechar"],["1 – 4","Escolher opção (questões, diálogos, jogos) ou dar nota na revisão"],["Enter","Continuar para a próxima"],["Espaço","Mostrar resposta do cartão"],["Z","Desfazer a última nota da revisão"],["R","Repetir o áudio"],["Ctrl + Espaço","Repetir o áudio enquanto digita no ditado"],["Ctrl + Enter","Conferir o ditado"]];
