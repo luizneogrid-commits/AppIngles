@@ -206,6 +206,18 @@ test("bloco de escuta da manhã alterna entre ditado, monte a frase e ouvido", (
   eq(r.map(x => x[0]), ["Ditado + shadowing", "Ditado + shadowing", "Monte a frase", "Ouça e entenda"]);
   assert(r.every(x => x[1]), "algum bloco não abriu o exercício: " + JSON.stringify(r));
 });
+test("revisão da semana: palavras dos últimos 7 dias e depois os erros", () => {
+  const r = E(`(()=>{ const bakDays = JSON.stringify(S.days), bakCards = JSON.stringify(S.cards), bakMis = JSON.stringify(S.mistakes);
+    const t = todayKey(); S.days[addDays(t,-2)] = Object.assign(S.days[addDays(t,-2)]||{m:[0,0,0],n:[0,0,0],xp:0}, {newIds:["v100","v101","v102","v103"]});
+    ["v100","v101","v102","v103"].forEach(id=>S.cards[id]={due:addDays(t,3),ivl:3,reps:1,last:addDays(t,-2)});
+    S.mistakes = [{key:"g:pp:0",k:"g",l:"pp",q:0,streak:0}]; S.weekReview = null;
+    const ww = weekWords().length; go("practice","week"); view.querySelector("#wrGo").click();
+    for(let k=0;k<ww;k++){ view.querySelector("#rq-skip").click(); view.querySelector("#qn").click(); }
+    const toMis = !!view.querySelector("#wrM"); view.querySelector("#wrM").click(); view.querySelector(".opt").click(); view.querySelector("#mn").click();
+    const done = S.weekReview === weekStart(t), final = view.querySelector(".empty h3").textContent;
+    S.days = JSON.parse(bakDays); S.cards = JSON.parse(bakCards); S.mistakes = JSON.parse(bakMis); return [ww>=4, toMis, done, /Semana revisada/.test(final)]; })()`);
+  eq(r, [true, true, true, true]);
+});
 test("rodapé mostra a versão e onde o progresso está salvo", () => {
   const r = E(`(()=>{ go("today"); const t = view.querySelector(".vfoot").textContent; go("progress"); return [t.includes(APP_VERSION), t.includes("só neste aparelho"), !!view.querySelector(".vfoot")]; })()`);
   eq(r, [true, true, true]);
